@@ -1,0 +1,202 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>LexContratos</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main class="app-shell">
+      <aside class="sidebar" aria-label="Archivo de contratos">
+        <div class="brand">
+          <div class="brand-mark" aria-hidden="true">L</div>
+          <div>
+            <strong>LexContratos</strong>
+            <span>Archivo contractual</span>
+          </div>
+        </div>
+
+        <section class="sidebar-panel">
+          <p class="eyebrow">Carpetas</p>
+          <div class="folder-create">
+            <input id="folder-name" type="text" placeholder="Cliente/Asunto/Subcarpeta" />
+            <button class="icon-button dark" id="create-folder" type="button" title="Crear carpeta" aria-label="Crear carpeta">+</button>
+          </div>
+          <div class="folder-list" id="folder-list" aria-label="Carpetas personalizadas"></div>
+        </section>
+
+        <section class="sidebar-panel">
+          <p class="eyebrow">Contratos creados</p>
+          <div class="saved-contracts" id="saved-contracts" aria-live="polite"></div>
+        </section>
+
+        <section class="sidebar-panel">
+          <p class="eyebrow">Versiones automáticas</p>
+          <div class="saved-contracts" id="version-list" aria-live="polite"></div>
+        </section>
+      </aside>
+
+      <section class="workspace">
+        <header class="topbar">
+          <div>
+            <p class="eyebrow">Biblioteca mexicana</p>
+            <h1>Tu biblioteca viva de contratos, machotes y versiones.</h1>
+            <p class="topbar-copy">Selecciona o importa tu machote, redacta nuevos contratos, guarda plantillas, edítalas, replícalas y filtra por cliente, proveedor o tipo. No pierdas tiempo llenando generales: adjunta mails, PDFs o Excels por cada parte y LexContratos extrae e integra la información por ti.</p>
+          </div>
+          <div class="topbar-actions">
+            <div class="segmented-control language-toggle" role="tablist" aria-label="Idioma del contrato">
+              <button class="active" type="button" data-language="es">ES</button>
+              <button type="button" data-language="en">EN</button>
+            </div>
+            <label class="secondary-action file-action" for="template-import">
+              Importar machote
+              <input id="template-import" type="file" accept=".txt,.csv,.eml,.docx,.pdf" />
+            </label>
+            <button class="primary-action" id="new-template" type="button">Nuevo machote</button>
+          </div>
+        </header>
+
+        <section class="main-layout">
+          <aside class="library-column" aria-label="Machotes disponibles">
+            <label class="search-field">
+              Buscar
+              <input id="template-search" type="search" placeholder="Servicios, arrendamiento, NDA..." />
+            </label>
+            <div class="chip-row" aria-label="Categorías">
+              <button class="chip active" type="button" data-category="Todos">Todos</button>
+              <button class="chip" type="button" data-category="Servicios">Servicios</button>
+              <button class="chip" type="button" data-category="Civil">Civil</button>
+              <button class="chip" type="button" data-category="Mercantil">Mercantil</button>
+              <button class="chip" type="button" data-category="Operación">Operación</button>
+            </div>
+            <div class="template-list" id="template-grid" aria-label="Lista compacta de machotes"></div>
+          </aside>
+
+          <section class="contract-stage">
+            <article class="selected-summary">
+              <div>
+                <p class="eyebrow" id="selected-category">Servicios</p>
+                <h2 id="editor-title">Prestación de servicios bajo demanda</h2>
+                <p id="selected-description">Machote robusto para adaptar a una operación concreta.</p>
+              </div>
+              <div class="summary-actions">
+                <span id="autosave-status">Sin cambios</span>
+                <span id="template-count">13 machotes</span>
+                <button class="secondary-action" id="rename-template" type="button">Renombrar</button>
+                <button class="secondary-action" id="replicate-template" type="button">Replicar</button>
+                <button class="primary-action" id="save-contract" type="button">Crear contrato</button>
+              </div>
+            </article>
+
+            <section class="party-upload-section" aria-label="Carga por parte contractual">
+              <div class="section-heading compact">
+                <div>
+                  <p class="eyebrow">Extracción sin confundir partes</p>
+                  <h2>Documentos por rol</h2>
+                </div>
+                <button class="secondary-action" id="extract-data" type="button">Llenar generales de las partes</button>
+              </div>
+              <div class="role-drop-grid" id="role-drop-grid"></div>
+            </section>
+
+            <section class="editor-shell">
+              <div class="editor-pane">
+                <div class="section-heading">
+                  <div>
+                    <p class="eyebrow">Contrato de trabajo</p>
+                    <h2 id="editor-mode-title">Versión abogado del diablo</h2>
+                  </div>
+                  <div class="editor-actions">
+                    <button class="secondary-action" id="export-word" type="button">Exportar Word</button>
+                    <button class="secondary-action" id="send-signature" type="button">Enviar a firma</button>
+                    <button class="secondary-action" id="copy-contract" type="button">Copiar texto</button>
+                    <button class="secondary-action" id="review-fields" type="button">Revisar campos</button>
+                    <button class="secondary-action" id="fill-contract" type="button">Llenar contrato</button>
+                    <button class="secondary-action" id="save-version" type="button">Sustituir master</button>
+                  </div>
+                </div>
+                <section class="format-panel" aria-label="Formato de exportación legal">
+                  <label>
+                    Fuente
+                    <select id="format-font">
+                      <option value="Times New Roman">Times New Roman</option>
+                      <option value="Arial">Arial</option>
+                      <option value="Georgia">Georgia</option>
+                    </select>
+                  </label>
+                  <label>
+                    Tamaño
+                    <input id="format-size" type="number" min="10" max="14" step="1" value="12" />
+                  </label>
+                  <label>
+                    Márgenes
+                    <select id="format-margin">
+                      <option value="54pt">0.75 pulgadas</option>
+                      <option value="72pt">1 pulgada</option>
+                      <option value="90pt">1.25 pulgadas</option>
+                    </select>
+                  </label>
+                  <label>
+                    Interlineado
+                    <select id="format-line-height">
+                      <option value="1.5">1.5</option>
+                      <option value="1.15">1.15</option>
+                      <option value="2">Doble</option>
+                    </select>
+                  </label>
+                  <label class="checkbox-line">
+                    <input id="format-justify" type="checkbox" checked disabled />
+                    Justificado siempre
+                  </label>
+                  <button class="secondary-action" id="apply-legal-format" type="button">Formato legal</button>
+                </section>
+                <textarea id="contract-editor" spellcheck="true"></textarea>
+              </div>
+
+              <aside class="assistant-pane" aria-label="Panel de datos">
+                <details class="data-section compact-fields" open>
+                  <summary>
+                    <div>
+                      <p class="eyebrow">Generales</p>
+                      <strong>Campos editables</strong>
+                    </div>
+                    <button class="secondary-action mini-action" id="clear-generales" type="button">Borrar</button>
+                  </summary>
+                  <form class="party-form" id="party-form">
+                    <div class="dynamic-fields" id="dynamic-fields"></div>
+                    <div class="custom-fields" id="custom-fields" aria-live="polite"></div>
+                  </form>
+                </details>
+
+                <details class="data-section" open>
+                  <summary>
+                    <div>
+                      <p class="eyebrow">Checklist</p>
+                      <strong>Datos obligatorios</strong>
+                    </div>
+                  </summary>
+                  <div class="requirements-list" id="requirements-list"></div>
+                </details>
+
+                <details class="data-section legal-note">
+                  <summary>
+                    <div>
+                      <p class="eyebrow">México</p>
+                      <strong>Base jurídica</strong>
+                    </div>
+                  </summary>
+                  <p>Los campos corporativos se basan en escritura o póliza constitutiva, poderes, administración, domicilio, RFC e inscripción registral. Cada contrato debe revisarse por estado, formalidades y operación concreta.</p>
+                </details>
+              </aside>
+            </section>
+          </section>
+        </section>
+      </section>
+    </main>
+
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script src="./template-prestacion-demanda.js"></script>
+    <script src="./app.js"></script>
+  </body>
+</html>
