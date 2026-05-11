@@ -86,23 +86,23 @@
 
     <main class="app-shell is-hidden" id="app-shell">
       <header class="topbar">
-        <div class="brand app-brand">
-          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
-          <div>
-            <strong>LexContratos</strong>
-            <span>Contratos, masters y firma</span>
+          <div class="brand app-brand">
+            <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
+            <div>
+              <strong>LexContratos</strong>
+            <span>Contratos, machotes y firma</span>
+            </div>
           </div>
-        </div>
 
         <div class="topbar-actions">
-          <button class="secondary-action" id="toggle-archive" type="button">Archivo</button>
-          <button class="primary-action" id="open-template-picker" type="button">Seleccionar contrato</button>
+          <button class="secondary-action" id="toggle-archive" type="button">Expedientes</button>
+          <button class="primary-action" id="open-template-picker" type="button">Seleccionar machote</button>
           <label class="secondary-action file-action" for="template-import">
-            Importar contrato
+            Importar machote propio
             <input id="template-import" type="file" accept=".txt,.csv,.eml,.docx,.pdf" />
           </label>
           <button class="secondary-action" id="new-template" type="button">Nuevo machote</button>
-          <button class="secondary-action" id="toggle-fields" type="button">Generales</button>
+          <button class="secondary-action" id="toggle-fields" type="button">Datos de partes</button>
           <div class="segmented-control language-toggle" role="tablist" aria-label="Idioma del contrato">
             <button class="active" type="button" data-language="es">ES</button>
             <button type="button" data-language="en">EN</button>
@@ -115,13 +115,13 @@
         </div>
       </header>
 
-      <aside class="sidebar side-drawer" id="archive-drawer" aria-label="Archivo de contratos">
+      <aside class="sidebar side-drawer" id="archive-drawer" aria-label="Expedientes de contratos">
         <div class="drawer-heading">
           <div>
-            <p class="eyebrow">Archivo</p>
+            <p class="eyebrow">Expedientes</p>
             <h2>Clientes y proveedores</h2>
           </div>
-          <button class="icon-button dark" id="close-archive" type="button" title="Cerrar archivo" aria-label="Cerrar archivo">×</button>
+          <button class="icon-button dark" id="close-archive" type="button" title="Cerrar expedientes" aria-label="Cerrar expedientes">×</button>
         </div>
 
         <section class="sidebar-panel">
@@ -143,13 +143,25 @@
         </section>
 
         <section class="sidebar-panel">
-          <p class="eyebrow">Versiones automáticas</p>
+          <p class="eyebrow">Versiones guardadas</p>
           <div class="saved-contracts" id="version-list" aria-live="polite"></div>
         </section>
       </aside>
 
       <section class="workspace">
         <section class="contract-stage">
+          <section class="product-context" aria-label="Contexto de LexContratos">
+            <p>LexContratos es un asistente para abogados que ahorra tiempo en tareas tediosas de llenado y organización contractual, sin quitarte el control de la información. Usa tus propios machotes o plantillas base, carga documentos de las partes o captura los datos manualmente, valida la información extraída y genera contratos editables, exportables a Word y listos para firma.</p>
+            <div class="workflow-steps" aria-label="Flujo principal">
+              <span>1. Selecciona machote</span>
+              <span>2. Revisa clausulado</span>
+              <span>3. Carga o captura datos</span>
+              <span>4. Valida información</span>
+              <span>5. Completa contrato</span>
+              <span>6. Exporta o firma</span>
+            </div>
+          </section>
+
           <article class="selected-summary">
             <div>
               <p class="eyebrow" id="selected-category">Servicios</p>
@@ -167,10 +179,21 @@
               <span id="autosave-status">Sin cambios</span>
               <span id="template-count">13 machotes</span>
               <button class="secondary-action" id="rename-template" type="button">Renombrar copia</button>
-              <button class="secondary-action" id="replicate-template" type="button">Replicar</button>
+              <button class="secondary-action" id="replicate-template" type="button">Duplicar plantilla</button>
               <button class="primary-action" id="save-contract" type="button">Crear contrato</button>
             </div>
           </article>
+
+          <section class="matter-panel" aria-label="Expediente contractual">
+            <div class="matter-copy">
+              <p class="eyebrow">Expediente contractual</p>
+              <h2 id="matter-folio">Folio pendiente</h2>
+              <p>Cada contrato genera un expediente con folio propio. Los documentos de las partes, datos extraídos, versiones editables, exportaciones y archivos firmados quedan organizados en el mismo espacio.</p>
+              <p>Usa el folio del expediente para localizar rápidamente contratos, documentos soporte y versiones firmadas.</p>
+            </div>
+            <div class="matter-tree" id="matter-tree" aria-live="polite"></div>
+            <div class="matter-history" id="matter-history" aria-live="polite"></div>
+          </section>
 
           <section class="editor-pane document-focus">
             <div class="section-heading">
@@ -182,11 +205,12 @@
                 <button class="secondary-action" id="export-word" type="button">Exportar Word</button>
                 <button class="secondary-action" id="send-signature" type="button">Enviar a firma</button>
                 <button class="secondary-action" id="copy-contract" type="button">Copiar texto</button>
-                <button class="secondary-action" id="review-fields" type="button">Revisar campos</button>
-                <button class="secondary-action" id="fill-contract" type="button">Llenar contrato</button>
-                <button class="secondary-action" id="save-version" type="button">Sustituir master</button>
+                <button class="secondary-action" id="review-fields" type="button">Revisar campos pendientes</button>
+                <button class="secondary-action" id="fill-contract" type="button">Completar contrato</button>
+                <button class="secondary-action" id="save-version" type="button">Reemplazar plantilla base</button>
               </div>
             </div>
+            <p class="editor-guidance">El contrato sigue siendo editable. LexContratos te ayuda con datos, campos y tareas repetitivas, pero el criterio jurídico y el contenido final permanecen bajo tu control. Cuando el contrato esté revisado, puedes exportarlo a Word o enviarlo a firma.</p>
             <section class="format-panel" aria-label="Formato de exportación legal">
               <label>
                 Fuente
@@ -228,11 +252,12 @@
           <section class="party-upload-section" aria-label="Carga por parte contractual">
             <div class="section-heading compact">
               <div>
-                <p class="eyebrow">Extracción sin confundir partes</p>
-                <h2>Documentos por rol</h2>
+                <p class="eyebrow">Datos y documentos por parte</p>
+                <h2>Información de las partes</h2>
               </div>
-              <button class="secondary-action" id="extract-data" type="button">Llenar generales de las partes</button>
+              <button class="secondary-action" id="extract-data" type="button">Extraer y revisar datos</button>
             </div>
+            <p class="section-help">Carga documentos o captura manualmente la información de cada parte. LexContratos ayuda a extraer los datos necesarios para completar datos de partes, sin mezclar roles y sin quitarte control sobre la información.</p>
             <div class="role-drop-grid" id="role-drop-grid"></div>
           </section>
         </section>
@@ -241,10 +266,10 @@
       <aside class="assistant-pane field-drawer" id="assistant-pane" aria-label="Panel de datos">
         <div class="drawer-heading light">
           <div>
-            <p class="eyebrow">Generales</p>
+            <p class="eyebrow">Datos de partes</p>
             <h2>Datos del contrato</h2>
           </div>
-          <button class="icon-button" id="close-fields" type="button" title="Cerrar generales" aria-label="Cerrar generales">×</button>
+          <button class="icon-button" id="close-fields" type="button" title="Cerrar datos de partes" aria-label="Cerrar datos de partes">×</button>
         </div>
         <details class="data-section compact-fields" open>
           <summary>
@@ -252,7 +277,7 @@
               <p class="eyebrow">Campos</p>
               <strong>Editables</strong>
             </div>
-            <button class="secondary-action mini-action" id="clear-generales" type="button">Borrar</button>
+            <button class="secondary-action mini-action" id="clear-generales" type="button">Borrar datos</button>
           </summary>
           <form class="party-form" id="party-form">
             <div class="dynamic-fields" id="dynamic-fields"></div>
@@ -281,7 +306,7 @@
         </details>
 
         <section class="data-section ai-panel">
-          <p class="eyebrow">IA de masters</p>
+          <p class="eyebrow">Mejora de plantillas</p>
           <div id="ai-insights" class="ai-insights" aria-live="polite"></div>
         </section>
       </aside>
@@ -290,13 +315,14 @@
     <dialog class="contract-picker" id="template-picker">
       <form method="dialog" class="dialog-close-row">
         <div>
-          <p class="eyebrow">Masters precargados</p>
-          <h2>Seleccionar contrato</h2>
+          <p class="eyebrow">Machotes / plantillas precargadas</p>
+          <h2>Seleccionar machote o plantilla</h2>
+          <p class="dialog-copy">Elige una plantilla precargada o importa tu propio machote. LexContratos te ayuda a llenar datos repetitivos; tú conservas el control del clausulado.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar selector">×</button>
       </form>
       <label class="search-field">
-        Buscar contrato
+        Buscar machote
         <input id="template-search" type="search" placeholder="Arrendamiento, renta, prestación de servicios, fideicomiso..." />
       </label>
       <div class="template-list" id="template-grid" aria-label="Lista compacta de machotes"></div>

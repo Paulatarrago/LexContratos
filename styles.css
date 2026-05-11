@@ -403,6 +403,8 @@ button {
 }
 
 .selected-summary,
+.product-context,
+.matter-panel,
 .editor-pane,
 .party-upload-section,
 .assistant-pane,
@@ -414,6 +416,40 @@ button {
     linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 252, 0.98)),
     var(--panel);
   box-shadow: var(--shadow);
+}
+
+.product-context {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px;
+}
+
+.product-context p {
+  max-width: 1120px;
+  margin: 0;
+  color: var(--muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.workflow-steps {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.workflow-steps span {
+  display: inline-flex;
+  align-items: center;
+  min-height: 28px;
+  border: 1px solid rgba(41, 75, 121, 0.14);
+  border-radius: 8px;
+  padding: 0 9px;
+  color: var(--ink);
+  background:
+    linear-gradient(180deg, #ffffff, #f6fafb);
+  font-size: 12px;
+  font-weight: 760;
 }
 
 .selected-summary {
@@ -473,6 +509,69 @@ button {
   font-weight: 760;
 }
 
+.matter-panel {
+  display: grid;
+  grid-template-columns: minmax(260px, 1fr) minmax(220px, 0.72fr) minmax(210px, 0.58fr);
+  gap: 12px;
+  padding: 12px 14px;
+}
+
+.matter-copy h2 {
+  margin: 4px 0 7px;
+  font-size: 18px;
+  line-height: 1.16;
+  letter-spacing: 0;
+}
+
+.matter-copy p:not(.eyebrow) {
+  margin: 5px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.matter-tree,
+.matter-history {
+  display: grid;
+  gap: 6px;
+  align-content: start;
+  border: 1px solid rgba(8, 124, 117, 0.12);
+  border-radius: 8px;
+  padding: 9px;
+  background:
+    linear-gradient(180deg, rgba(79, 231, 215, 0.04), rgba(255, 255, 255, 0.74)),
+    #fbfdfd;
+}
+
+.matter-tree strong,
+.matter-history strong {
+  display: block;
+  color: var(--ink);
+  font-size: 13px;
+}
+
+.matter-tree span,
+.matter-history span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.matter-tree ul,
+.matter-history ul {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding-left: 16px;
+}
+
+.matter-tree li,
+.matter-history li {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
 .eyebrow {
   margin: 0;
   color: var(--blue);
@@ -484,6 +583,21 @@ button {
 
 .document-focus {
   padding: 12px;
+}
+
+.editor-guidance,
+.section-help,
+.dialog-copy {
+  margin: 0 0 10px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.dialog-copy {
+  max-width: 640px;
+  margin-top: 6px;
+  margin-bottom: 0;
 }
 
 .section-heading {
@@ -602,6 +716,7 @@ button {
   min-height: 68px;
   display: grid;
   place-items: center;
+  gap: 4px;
   text-align: center;
   border-radius: 8px;
   background: white;
@@ -609,6 +724,18 @@ button {
   color: var(--muted);
   position: relative;
   padding: 10px;
+}
+
+.role-drop label strong {
+  color: var(--ink);
+  font-size: 13px;
+  line-height: 1.35;
+}
+
+.role-drop label small {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
 }
 
 .role-drop input[type="file"] {
@@ -1100,6 +1227,7 @@ dialog::backdrop {
   }
 
   .selected-summary,
+  .matter-panel,
   .section-heading,
   .dialog-close-row {
     display: grid;
@@ -1111,6 +1239,7 @@ dialog::backdrop {
 
   .format-panel,
   .role-drop-grid,
+  .matter-panel,
   .signer-row {
     grid-template-columns: 1fr;
   }

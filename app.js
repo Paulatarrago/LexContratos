@@ -602,6 +602,9 @@ const signatureDialog = document.querySelector("#signature-dialog");
 const signatureForm = document.querySelector("#signature-form");
 const signerList = document.querySelector("#signer-list");
 const quickFolderButton = document.querySelector("#quick-folder");
+const matterFolio = document.querySelector("#matter-folio");
+const matterTree = document.querySelector("#matter-tree");
+const matterHistory = document.querySelector("#matter-history");
 
 let activeUser = loadCurrentUser();
 let templates = loadMasterTemplates();
@@ -617,6 +620,8 @@ let savedContracts = loadSavedContracts();
 let versions = loadVersions();
 let legalFormat = loadLegalFormat();
 let masterInsights = loadMasterInsights();
+let activeMatterFolio = null;
+let matterHistoryEvents = [];
 let toastTimer;
 let autosaveTimer;
 
@@ -802,7 +807,7 @@ function renderMasterInsights() {
           </article>
         `)
         .join("")
-    : `<span>Cuando sustituyas un master, la IA registrará mejoras anonimizadas para nutrir la biblioteca base.</span>`;
+    : `<span>Cuando reemplaces una plantilla base, LexContratos registrará mejoras anonimizadas para nutrir la biblioteca.</span>`;
 }
 
 function scrubKnownPartyData(text) {
@@ -828,7 +833,7 @@ function recordMasterImprovement(masterKey, prepared) {
     title,
     fields: prepared.fields.length,
     date: new Date().toLocaleString("es-MX"),
-    status: isSharedBase ? "Master base enriquecido" : "Mejora privada registrada"
+    status: isSharedBase ? "Plantilla base enriquecida" : "Mejora privada registrada"
   });
   saveMasterInsights();
 
@@ -840,7 +845,7 @@ function recordMasterImprovement(masterKey, prepared) {
       customFields: prepared.fields,
       fields: prepared.fields.length,
       master: true,
-      description: "Master base enriquecido con mejoras anonimizadas de usuarios."
+      description: "Plantilla base enriquecida con mejoras anonimizadas de usuarios."
     };
     localStorage.setItem("lexcontratos_shared_master_templates", JSON.stringify(shared));
   }
@@ -942,6 +947,178 @@ function sanitizeFilename(name) {
 
 function cleanWorkingTitle(title) {
   return title.replace(/\s+-\s+copia(?:\s+de\s+trabajo)?$/i, "").trim();
+}
+
+function codeFromParty(value, fallback) {
+  const source = removeAccents(value || fallback || "PARTE")
+    .toUpperCase()
+    .replace(/\b(SA|SAPI|SAS|SRL|SC|AC|CV|DE|DEL|LA|EL|Y|THE|INC|LLC|SOCIEDAD|ANONIMA|CAPITAL|VARIABLE|RESPONSABILIDAD|LIMITADA)\b/g, " ")
+    .replace(/[^A-Z0-9\s]/g, " ")
+    .trim();
+  const words = source.split(/\s+/).filter(Boolean);
+  if (!words.length) return "PARTE";
+  if (words.length === 1) return words[0].slice(0, 8);
+  return words.map((word) => word.slice(0, 2)).join("").slice(0, 8);
+}
+
+function typeCodeForTemplate(key = activeTemplate) {
+  const title = removeAccents(cleanWorkingTitle(templates[key]?.title || editorTitle.textContent || "")).toUpperCase();
+  const map = {
+    prestacionDemandaEjemplo: "PS",
+    services: "PS",
+    professional_services: "PSP",
+    lease: "AR",
+    purchase: "CV",
+    nda: "NDA",
+    trust: "FID",
+    supply: "SM",
+    commission: "CM",
+    mandate: "MAN",
+    loan: "MT",
+    distribution: "DIS",
+    agency: "AG",
+    work_contract: "OB",
+    rights_assignment: "CD",
+    license_use: "LU",
+    franchise: "FR",
+    partnership: "SOC",
+    association: "AP",
+    amendment: "MOD",
+    termination_agreement: "TER",
+    debt_acknowledgment: "RA"
+  };
+  if (map[key]) return map[key];
+  if (title.includes("PRESTACION")) return "PS";
+  if (title.includes("ARRENDAMIENTO") || title.includes("RENTA")) return "AR";
+  if (title.includes("COMPRAVENTA")) return "CV";
+  if (title.includes("CONFIDENCIALIDAD") || title.includes("NDA")) return "NDA";
+  if (title.includes("FIDEICOMISO")) return "FID";
+  if (title.includes("SUMINISTRO")) return "SM";
+  if (title.includes("MUTUO")) return "MT";
+  return toCamelCase(title).slice(0, 3).toUpperCase() || "CON";
+}
+
+function matterBaseCode() {
+  const values = getPartyData();
+  const roles = getRoles();
+  const partA = codeFromParty(values.parteA, roles[0]?.label || "Parte A");
+  const partB = codeFromParty(values.parteB, roles[1]?.label || "Parte B");
+  const year = new Date().getFullYear();
+  return `${partA}-${partB}-${year}-${typeCodeForTemplate()}`;
+}
+
+function nextMatterSequence(base) {
+  const existing = savedContracts
+    .map((contract) => contract.matter?.folio || contract.folio || "")
+    .filter((folio) => folio.startsWith(`${base}-`));
+  const max = existing.reduce((current, folio) => {
+    const number = Number(folio.split("-").pop());
+    return Number.isFinite(number) ? Math.max(current, number) : current;
+  }, 0);
+  return String(max + 1).padStart(3, "0");
+}
+
+function previewMatterFolio() {
+  if (activeMatterFolio) return activeMatterFolio;
+  const base = matterBaseCode();
+  return `${base}-${nextMatterSequence(base)}`;
+}
+
+function ensureMatterFolio() {
+  if (!activeMatterFolio) activeMatterFolio = previewMatterFolio();
+  return activeMatterFolio;
+}
+
+function classifySupportDocument(fileName) {
+  const clean = removeAccents(fileName).toLowerCase();
+  if (clean.includes("acta")) return "Acta constitutiva";
+  if (clean.includes("constancia") || clean.includes("csf") || clean.includes("situacion fiscal")) return "Constancia de situación fiscal";
+  if (clean.includes("poder")) return "Poder del representante legal";
+  if (clean.includes("ine") || clean.includes("identificacion") || clean.includes("id")) return "INE o identificación oficial";
+  if (clean.includes("domicilio")) return "Comprobante de domicilio";
+  if (clean.includes("correo") || clean.includes("mail") || clean.endsWith(".eml")) return "Correo o comunicación";
+  if (clean.endsWith(".xls") || clean.endsWith(".xlsx") || clean.endsWith(".csv")) return "Base de datos o Excel";
+  if (clean.endsWith(".pdf")) return "PDF soporte";
+  if (clean.endsWith(".doc") || clean.endsWith(".docx")) return "Word soporte";
+  return "Documento soporte";
+}
+
+function addMatterEvent(label) {
+  matterHistoryEvents.push({
+    label,
+    date: new Date().toLocaleString("es-MX")
+  });
+  matterHistoryEvents = matterHistoryEvents.slice(-8);
+  renderMatterPanel();
+}
+
+function matterSnapshot(status = "En preparación", lock = false) {
+  const values = getPartyData();
+  const required = requiredFieldsForActiveTemplate();
+  const completed = required.filter(([name]) => String(values[name] || "").trim()).length;
+  return {
+    folio: lock ? ensureMatterFolio() : previewMatterFolio(),
+    status,
+    folder: activeFolder,
+    contractTitle: cleanWorkingTitle(editorTitle.textContent),
+    roles: getRoles().map((role) => ({
+      label: role.label,
+      party: values[role.part] || role.label,
+      documents: (sourceTextsBySide[role.side] || []).map((file) => ({
+        name: file.name,
+        size: file.size,
+        type: file.type || classifySupportDocument(file.name)
+      }))
+    })),
+    validatedData: {
+      completed,
+      total: required.length,
+      missing: Math.max(required.length - completed, 0)
+    },
+    history: matterHistoryEvents.slice()
+  };
+}
+
+function renderMatterPanel() {
+  if (!matterFolio || !matterTree || !matterHistory) return;
+  const folio = previewMatterFolio();
+  matterFolio.textContent = folio;
+  const values = getPartyData();
+  const required = requiredFieldsForActiveTemplate();
+  const completed = required.filter(([name]) => String(values[name] || "").trim()).length;
+  const events = matterHistoryEvents.map((event) => event.label).join(" ");
+  const contractFiles = [
+    "Contrato editable",
+    events.includes("Word") ? "Contrato exportado Word" : "Word pendiente",
+    events.includes("firma") || events.includes("Firma") ? "Contrato enviado a firma" : "Firma pendiente",
+    "Contrato firmado pendiente"
+  ];
+
+  matterTree.innerHTML = `
+    <strong>Contenido del expediente</strong>
+    <span>Los documentos que cargues para cada parte se guardarán dentro del expediente de este contrato, clasificados por rol.</span>
+    ${getRoles()
+      .map((role) => {
+        const files = sourceTextsBySide[role.side] || [];
+        const docs = files.length
+          ? files.map((file) => `<li>${file.type || classifySupportDocument(file.name)} · ${file.name}</li>`).join("")
+          : `<li>Documentos soporte pendientes</li>`;
+        return `<span>/${role.label}</span><ul>${docs}</ul>`;
+      })
+      .join("")}
+    <span>/Contrato</span>
+    <ul>${contractFiles.map((item) => `<li>${item}</li>`).join("")}</ul>
+    <span>Datos extraídos: ${completed}/${required.length} validados</span>
+  `;
+
+  matterHistory.innerHTML = `
+    <strong>Historial</strong>
+    <ul>${
+      matterHistoryEvents.length
+        ? matterHistoryEvents.map((event) => `<li>${event.date} · ${event.label}</li>`).join("")
+        : `<li>Expediente en preparación</li>`
+    }</ul>
+  `;
 }
 
 function getPartyData() {
@@ -1080,14 +1257,14 @@ function renderTemplates() {
         <h2>${template.title}</h2>
         <p>${template.category} · ${template.fields} campos</p>
         <footer>
-          <span>master</span>
-          <button class="ghost-button clone-template" type="button">Usar</button>
+          <span>Plantilla base</span>
+          <button class="ghost-button clone-template" type="button">Duplicar plantilla</button>
         </footer>
       </article>
     `)
     .join("");
 
-  templateCount.textContent = `${Object.values(templates).filter((template) => template.master).length} masters`;
+  templateCount.textContent = `${Object.values(templates).filter((template) => template.master).length} machotes`;
 }
 
 function buildEnglishTemplate(template) {
@@ -1132,7 +1309,7 @@ function createWorkingCopy(sourceKey, customBody) {
   templates[key] = {
     ...source,
     title: `${source.title} - copia de trabajo`,
-    description: "Copia editable. El master queda protegido.",
+    description: "Copia editable. La plantilla base queda protegida.",
     body: prepared.body,
     fields: prepared.fields.length,
     customFields: prepared.fields,
@@ -1141,7 +1318,8 @@ function createWorkingCopy(sourceKey, customBody) {
   };
   loadTemplate(key);
   editor.readOnly = false;
-  showToast("Copia creada. Ahora puedes editar sin tocar el master.");
+  addMatterEvent("Copia editable creada");
+  showToast("Copia creada. Ahora puedes editar sin tocar la plantilla base.");
 }
 
 function renderVersions() {
@@ -1151,7 +1329,7 @@ function renderVersions() {
         .map((version) => `
           <button class="saved-contract" type="button" data-version-id="${version.id}">
             <strong>${version.title}</strong>
-            <span>${version.language.toUpperCase()} · ${version.date}</span>
+            <span>${version.matter?.folio || "Sin folio"} · ${version.language.toUpperCase()} · ${version.date}</span>
           </button>
         `)
         .join("")
@@ -1161,9 +1339,10 @@ function renderVersions() {
 function autoSaveVersion(reason = "auto") {
   const body = editor.value.trim();
   if (!body) return;
+  const matter = matterSnapshot(reason === "manual" ? "Versión manual" : "Autosave", false);
 
   const last = versions[versions.length - 1];
-  if (last && last.template === activeTemplate && last.body === body && last.folder === activeFolder) {
+  if (last && last.template === activeTemplate && last.body === body && last.folder === activeFolder && last.matter?.folio === matter.folio) {
     autosaveStatus.textContent = "Guardado";
     autosaveStatus.classList.add("autosave-highlight");
     return;
@@ -1176,19 +1355,21 @@ function autoSaveVersion(reason = "auto") {
     template: activeTemplate,
     language: activeLanguage,
     date: new Date().toLocaleString("es-MX"),
-    body
+    body,
+    matter
   });
   versions = versions.slice(-60);
   saveVersions();
   renderVersions();
   autosaveStatus.textContent = "Guardado";
   autosaveStatus.classList.add("autosave-highlight");
+  if (reason === "manual") addMatterEvent("Versión editable guardada");
 }
 
 function scheduleAutoSave() {
   clearTimeout(autosaveTimer);
   if (!isWorkingCopy) {
-    autosaveStatus.textContent = "Master protegido";
+    autosaveStatus.textContent = "Plantilla protegida";
     autosaveStatus.classList.remove("autosave-highlight");
     return;
   }
@@ -1207,16 +1388,19 @@ function loadTemplate(key) {
   selectedDescription.textContent = template.description;
   editor.value = bodyForTemplate(key);
   editor.readOnly = !isWorkingCopy;
-  autosaveStatus.textContent = isWorkingCopy ? "Copia de trabajo" : "Master protegido";
-  renameTemplateButton.textContent = isWorkingCopy ? "Renombrar copia" : "Master no renombrable";
-  renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Los masters se protegen; replica para renombrar una copia.";
+  autosaveStatus.textContent = isWorkingCopy ? "Copia de trabajo" : "Plantilla protegida";
+  renameTemplateButton.textContent = isWorkingCopy ? "Renombrar copia" : "Nombre protegido";
+  renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Las plantillas base se protegen; duplica para renombrar una copia.";
   autosaveStatus.classList.remove("autosave-highlight");
   sourceTextsBySide = { A: [], B: [] };
+  activeMatterFolio = null;
+  matterHistoryEvents = [];
   renderTemplates();
   renderDynamicFields();
   renderCustomFields();
   renderRoleDrops();
   renderRequirements();
+  renderMatterPanel();
 }
 
 function escapeHtml(value) {
@@ -1288,13 +1472,14 @@ function formattedContractHtml(text) {
 
 function exportWordDocument() {
   const title = cleanWorkingTitle(editorTitle.textContent);
+  const folio = ensureMatterFolio();
   const missing = missingFieldsForActiveTemplate();
   if (missing.length) {
     const list = missing.slice(0, 12).map(([, label]) => `- ${label}`).join("\n");
     const extra = missing.length > 12 ? `\n- ${missing.length - 12} dato${missing.length - 12 === 1 ? "" : "s"} más` : "";
     const proceed = window.confirm(`Antes de exportar faltan estos datos generales:\n\n${list}${extra}\n\n¿Quieres exportar de todos modos?`);
     if (!proceed) {
-      showToast("Exportación detenida para completar generales.");
+      showToast("Exportación detenida para completar datos de partes.");
       return;
     }
   }
@@ -1318,9 +1503,10 @@ function exportWordDocument() {
   const blob = new Blob(["\ufeff", html], { type: "application/msword" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `${sanitizeFilename(title)}.doc`;
+  link.download = `${sanitizeFilename(folio)}-${sanitizeFilename(title)}.doc`;
   link.click();
   URL.revokeObjectURL(link.href);
+  addMatterEvent("Versión exportada a Word");
   autoSaveVersion("manual");
   showToast("Contrato exportado en formato compatible con Word.");
 }
@@ -1374,7 +1560,7 @@ function dropboxSignConfigurationStatus() {
 
 function prepareSignaturePacket() {
   if (!isWorkingCopy) {
-    showToast("Primero replica el master para preparar un contrato de firma.");
+    showToast("Primero duplica la plantilla base para preparar un contrato de firma.");
     return;
   }
   renderSignatureRows();
@@ -1391,9 +1577,12 @@ function submitSignaturePacket(event) {
   }
   const config = dropboxSignConfigurationStatus();
   const status = config.configured ? "Enviado a firma" : "Pendiente de envío";
+  ensureMatterFolio();
+  const eventLabel = config.configured ? "Contrato enviado a firma" : "Contrato preparado para firma";
+  addMatterEvent(eventLabel);
   savedContracts.push({
     id: Date.now().toString(),
-    title: `${status} · ${title}`,
+    title: `${previewMatterFolio()} · ${status} · ${title}`,
     folder: activeFolder,
     template: activeTemplate,
     language: activeLanguage,
@@ -1402,7 +1591,8 @@ function submitSignaturePacket(event) {
     status,
     signatureProvider: "Dropbox Sign",
     signatureState: config.configured ? "sent" : "pending_configuration",
-    signers
+    signers,
+    matter: matterSnapshot(status, true)
   });
   saveSavedContracts();
   renderSavedContracts();
@@ -1415,7 +1605,7 @@ function renameActiveTemplate() {
   const current = templates[activeTemplate];
   if (!current) return;
   if (current.master) {
-    showToast("Los masters no se renombran directo. Replica el machote y renombra la copia.");
+    showToast("Las plantillas base no se renombran directo. Duplica el machote y renombra la copia.");
     return;
   }
   const name = window.prompt("Nuevo nombre para esta copia de trabajo", current.title);
@@ -1426,15 +1616,16 @@ function renameActiveTemplate() {
   renderTemplates();
   renderCustomFields();
   renderRequirements();
+  renderMatterPanel();
   autoSaveVersion("manual");
-  showToast("Copia renombrada. El master original sigue intacto.");
+  showToast("Copia renombrada. La plantilla base original sigue intacta.");
 }
 
 function reviewEditableFieldsFromContract() {
   const template = templates[activeTemplate];
   if (!template) return;
   if (!isWorkingCopy) {
-    showToast("El master está protegido. Replica el machote para revisar o ajustar campos.");
+    showToast("La plantilla base está protegida. Duplica el machote para revisar o ajustar campos.");
     return;
   }
   const prepared = prepareTemplateFields(editor.value, template.customFields || []);
@@ -1461,9 +1652,9 @@ function clearGeneralData(event) {
   renderCustomFields();
   renderRoleDrops();
   renderRequirements();
-  autosaveStatus.textContent = "Generales borradas";
+  autosaveStatus.textContent = "Datos de partes borrados";
   autosaveStatus.classList.remove("autosave-highlight");
-  showToast("Generales borradas. Puedes cargar documentos nuevos por cada parte.");
+  showToast("Datos de partes borrados. Puedes cargar documentos nuevos por cada parte.");
 }
 
 function renderDynamicFields() {
@@ -1472,7 +1663,7 @@ function renderDynamicFields() {
     .map((role) => `
       <div class="field-group-title">
         <p class="eyebrow">${role.label}</p>
-        <strong>Generales de ${values[role.part] || role.label}</strong>
+        <strong>Datos de ${values[role.part] || role.label}</strong>
       </div>
       ${fieldsForRole(role)
         .map(([name, label]) => `<label>${label}<input name="${name}" value="${values[name] || ""}" /></label>`)
@@ -1509,13 +1700,14 @@ function renderRoleDrops() {
               <p class="eyebrow">${role.label}</p>
               <h3>${values[role.part] || role.label}</h3>
             </div>
-            <span>${files.length} fuente${files.length === 1 ? "" : "s"}</span>
+            <span>${files.length} archivo${files.length === 1 ? "" : "s"}</span>
           </header>
           <label>
             <input class="role-file-input" type="file" multiple accept=".csv,.txt,.eml,.pdf,.xlsx,.xls,.docx" data-side="${role.side}" />
-            Arrastra o selecciona documentos de ${role.label}
+            <strong>Arrastra aquí actas, poderes, constancias fiscales, identificaciones, correos, PDF, Word o Excel de ${role.label}.</strong>
+            <small>También puedes capturar los datos manualmente.</small>
           </label>
-          <ul class="role-file-list">${files.map((file) => `<li><span>${file.name}</span><strong>${file.size}</strong></li>`).join("")}</ul>
+          <ul class="role-file-list">${files.map((file) => `<li><span>${file.type || classifySupportDocument(file.name)} · ${file.name}</span><strong>${file.size}</strong></li>`).join("")}</ul>
         </section>
       `;
     })
@@ -1602,6 +1794,7 @@ function applyDetectedData(updates) {
   });
   renderRoleDrops();
   renderRequirements();
+  renderMatterPanel();
 }
 
 templateGrid.addEventListener("click", (event) => {
@@ -1621,7 +1814,7 @@ roleDropGrid.addEventListener("change", async (event) => {
   if (!event.target.classList.contains("role-file-input")) return;
   if (!isWorkingCopy) {
     event.target.value = "";
-    showToast("Primero replica el master. Los documentos de partes se cargan en una copia de trabajo.");
+    showToast("Primero duplica la plantilla base. Los documentos de partes se cargan en una copia de trabajo.");
     return;
   }
   const side = event.target.dataset.side;
@@ -1629,12 +1822,14 @@ roleDropGrid.addEventListener("change", async (event) => {
   sourceTextsBySide[side] = [];
 
   for (const file of files) {
-    const entry = { name: file.name, size: `${Math.ceil(file.size / 1024)} KB`, text: "" };
+    const entry = { name: file.name, size: `${Math.ceil(file.size / 1024)} KB`, type: classifySupportDocument(file.name), text: "" };
     if (/\.(txt|csv|eml)$/i.test(file.name)) entry.text = await file.text();
     sourceTextsBySide[side].push(entry);
   }
 
   renderRoleDrops();
+  renderMatterPanel();
+  addMatterEvent(`Documentos soporte cargados para ${getRoles().find((role) => role.side === side)?.label || "parte"}`);
   showToast("Documentos cargados en la parte correcta.");
 });
 
@@ -1671,12 +1866,12 @@ document.querySelector("#close-fields").addEventListener("click", () => assistan
 
 document.querySelector("#fill-contract").addEventListener("click", () => {
   if (!isWorkingCopy) {
-    showToast("Primero replica el master para llenar el contrato.");
+    showToast("Primero duplica la plantilla base para completar el contrato.");
     return;
   }
   editor.value = fillPlaceholders(editor.value);
   autoSaveVersion("manual");
-  showToast("Contrato llenado con los datos de cada parte.");
+  showToast("Contrato completado con los datos de cada parte.");
 });
 
 document.querySelector("#export-word").addEventListener("click", exportWordDocument);
@@ -1809,20 +2004,24 @@ signatureForm.addEventListener("submit", submitSignaturePacket);
 
 document.querySelector("#save-contract").addEventListener("click", () => {
   if (!isWorkingCopy) {
-    showToast("Primero replica el master para crear un contrato.");
+    showToast("Primero duplica la plantilla base para crear un contrato.");
     return;
   }
   const filled = fillPlaceholders(editor.value);
   editor.value = filled;
+  const folio = ensureMatterFolio();
+  addMatterEvent("Contrato creado");
   const title = `${cleanWorkingTitle(templates[activeTemplate].title)} · ${new Date().toLocaleDateString("es-MX")}`;
   savedContracts.push({
     id: Date.now().toString(),
-    title,
+    title: `${folio} · ${title}`,
     folder: activeFolder,
     template: activeTemplate,
     language: activeLanguage,
     date: new Date().toLocaleString("es-MX"),
-    body: filled
+    body: filled,
+    folio,
+    matter: matterSnapshot("Contrato creado", true)
   });
   saveSavedContracts();
   renderSavedContracts();
@@ -1832,12 +2031,12 @@ document.querySelector("#save-contract").addEventListener("click", () => {
 
 document.querySelector("#save-version").addEventListener("click", () => {
   if (!isWorkingCopy) {
-    showToast("No se trabaja directo sobre masters. Replica, ajusta la copia y luego sustituye el master.");
+    showToast("No se trabaja directo sobre plantillas base. Duplica, ajusta la copia y luego reemplaza la plantilla base.");
     return;
   }
   const key = activeSourceMaster || activeTemplate || `custom-${Date.now()}`;
   const targetTitle = cleanWorkingTitle((templates[key] || templates[activeTemplate] || {}).title || editorTitle.textContent);
-  const confirmed = window.confirm(`Vas a sustituir el master "${targetTitle}" con esta copia de trabajo.\n\nEl master anterior quedará reemplazado para tu biblioteca. ¿Estás segura de continuar?`);
+  const confirmed = window.confirm(`Vas a reemplazar la plantilla base "${targetTitle}" con esta copia de trabajo.\n\nLa plantilla base anterior quedará reemplazada para tu biblioteca. ¿Estás segura de continuar?`);
   if (!confirmed) {
     showToast("Sustitución cancelada. La copia sigue editable.");
     return;
@@ -1848,7 +2047,7 @@ document.querySelector("#save-version").addEventListener("click", () => {
     ...(templates[activeSourceMaster] || templates[activeTemplate] || {}),
     title: cleanWorkingTitle(editorTitle.textContent),
     category: templates[activeTemplate]?.category || "Operación",
-    description: "Machote maestro validado por el despacho.",
+    description: "Plantilla base validada por el despacho.",
     fields: prepared.fields.length,
     body: prepared.body,
     master: true,
@@ -1861,7 +2060,7 @@ document.querySelector("#save-version").addEventListener("click", () => {
   recordMasterImprovement(key, prepared);
   loadTemplate(key);
   renderVersions();
-  showToast("Master sustituido con confirmación. La IA registró la mejora anonimizada.");
+  showToast("Plantilla base reemplazada con confirmación. La mejora quedó registrada de forma anonimizada.");
 });
 
 document.querySelector("#new-template").addEventListener("click", () => {
@@ -1882,7 +2081,7 @@ document.querySelector("#new-template").addEventListener("click", () => {
 
 document.querySelector("#extract-data").addEventListener("click", () => {
   if (!isWorkingCopy) {
-    showToast("Primero replica el master. Después carga documentos por parte y llena generales.");
+    showToast("Primero duplica la plantilla base. Después carga documentos por parte y revisa los datos.");
     return;
   }
   let detected = {};
@@ -1893,7 +2092,8 @@ document.querySelector("#extract-data").addEventListener("click", () => {
   applyDetectedData(detected);
   const missing = missingFieldsForActiveTemplate().length;
   if (Object.keys(detected).length) {
-    showToast(missing ? `Se extrajeron ${Object.keys(detected).length} datos. Faltan ${missing}: sube otro documento o llena el campo manualmente.` : "Generales completas. Ya puedes llenar el contrato.");
+    addMatterEvent(`Datos extraídos y validados: ${Object.keys(detected).length}`);
+    showToast(missing ? `Se extrajeron ${Object.keys(detected).length} datos para revisión. Faltan ${missing}: sube otro documento o llena el campo manualmente.` : "Datos de partes completos. Ya puedes completar el contrato.");
   } else {
     showToast("Carga textos, correos o CSV por cada parte, o llena manualmente los campos faltantes.");
   }
@@ -1903,7 +2103,7 @@ templateImport.addEventListener("change", async () => {
   const [file] = Array.from(templateImport.files);
   if (!file) return;
 
-  const addToMaster = window.confirm("¿Quieres guardar este contrato como master del catálogo?\n\nAceptar: revisa campos, limpia marcadores y lo guarda en Masters.\nCancelar: solo lo abre como copia de trabajo para este contrato.");
+  const addToMaster = window.confirm("¿Quieres guardar este contrato como machote del catálogo?\n\nAceptar: revisa campos, limpia marcadores y lo guarda como plantilla base.\nCancelar: solo lo abre como copia de trabajo para este contrato.");
   const keyPrefix = addToMaster ? "custom-master" : "work";
   activeTemplate = `custom-${Date.now()}`;
   activeTemplate = `${keyPrefix}-${Date.now()}`;
@@ -1911,7 +2111,7 @@ templateImport.addEventListener("change", async () => {
   templates[activeTemplate] = {
     category: "Operación",
     title: file.name.replace(/\.[^.]+$/, ""),
-    description: addToMaster ? "Machote importado, revisado y guardado como master." : "Contrato importado como copia de trabajo temporal.",
+    description: addToMaster ? "Machote importado, revisado y guardado como plantilla base." : "Contrato importado como copia de trabajo temporal.",
     fields: 0,
     body: "",
     customFields: [],
@@ -1923,10 +2123,10 @@ templateImport.addEventListener("change", async () => {
     templates[activeTemplate].body = prepared.body;
     templates[activeTemplate].customFields = prepared.fields;
     templates[activeTemplate].fields = prepared.fields.length;
-    showToast(addToMaster ? `Master guardado con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} limpio${prepared.fields.length === 1 ? "" : "s"}. Repícalo para trabajarlo.` : `Copia de trabajo importada con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"}.`);
+    showToast(addToMaster ? `Machote guardado con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} limpio${prepared.fields.length === 1 ? "" : "s"}. Duplica la plantilla para trabajarlo.` : `Copia de trabajo importada con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"}.`);
   } else {
     templates[activeTemplate].body = `MACHOTE IMPORTADO: ${file.name}\n\nEn la versión completa, LexContratos extraería el texto de PDF o Word, conservaría su estructura y detectaría campos rellenables por parte.`;
-    showToast(addToMaster ? "Master creado. PDF y Word requieren extracción documental en backend para limpiar campos automáticamente." : "Contrato abierto como trabajo temporal. PDF y Word requieren extracción documental en backend.");
+    showToast(addToMaster ? "Machote creado. PDF y Word requieren extracción documental en backend para limpiar campos con precisión." : "Contrato abierto como trabajo temporal. PDF y Word requieren extracción documental en backend.");
   }
 
   if (addToMaster) saveMasterTemplates();
@@ -1975,9 +2175,25 @@ savedContractsList.addEventListener("click", (event) => {
   if (!button) return;
   const contract = savedContracts.find((item) => item.id === button.dataset.id);
   if (!contract) return;
+  activeFolder = contract.folder || activeFolder;
+  activeTemplate = contract.template || activeTemplate;
   editorTitle.textContent = contract.title;
   editor.value = contract.body;
   activeLanguage = contract.language;
+  if (contract.matter) {
+    activeMatterFolio = contract.matter.folio;
+    matterHistoryEvents = contract.matter.history || [];
+    const roles = getRoles();
+    sourceTextsBySide = {
+      A: (contract.matter.roles?.[0]?.documents || []).map((doc) => ({ ...doc, text: "" })),
+      B: (contract.matter.roles?.[1]?.documents || []).map((doc) => ({ ...doc, text: "" }))
+    };
+    if (!roles.length) sourceTextsBySide = { A: [], B: [] };
+    renderRoleDrops();
+    renderMatterPanel();
+  }
+  renderFolders();
+  renderFolderSelector();
   showToast("Contrato archivado abierto en el editor.");
 });
 
@@ -1989,14 +2205,20 @@ versionList.addEventListener("click", (event) => {
   editorTitle.textContent = version.title;
   editor.value = version.body;
   activeLanguage = version.language;
+  if (version.matter) {
+    activeMatterFolio = version.matter.folio;
+    matterHistoryEvents = version.matter.history || matterHistoryEvents;
+    renderMatterPanel();
+  }
   autosaveStatus.textContent = "Versión abierta";
   autosaveStatus.classList.add("autosave-highlight");
-  showToast("Versión automática abierta en el editor.");
+  showToast("Versión guardada abierta en el editor.");
 });
 
 partyForm.addEventListener("input", () => {
   renderRoleDrops();
   renderRequirements();
+  if (!activeMatterFolio) renderMatterPanel();
 });
 
 editor.addEventListener("input", scheduleAutoSave);
