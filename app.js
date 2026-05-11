@@ -596,6 +596,8 @@ const licenseStatus = document.querySelector("#license-status");
 const licensePill = document.querySelector("#license-pill");
 const templatePicker = document.querySelector("#template-picker");
 const openTemplatePicker = document.querySelector("#open-template-picker");
+const userGuideDialog = document.querySelector("#user-guide-dialog");
+const openUserGuide = document.querySelector("#open-user-guide");
 const archiveDrawer = document.querySelector("#archive-drawer");
 const assistantPane = document.querySelector("#assistant-pane");
 const signatureDialog = document.querySelector("#signature-dialog");
@@ -1869,6 +1871,7 @@ document.querySelector("#toggle-archive").addEventListener("click", () => archiv
 document.querySelector("#close-archive").addEventListener("click", () => archiveDrawer.classList.remove("open"));
 document.querySelector("#toggle-fields").addEventListener("click", () => assistantPane.classList.add("open"));
 document.querySelector("#close-fields").addEventListener("click", () => assistantPane.classList.remove("open"));
+openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
 
 document.querySelector("#fill-contract").addEventListener("click", () => {
   if (!isWorkingCopy) {
