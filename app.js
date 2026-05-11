@@ -248,6 +248,247 @@ DERIVADA DEL CONTRATO CELEBRADO ENTRE {{parteA}} Y {{parteB}}.
   }
 };
 
+const extendedTemplates = {
+  trust: {
+    category: "Mercantil",
+    title: "Fideicomiso",
+    description: "Constitución, fiduciario, fideicomitente, fideicomisario, patrimonio y fines.",
+    body: `CONTRATO DE FIDEICOMISO
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, COMO "FIDEICOMITENTE", Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO "FIDUCIARIO".
+
+DECLARACIONES
+
+I. Las partes declaran su existencia, facultades, RFC, domicilio y autorizaciones conforme a {{escrituraA}}, {{poderA}}, {{escrituraB}} y {{poderB}}.
+
+CLÁUSULAS
+
+PRIMERA. Constitución. EL FIDEICOMITENTE transmite al FIDUCIARIO los bienes, derechos o recursos descritos en el anexo patrimonial para destinarlos a los fines del fideicomiso.
+
+SEGUNDA. Fines. El patrimonio fideicomitido se administrará exclusivamente conforme a los fines, instrucciones, limitaciones y reglas de inversión pactadas.
+
+TERCERA. Fideicomisarios. Los beneficiarios, derechos económicos, reglas de distribución y sustitución serán los previstos en el anexo correspondiente.
+
+CUARTA. Responsabilidad fiduciaria. EL FIDUCIARIO responderá por el cumplimiento de sus obligaciones conforme al contrato, la legislación aplicable y las instrucciones lícitas recibidas.`
+  },
+  association: {
+    category: "Civil",
+    title: "Asociación en participación",
+    description: "Aportaciones, gestión, utilidades, pérdidas, información y terminación.",
+    body: `CONTRATO DE ASOCIACIÓN EN PARTICIPACIÓN
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, COMO "ASOCIANTE", Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO "ASOCIADO".
+
+CLÁUSULAS
+
+PRIMERA. Objeto. EL ASOCIANTE concede al ASOCIADO participación en los resultados del negocio descrito en este contrato.
+
+SEGUNDA. Aportaciones. Las aportaciones, recursos, bienes, servicios, derechos y obligaciones de cada parte se detallan en el anexo económico.
+
+TERCERA. Administración. EL ASOCIANTE conservará la gestión frente a terceros, sin perjuicio de los reportes, auditorías y controles pactados.
+
+CUARTA. Utilidades y pérdidas. La distribución se realizará conforme a los porcentajes, fechas, reservas, impuestos y deducciones autorizadas.`
+  },
+  agency: {
+    category: "Mercantil",
+    title: "Agencia comercial",
+    description: "Promoción de negocios, territorio, comisiones, no exclusividad y reportes.",
+    body: `CONTRATO DE AGENCIA COMERCIAL
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, COMO "EL PRINCIPAL", Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO "EL AGENTE".
+
+CLÁUSULAS
+
+PRIMERA. Agencia. EL AGENTE promoverá operaciones comerciales de EL PRINCIPAL en el territorio y canales autorizados.
+
+SEGUNDA. Alcance. EL AGENTE no tendrá facultades para obligar a EL PRINCIPAL salvo autorización expresa y por escrito.
+
+TERCERA. Comisión. Las comisiones se devengarán conforme a operaciones efectivamente cobradas, reglas de atribución y comprobación pactadas.
+
+CUARTA. Cumplimiento. EL AGENTE cumplirá políticas comerciales, anticorrupción, confidencialidad, protección de datos y uso autorizado de marca.`
+  },
+  work_contract: {
+    category: "Civil",
+    title: "Obra a precio alzado",
+    description: "Ejecución de obra, precio, calendario, cambios, garantías y entrega.",
+    body: `CONTRATO DE OBRA A PRECIO ALZADO
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, COMO "EL CONTRATANTE", Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO "EL CONTRATISTA".
+
+CLÁUSULAS
+
+PRIMERA. Obra. EL CONTRATISTA ejecutará la obra descrita en planos, especificaciones, calendario y anexos técnicos.
+
+SEGUNDA. Precio. El precio será cerrado salvo cambios aprobados por escrito, trabajos extraordinarios, fuerza mayor o ajustes expresamente pactados.
+
+TERCERA. Supervisión. EL CONTRATANTE podrá verificar avances, calidad, seguridad, permisos, cumplimiento normativo y documentación soporte.
+
+CUARTA. Entrega y garantías. La recepción, vicios ocultos, correcciones, garantías y penalizaciones se sujetarán a las reglas del contrato.`
+  },
+  professional_services: {
+    category: "Servicios",
+    title: "Prestación de servicios profesionales",
+    description: "Servicios especializados, independencia, entregables, honorarios y confidencialidad.",
+    body: `CONTRATO DE PRESTACIÓN DE SERVICIOS PROFESIONALES
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, COMO "EL CLIENTE", Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO "EL PROFESIONISTA".
+
+CLÁUSULAS
+
+PRIMERA. Servicios. EL PROFESIONISTA prestará servicios profesionales con autonomía técnica, diligencia y apego a la regulación aplicable.
+
+SEGUNDA. Entregables. Los informes, dictámenes, análisis, documentos o resultados se entregarán conforme al alcance y calendario pactados.
+
+TERCERA. Honorarios. EL CLIENTE pagará honorarios contra factura y evidencia de prestación, sin que exista relación laboral.
+
+CUARTA. Responsabilidad. EL PROFESIONISTA responderá por dolo, negligencia grave, confidencialidad, conflicto de interés y obligaciones fiscales propias.`
+  },
+  promise: {
+    category: "Civil",
+    title: "Promesa de contrato",
+    description: "Promesa bilateral, contrato definitivo, condiciones, plazo y penalidad.",
+    body: `CONTRATO DE PROMESA
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, Y {{parteB}}, REPRESENTADA POR {{repB}}.
+
+CLÁUSULAS
+
+PRIMERA. Promesa. Las partes se obligan a celebrar el contrato definitivo descrito en este instrumento.
+
+SEGUNDA. Elementos. El objeto, precio, condiciones esenciales, anexos y documentos del contrato definitivo se tendrán por incorporados.
+
+TERCERA. Plazo. La firma del contrato definitivo deberá realizarse dentro del plazo pactado y sujeto al cumplimiento de condiciones.
+
+CUARTA. Incumplimiento. La parte incumplida podrá exigir cumplimiento, pena convencional, daños o terminación conforme a derecho.`
+  },
+  rights_assignment: {
+    category: "Civil",
+    title: "Cesión de derechos",
+    description: "Cesión, contraprestación, legitimidad, notificación y saneamiento.",
+    body: `CONTRATO DE CESIÓN DE DERECHOS
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, COMO "CEDENTE", Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO "CESIONARIO".
+
+CLÁUSULAS
+
+PRIMERA. Cesión. EL CEDENTE transmite a EL CESIONARIO los derechos descritos en el anexo, con sus accesorios y limitaciones.
+
+SEGUNDA. Titularidad. EL CEDENTE declara ser titular legítimo de los derechos y que no existen gravámenes, litigios o restricciones no reveladas.
+
+TERCERA. Notificación. Las partes realizarán las notificaciones, registros, consentimientos o formalidades necesarias para que la cesión surta efectos.
+
+CUARTA. Saneamiento. EL CEDENTE responderá por existencia, legitimidad y alcance de los derechos cedidos en los términos pactados.`
+  },
+  license_use: {
+    category: "Mercantil",
+    title: "Licencia de uso",
+    description: "Uso de software, marca, contenido o tecnología, restricciones y soporte.",
+    body: `CONTRATO DE LICENCIA DE USO
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, COMO "LICENCIANTE", Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO "LICENCIATARIO".
+
+CLÁUSULAS
+
+PRIMERA. Licencia. EL LICENCIANTE otorga una licencia limitada, no exclusiva, revocable o temporal conforme a los alcances pactados.
+
+SEGUNDA. Restricciones. EL LICENCIATARIO no podrá sublicenciar, transferir, modificar, copiar, explotar o usar fuera del alcance autorizado.
+
+TERCERA. Propiedad intelectual. La titularidad de derechos, mejoras, marcas, desarrollos, documentación y materiales permanecerá conforme al anexo.
+
+CUARTA. Terminación. El incumplimiento de uso, pago, confidencialidad o propiedad intelectual será causa de terminación y cese inmediato de uso.`
+  },
+  franchise: {
+    category: "Mercantil",
+    title: "Franquicia",
+    description: "Marca, know-how, manuales, territorio, cuotas, asistencia y terminación.",
+    body: `CONTRATO DE FRANQUICIA
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, COMO "FRANQUICIANTE", Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO "FRANQUICIATARIO".
+
+CLÁUSULAS
+
+PRIMERA. Franquicia. EL FRANQUICIANTE autoriza el uso de marca, sistema, know-how, manuales y elementos operativos conforme al contrato.
+
+SEGUNDA. Territorio y operación. EL FRANQUICIATARIO operará en el territorio, estándares, imagen, proveedores y manuales autorizados.
+
+TERCERA. Cuotas. Las cuotas iniciales, regalías, fondos de publicidad, pagos recurrentes e impuestos se cubrirán conforme al anexo económico.
+
+CUARTA. Protección del sistema. La confidencialidad, secretos industriales, propiedad intelectual, auditorías y terminación se regirán por reglas reforzadas.`
+  },
+  partnership: {
+    category: "Mercantil",
+    title: "Sociedad",
+    description: "Bases para sociedad, aportaciones, gobierno, derechos corporativos y salida.",
+    body: `CONTRATO DE SOCIEDAD
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO SOCIOS.
+
+CLÁUSULAS
+
+PRIMERA. Sociedad. Las partes acuerdan constituir o regular una sociedad conforme al tipo, denominación, objeto, domicilio y duración pactados.
+
+SEGUNDA. Aportaciones. Las aportaciones de capital, bienes, industria, derechos, tecnología o servicios se documentarán y valuarán conforme al anexo.
+
+TERCERA. Gobierno. La administración, asambleas, derechos de voto, transmisión de partes sociales o acciones y materias reservadas se sujetarán al convenio.
+
+CUARTA. Salida. La separación, exclusión, compra forzosa, tag along, drag along, valuación y solución de controversias se pactarán expresamente.`
+  },
+  amendment: {
+    category: "Operación",
+    title: "Convenio modificatorio",
+    description: "Modificación de contrato existente, ratificación, vigencia y prevalencia.",
+    body: `CONVENIO MODIFICATORIO
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, Y {{parteB}}, REPRESENTADA POR {{repB}}.
+
+CLÁUSULAS
+
+PRIMERA. Antecedente. Las partes celebraron previamente el contrato identificado en el anexo de antecedentes.
+
+SEGUNDA. Modificaciones. Las cláusulas, anexos, precios, plazos, obligaciones o alcances señalados se modifican en los términos de este convenio.
+
+TERCERA. Ratificación. Todo lo no modificado expresamente permanece vigente, válido y obligatorio para las partes.
+
+CUARTA. Prevalencia. En caso de contradicción, este convenio prevalecerá respecto del contrato original únicamente sobre las materias modificadas.`
+  },
+  termination_agreement: {
+    category: "Operación",
+    title: "Convenio de terminación",
+    description: "Terminación, finiquito, obligaciones pendientes, confidencialidad y liberación.",
+    body: `CONVENIO DE TERMINACIÓN
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, Y {{parteB}}, REPRESENTADA POR {{repB}}.
+
+CLÁUSULAS
+
+PRIMERA. Terminación. Las partes acuerdan terminar el contrato identificado en antecedentes a partir de la fecha pactada.
+
+SEGUNDA. Finiquito. Las obligaciones pendientes de pago, entrega, devolución, documentación, impuestos o garantías se liquidarán conforme al anexo.
+
+TERCERA. Liberación. Una vez cumplidas las obligaciones pendientes, las partes se otorgan el finiquito y liberación en los términos pactados.
+
+CUARTA. Supervivencia. Confidencialidad, datos personales, propiedad intelectual, indemnidades, jurisdicción y obligaciones por naturaleza sobreviviente continuarán vigentes.`
+  },
+  debt_acknowledgment: {
+    category: "Civil",
+    title: "Reconocimiento de adeudo",
+    description: "Adeudo, calendario de pago, intereses, garantías, incumplimiento y jurisdicción.",
+    body: `CONVENIO DE RECONOCIMIENTO DE ADEUDO
+
+QUE CELEBRAN {{parteA}}, REPRESENTADA POR {{repA}}, COMO "ACREEDOR", Y {{parteB}}, REPRESENTADA POR {{repB}}, COMO "DEUDOR".
+
+CLÁUSULAS
+
+PRIMERA. Reconocimiento. EL DEUDOR reconoce adeudar a EL ACREEDOR la cantidad de {{importeNumero}} ({{importeLetra}}).
+
+SEGUNDA. Pago. EL DEUDOR pagará el adeudo conforme al calendario, cuenta, referencias y comprobantes pactados.
+
+TERCERA. Incumplimiento. La falta de pago dará lugar a vencimiento anticipado, intereses, gastos de cobranza, penas o ejecución de garantías.
+
+CUARTA. Garantías. Las garantías personales, reales, títulos de crédito o documentos soporte se describen en el anexo correspondiente.`
+  }
+};
+
 const roleLabels = {
   prestacionDemandaEjemplo: ["Prestador de servicios", "Cliente"],
   services: ["Prestador de servicios", "Cliente"],
@@ -261,7 +502,20 @@ const roleLabels = {
   commission: ["Comitente", "Comisionista"],
   mandate: ["Mandante", "Mandatario"],
   nda: ["Parte A", "Parte B"],
-  work_order: ["Parte A", "Parte B"]
+  work_order: ["Parte A", "Parte B"],
+  trust: ["Fideicomitente", "Fiduciario"],
+  association: ["Asociante", "Asociado"],
+  agency: ["Principal", "Agente"],
+  work_contract: ["Contratante", "Contratista"],
+  professional_services: ["Cliente", "Profesionista"],
+  promise: ["Promitente A", "Promitente B"],
+  rights_assignment: ["Cedente", "Cesionario"],
+  license_use: ["Licenciante", "Licenciatario"],
+  franchise: ["Franquiciante", "Franquiciatario"],
+  partnership: ["Socio A", "Socio B"],
+  amendment: ["Parte A", "Parte B"],
+  termination_agreement: ["Parte A", "Parte B"],
+  debt_acknowledgment: ["Acreedor", "Deudor"]
 };
 
 const defaultValues = {
@@ -318,6 +572,7 @@ const dynamicFields = document.querySelector("#dynamic-fields");
 const roleDropGrid = document.querySelector("#role-drop-grid");
 const folderList = document.querySelector("#folder-list");
 const folderName = document.querySelector("#folder-name");
+const folderRoot = document.querySelector("#folder-root");
 const savedContractsList = document.querySelector("#saved-contracts");
 const versionList = document.querySelector("#version-list");
 const autosaveStatus = document.querySelector("#autosave-status");
@@ -326,7 +581,27 @@ const formatSize = document.querySelector("#format-size");
 const formatMargin = document.querySelector("#format-margin");
 const formatLineHeight = document.querySelector("#format-line-height");
 const formatJustify = document.querySelector("#format-justify");
+const currentUserLabel = document.querySelector("#current-user-label");
+const switchUserButton = document.querySelector("#switch-user");
+const renameTemplateButton = document.querySelector("#rename-template");
+const aiInsights = document.querySelector("#ai-insights");
+const appShell = document.querySelector("#app-shell");
+const authShell = document.querySelector("#auth-shell");
+const authLogin = document.querySelector("#auth-login");
+const authRegister = document.querySelector("#auth-register");
+const authRecover = document.querySelector("#auth-recover");
+const licenseRequired = document.querySelector("#license-required");
+const licenseStatus = document.querySelector("#license-status");
+const licensePill = document.querySelector("#license-pill");
+const templatePicker = document.querySelector("#template-picker");
+const openTemplatePicker = document.querySelector("#open-template-picker");
+const archiveDrawer = document.querySelector("#archive-drawer");
+const assistantPane = document.querySelector("#assistant-pane");
+const signatureDialog = document.querySelector("#signature-dialog");
+const signatureForm = document.querySelector("#signature-form");
+const signerList = document.querySelector("#signer-list");
 
+let activeUser = loadCurrentUser();
 let templates = loadMasterTemplates();
 let activeTemplate = templates.prestacionDemandaEjemplo ? "prestacionDemandaEjemplo" : "services";
 let activeSourceMaster = activeTemplate;
@@ -335,20 +610,92 @@ let activeCategory = "Todos";
 let activeLanguage = "es";
 let sourceTextsBySide = { A: [], B: [] };
 let folders = loadFolders();
-let activeFolder = folders[0] || "General";
+let activeFolder = folders[0] || "Clientes";
 let savedContracts = loadSavedContracts();
 let versions = loadVersions();
 let legalFormat = loadLegalFormat();
+let masterInsights = loadMasterInsights();
 let toastTimer;
 let autosaveTimer;
 
+const demoAccount = {
+  email: "paula.tarrago",
+  password: "demo123",
+  name: "Paula Tarrago",
+  role: "Administrador",
+  accountStatus: "active",
+  licenseStatus: "active",
+  licenseEndsAt: "2026-12-31"
+};
+
+function loadUsers() {
+  const users = readJson("lexcontratos_users", {});
+  if (!users[demoAccount.email]) {
+    users[demoAccount.email] = demoAccount;
+    localStorage.setItem("lexcontratos_users", JSON.stringify(users));
+  }
+  return users;
+}
+
+function saveUsers(users) {
+  localStorage.setItem("lexcontratos_users", JSON.stringify(users));
+}
+
+function loadSession() {
+  return readJson("lexcontratos_session", null);
+}
+
+function saveSession(email) {
+  localStorage.setItem("lexcontratos_session", JSON.stringify({ email, date: new Date().toISOString() }));
+  localStorage.setItem("lexcontratos_current_user", email);
+}
+
+function clearSession() {
+  localStorage.removeItem("lexcontratos_session");
+}
+
+function normalizeUserKey(value) {
+  return removeAccents(value || "despacho")
+    .toLowerCase()
+    .replace(/[^a-z0-9._-]+/g, "-")
+    .replace(/^-+|-+$/g, "") || "despacho";
+}
+
+function loadCurrentUser() {
+  const session = loadSession();
+  return session?.email || localStorage.getItem("lexcontratos_current_user") || "paula.tarrago";
+}
+
+function saveCurrentUser(user) {
+  localStorage.setItem("lexcontratos_current_user", user);
+}
+
+function userStorageKey(name) {
+  return `lexcontratos_${normalizeUserKey(activeUser)}_${name}`;
+}
+
+function readJson(key, fallback) {
+  try {
+    const saved = localStorage.getItem(key);
+    return saved ? JSON.parse(saved) : fallback;
+  } catch (error) {
+    return fallback;
+  }
+}
+
 function loadMasterTemplates() {
   const imported = window.lexImportedTemplates || {};
-  const availableTemplates = { ...imported, ...baseTemplates };
-  const saved = JSON.parse(localStorage.getItem("lexcontratos_master_templates") || "{}");
+  const availableTemplates = { ...imported, ...baseTemplates, ...extendedTemplates };
+  const shared = readJson("lexcontratos_shared_master_templates", {});
+  const legacy = readJson("lexcontratos_master_templates", {});
+  const personal = readJson(userStorageKey("master_templates"), legacy);
+  const combined = { ...shared, ...personal };
+  const keys = new Set([...Object.keys(availableTemplates), ...Object.keys(combined)]);
+
   return Object.fromEntries(
-    Object.entries(availableTemplates).map(([key, template]) => {
-      const merged = { ...template, ...(saved[key] || {}), master: Boolean(template.master || saved[key]) };
+    Array.from(keys).map((key) => {
+      const template = availableTemplates[key] || combined[key] || {};
+      const merged = { ...template, ...(combined[key] || {}), master: true };
       const prepared = prepareTemplateFields(merged.body || "", merged.customFields || []);
       return [
         key,
@@ -369,37 +716,55 @@ function saveMasterTemplates() {
   Object.entries(templates).forEach(([key, template]) => {
     if (template.master) masters[key] = template;
   });
-  localStorage.setItem("lexcontratos_master_templates", JSON.stringify(masters));
+  localStorage.setItem(userStorageKey("master_templates"), JSON.stringify(masters));
 }
 
 function loadFolders() {
-  return JSON.parse(localStorage.getItem("lexcontratos_folders") || '["General","Clientes","Proveedores"]');
+  const saved = readJson(userStorageKey("folders"), readJson("lexcontratos_folders", ["Clientes", "Proveedores"]));
+  const normalized = saved
+    .map((folder) => (folder === "General" ? "Clientes/General" : folder))
+    .filter(Boolean);
+  return Array.from(new Set(["Clientes", "Proveedores", ...normalized]));
 }
 
 function saveFolders() {
-  localStorage.setItem("lexcontratos_folders", JSON.stringify(folders));
+  localStorage.setItem(userStorageKey("folders"), JSON.stringify(folders));
 }
 
 function loadSavedContracts() {
-  return JSON.parse(localStorage.getItem("lexcontratos_saved_contracts") || "[]");
+  const saved = readJson(userStorageKey("saved_contracts"), readJson("lexcontratos_saved_contracts", []));
+  return saved.map((contract) => ({
+    ...contract,
+    folder: contract.folder === "General" ? "Clientes/General" : contract.folder
+  }));
 }
 
 function saveSavedContracts() {
-  localStorage.setItem("lexcontratos_saved_contracts", JSON.stringify(savedContracts));
+  localStorage.setItem(userStorageKey("saved_contracts"), JSON.stringify(savedContracts));
 }
 
 function loadVersions() {
-  return JSON.parse(localStorage.getItem("lexcontratos_versions") || "[]");
+  const saved = readJson(userStorageKey("versions"), readJson("lexcontratos_versions", []));
+  return saved.map((version) => ({
+    ...version,
+    folder: version.folder === "General" ? "Clientes/General" : version.folder
+  }));
 }
 
 function saveVersions() {
-  localStorage.setItem("lexcontratos_versions", JSON.stringify(versions));
+  localStorage.setItem(userStorageKey("versions"), JSON.stringify(versions));
 }
 
 function loadLegalFormat() {
-  const saved = JSON.parse(
-    localStorage.getItem("lexcontratos_legal_format") ||
-      '{"font":"Times New Roman","size":"12","margin":"54pt","lineHeight":"1.5","justify":true}'
+  const saved = readJson(
+    userStorageKey("legal_format"),
+    readJson("lexcontratos_legal_format", {
+      font: "Times New Roman",
+      size: "12",
+      margin: "54pt",
+      lineHeight: "1.5",
+      justify: true
+    })
   );
   if (saved.margin === "72pt") saved.margin = "54pt";
   saved.justify = true;
@@ -407,7 +772,154 @@ function loadLegalFormat() {
 }
 
 function saveLegalFormat() {
-  localStorage.setItem("lexcontratos_legal_format", JSON.stringify(legalFormat));
+  localStorage.setItem(userStorageKey("legal_format"), JSON.stringify(legalFormat));
+}
+
+function loadMasterInsights() {
+  return readJson("lexcontratos_master_insights", []);
+}
+
+function saveMasterInsights() {
+  localStorage.setItem("lexcontratos_master_insights", JSON.stringify(masterInsights.slice(-20)));
+}
+
+function renderUserSession() {
+  const account = loadUsers()[activeUser];
+  currentUserLabel.textContent = account?.name || activeUser;
+  if (licensePill) licensePill.textContent = account?.role === "Administrador" ? "Administrador" : account?.licenseStatus === "active" ? "Licencia activa" : "Licencia pendiente";
+}
+
+function renderMasterInsights() {
+  const visible = masterInsights.slice(-3).reverse();
+  aiInsights.innerHTML = visible.length
+    ? visible
+        .map((item) => `
+          <article>
+            <strong>${item.title}</strong>
+            <span>${item.status} · ${item.date}</span>
+          </article>
+        `)
+        .join("")
+    : `<span>Cuando sustituyas un master, la IA registrará mejoras anonimizadas para nutrir la biblioteca base.</span>`;
+}
+
+function scrubKnownPartyData(text) {
+  let scrubbed = text;
+  const values = getPartyData();
+  Object.entries(values)
+    .filter(([, value]) => String(value || "").trim().length > 2)
+    .sort((a, b) => String(b[1]).length - String(a[1]).length)
+    .forEach(([name, value]) => {
+      const escaped = String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+      scrubbed = scrubbed.replace(new RegExp(escaped, "g"), `{{${name}}}`);
+    });
+  return scrubbed;
+}
+
+function recordMasterImprovement(masterKey, prepared) {
+  const title = cleanWorkingTitle(editorTitle.textContent);
+  const isSharedBase = Boolean(baseTemplates[masterKey] || extendedTemplates[masterKey] || (window.lexImportedTemplates || {})[masterKey]);
+  masterInsights.push({
+    id: Date.now().toString(),
+    user: activeUser,
+    masterKey,
+    title,
+    fields: prepared.fields.length,
+    date: new Date().toLocaleString("es-MX"),
+    status: isSharedBase ? "Master base enriquecido" : "Mejora privada registrada"
+  });
+  saveMasterInsights();
+
+  if (isSharedBase) {
+    const shared = readJson("lexcontratos_shared_master_templates", {});
+    shared[masterKey] = {
+      ...(templates[masterKey] || {}),
+      body: scrubKnownPartyData(prepared.body),
+      customFields: prepared.fields,
+      fields: prepared.fields.length,
+      master: true,
+      description: "Master base enriquecido con mejoras anonimizadas de usuarios."
+    };
+    localStorage.setItem("lexcontratos_shared_master_templates", JSON.stringify(shared));
+  }
+
+  renderMasterInsights();
+}
+
+function switchActiveUser(user, announce = true) {
+  activeUser = user;
+  saveCurrentUser(user);
+  templates = loadMasterTemplates();
+  activeTemplate = templates.prestacionDemandaEjemplo ? "prestacionDemandaEjemplo" : "services";
+  activeSourceMaster = activeTemplate;
+  isWorkingCopy = false;
+  sourceTextsBySide = { A: [], B: [] };
+  folders = loadFolders();
+  activeFolder = folders[0] || "Clientes";
+  savedContracts = loadSavedContracts();
+  versions = loadVersions();
+  legalFormat = loadLegalFormat();
+  renderUserSession();
+  syncFormatControls();
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  loadTemplate(activeTemplate);
+  if (announce) showToast(`Sesión cambiada a ${activeUser}. Biblioteca personal cargada.`);
+}
+
+function currentAccount() {
+  const session = loadSession();
+  if (!session?.email) return null;
+  return loadUsers()[session.email] || null;
+}
+
+function hasActiveAccess(account) {
+  return Boolean(account && account.accountStatus === "active" && (account.licenseStatus === "active" || account.role === "Administrador"));
+}
+
+function showAuthPanel(panel) {
+  [authLogin, authRegister, authRecover, licenseRequired].forEach((item) => item.classList.add("is-hidden"));
+  panel.classList.remove("is-hidden");
+}
+
+function renderAccessState() {
+  loadUsers();
+  const account = currentAccount();
+
+  if (!account) {
+    appShell.classList.add("is-hidden");
+    authShell.classList.remove("is-hidden");
+    showAuthPanel(authLogin);
+    return;
+  }
+
+  if (!hasActiveAccess(account)) {
+    appShell.classList.add("is-hidden");
+    authShell.classList.remove("is-hidden");
+    licenseStatus.innerHTML = `
+      <span>Usuario: ${account.email}</span>
+      <span>Estado: ${account.accountStatus}</span>
+      <span>Licencia: ${account.licenseStatus || "sin licencia"}</span>
+      <span>Rol: ${account.role || "Usuario"}</span>
+    `;
+    showAuthPanel(licenseRequired);
+    return;
+  }
+
+  authShell.classList.add("is-hidden");
+  appShell.classList.remove("is-hidden");
+  licensePill.textContent = account.role === "Administrador" ? "Administrador" : "Licencia activa";
+  currentUserLabel.textContent = account.name || account.email;
+  switchActiveUser(account.email, false);
+}
+
+function signOut() {
+  clearSession();
+  appShell.classList.add("is-hidden");
+  authShell.classList.remove("is-hidden");
+  showAuthPanel(authLogin);
+  showToast("Sesión cerrada.");
 }
 
 function showToast(message) {
@@ -476,6 +988,11 @@ function requiredFieldsForActiveTemplate() {
   return [...roleFields, ...customRequired].filter(
     ([name], index, list) => list.findIndex(([candidate]) => candidate === name) === index
   );
+}
+
+function missingFieldsForActiveTemplate() {
+  const values = getPartyData();
+  return requiredFieldsForActiveTemplate().filter(([name]) => !String(values[name] || "").trim());
 }
 
 function removeAccents(value) {
@@ -551,20 +1068,18 @@ function renderTemplates() {
   const query = templateSearch.value.trim().toLowerCase();
   const filtered = Object.entries(templates).filter(([, template]) => {
     if (!template.master) return false;
-    const matchesCategory = activeCategory === "Todos" || template.category === activeCategory;
     const haystack = `${template.title} ${template.description} ${template.category}`.toLowerCase();
-    return matchesCategory && haystack.includes(query);
+    return haystack.includes(query);
   });
 
   templateGrid.innerHTML = filtered
     .map(([key, template]) => `
       <article class="template-card ${key === activeTemplate ? "selected" : ""}" data-template="${key}">
-        <p class="eyebrow">${template.category}</p>
         <h2>${template.title}</h2>
-        <p>${template.description}</p>
+        <p>${template.category} · ${template.fields} campos</p>
         <footer>
-          <span>${template.fields} campos ${template.master ? "· maestro" : ""}</span>
-          <button class="ghost-button clone-template" type="button">Replicar</button>
+          <span>master</span>
+          <button class="ghost-button clone-template" type="button">Usar</button>
         </footer>
       </article>
     `)
@@ -691,6 +1206,8 @@ function loadTemplate(key) {
   editor.value = bodyForTemplate(key);
   editor.readOnly = !isWorkingCopy;
   autosaveStatus.textContent = isWorkingCopy ? "Copia de trabajo" : "Master protegido";
+  renameTemplateButton.textContent = isWorkingCopy ? "Renombrar copia" : "Master no renombrable";
+  renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Los masters se protegen; replica para renombrar una copia.";
   autosaveStatus.classList.remove("autosave-highlight");
   sourceTextsBySide = { A: [], B: [] };
   renderTemplates();
@@ -769,6 +1286,16 @@ function formattedContractHtml(text) {
 
 function exportWordDocument() {
   const title = cleanWorkingTitle(editorTitle.textContent);
+  const missing = missingFieldsForActiveTemplate();
+  if (missing.length) {
+    const list = missing.slice(0, 12).map(([, label]) => `- ${label}`).join("\n");
+    const extra = missing.length > 12 ? `\n- ${missing.length - 12} dato${missing.length - 12 === 1 ? "" : "s"} más` : "";
+    const proceed = window.confirm(`Antes de exportar faltan estos datos generales:\n\n${list}${extra}\n\n¿Quieres exportar de todos modos?`);
+    if (!proceed) {
+      showToast("Exportación detenida para completar generales.");
+      return;
+    }
+  }
   readFormatControls();
   const documentBody = formattedContractHtml(editor.value);
   const html = `<!doctype html>
@@ -796,49 +1323,109 @@ function exportWordDocument() {
   showToast("Contrato exportado en formato compatible con Word.");
 }
 
+function signerRowTemplate(index, values = {}) {
+  return `
+    <div class="signer-row" data-signer-row>
+      <label>Nombre<input name="signerName" value="${values.name || ""}" required /></label>
+      <label>Correo<input name="signerEmail" type="email" value="${values.email || ""}" required /></label>
+      <label>Rol<input name="signerRole" value="${values.role || ""}" required /></label>
+      <label>Orden<input name="signerOrder" type="number" min="1" value="${values.order || index + 1}" /></label>
+      <button class="icon-button remove-signer" type="button" title="Quitar firmante" aria-label="Quitar firmante">×</button>
+    </div>
+  `;
+}
+
+function defaultSigners() {
+  const values = getPartyData();
+  return getRoles().map((role, index) => ({
+    name: values[role.side === "A" ? "repA" : "repB"] || "",
+    email: values[role.side === "A" ? "correoPrestador" : "correoCliente"] || "",
+    role: role.label,
+    order: index + 1
+  }));
+}
+
+function renderSignatureRows(signers = defaultSigners()) {
+  signerList.innerHTML = signers.map((signer, index) => signerRowTemplate(index, signer)).join("");
+}
+
+function getSignatureRequestSigners() {
+  return Array.from(signerList.querySelectorAll("[data-signer-row]")).map((row, index) => ({
+    name: row.querySelector('[name="signerName"]').value.trim(),
+    email: row.querySelector('[name="signerEmail"]').value.trim(),
+    role: row.querySelector('[name="signerRole"]').value.trim(),
+    order: Number(row.querySelector('[name="signerOrder"]').value || index + 1)
+  }));
+}
+
+function dropboxSignConfigurationStatus() {
+  return {
+    configured: false,
+    missing: [
+      "DROPBOX_SIGN_API_KEY",
+      "DROPBOX_SIGN_CLIENT_ID",
+      "DROPBOX_SIGN_CLIENT_SECRET",
+      "DROPBOX_SIGN_WEBHOOK_SECRET"
+    ]
+  };
+}
+
 function prepareSignaturePacket() {
   if (!isWorkingCopy) {
     showToast("Primero replica el master para preparar un contrato de firma.");
     return;
   }
+  renderSignatureRows();
+  signatureDialog.showModal();
+}
+
+function submitSignaturePacket(event) {
+  event.preventDefault();
   const title = cleanWorkingTitle(editorTitle.textContent);
-  const roles = getRoles().map((role) => role.label).join(" y ");
+  const signers = getSignatureRequestSigners();
+  if (signers.some((signer) => !signer.name || !signer.email || !signer.role)) {
+    showToast("Completa nombre, correo y rol de cada firmante.");
+    return;
+  }
+  const config = dropboxSignConfigurationStatus();
+  const status = config.configured ? "Enviado a firma" : "Pendiente de envío";
   savedContracts.push({
     id: Date.now().toString(),
-    title: `Firma pendiente · ${title}`,
+    title: `${status} · ${title}`,
     folder: activeFolder,
     template: activeTemplate,
     language: activeLanguage,
     date: new Date().toLocaleString("es-MX"),
     body: fillPlaceholders(editor.value),
-    status: "Listo para firma digital",
-    signers: roles
+    status,
+    signatureProvider: "Dropbox Sign",
+    signatureState: config.configured ? "sent" : "pending_configuration",
+    signers
   });
   saveSavedContracts();
   renderSavedContracts();
   autoSaveVersion("manual");
-  showToast("Paquete de firma listo. En una integración real saldría a e.firma, DocuSign, Adobe Sign o proveedor autorizado.");
+  signatureDialog.close();
+  showToast(config.configured ? "Contrato enviado a Dropbox Sign." : "Envío preparado. Falta conectar credenciales de Dropbox Sign en backend.");
 }
 
 function renameActiveTemplate() {
   const current = templates[activeTemplate];
   if (!current) return;
-  if (!current.master) {
-    showToast("Esta es una copia de trabajo. Renombra el master desde la biblioteca o sustitúyelo cuando esté lista.");
+  if (current.master) {
+    showToast("Los masters no se renombran directo. Replica el machote y renombra la copia.");
     return;
   }
-  const name = window.prompt("Nuevo nombre para este machote", current.title);
+  const name = window.prompt("Nuevo nombre para esta copia de trabajo", current.title);
   if (!name || !name.trim()) return;
 
   current.title = name.trim();
-  current.description = current.description || "Machote agregado al catálogo del despacho.";
-  current.master = true;
   editorTitle.textContent = current.title;
-  saveMasterTemplates();
   renderTemplates();
   renderCustomFields();
   renderRequirements();
-  showToast("Machote renombrado y guardado en el catálogo.");
+  autoSaveVersion("manual");
+  showToast("Copia renombrada. El master original sigue intacto.");
 }
 
 function reviewEditableFieldsFromContract() {
@@ -966,7 +1553,7 @@ function renderSavedContracts() {
         .map((contract) => `
           <button class="saved-contract" type="button" data-id="${contract.id}">
             <strong>${contract.title}</strong>
-            <span>${contract.language.toUpperCase()} · ${contract.date}</span>
+            <span>${contract.status || contract.language.toUpperCase()} · ${contract.date}</span>
           </button>
         `)
         .join("")
@@ -1012,9 +1599,11 @@ templateGrid.addEventListener("click", (event) => {
   if (event.target.closest(".clone-template")) {
     loadTemplate(card.dataset.template);
     createWorkingCopy(card.dataset.template);
+    if (templatePicker.open) templatePicker.close();
     return;
   }
   loadTemplate(card.dataset.template);
+  if (templatePicker.open) templatePicker.close();
 });
 
 roleDropGrid.addEventListener("change", async (event) => {
@@ -1057,6 +1646,18 @@ document.querySelectorAll(".language-toggle button").forEach((button) => {
 
 templateSearch.addEventListener("input", renderTemplates);
 
+openTemplatePicker.addEventListener("click", () => {
+  templateSearch.value = "";
+  renderTemplates();
+  templatePicker.showModal();
+  templateSearch.focus();
+});
+
+document.querySelector("#toggle-archive").addEventListener("click", () => archiveDrawer.classList.add("open"));
+document.querySelector("#close-archive").addEventListener("click", () => archiveDrawer.classList.remove("open"));
+document.querySelector("#toggle-fields").addEventListener("click", () => assistantPane.classList.add("open"));
+document.querySelector("#close-fields").addEventListener("click", () => assistantPane.classList.remove("open"));
+
 document.querySelector("#fill-contract").addEventListener("click", () => {
   if (!isWorkingCopy) {
     showToast("Primero replica el master para llenar el contrato.");
@@ -1085,6 +1686,84 @@ document.querySelector("#replicate-template").addEventListener("click", () => {
 document.querySelector("#rename-template").addEventListener("click", renameActiveTemplate);
 
 document.querySelector("#clear-generales").addEventListener("click", clearGeneralData);
+
+switchUserButton.addEventListener("click", () => {
+  signOut();
+});
+
+document.querySelector("#login-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const email = document.querySelector("#login-email").value.trim();
+  const password = document.querySelector("#login-password").value;
+  const user = loadUsers()[email];
+  if (!user || user.password !== password) {
+    showToast("Usuario o contraseña incorrectos.");
+    return;
+  }
+  saveSession(email);
+  renderAccessState();
+});
+
+document.querySelector("#register-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  const users = loadUsers();
+  const email = document.querySelector("#register-email").value.trim();
+  if (users[email]) {
+    showToast("Ese usuario ya existe.");
+    return;
+  }
+  users[email] = {
+    email,
+    password: document.querySelector("#register-password").value,
+    name: document.querySelector("#register-name").value.trim(),
+    role: "Usuario",
+    accountStatus: "active",
+    licenseStatus: "inactive",
+    licenseEndsAt: ""
+  };
+  saveUsers(users);
+  saveSession(email);
+  renderAccessState();
+});
+
+document.querySelector("#recover-form").addEventListener("submit", (event) => {
+  event.preventDefault();
+  showToast("Recuperación preparada. En producción se enviará un correo seguro.");
+  showAuthPanel(authLogin);
+});
+
+document.querySelector("#show-register").addEventListener("click", () => showAuthPanel(authRegister));
+document.querySelector("#show-recover").addEventListener("click", () => showAuthPanel(authRecover));
+document.querySelectorAll(".show-login").forEach((button) => button.addEventListener("click", () => showAuthPanel(authLogin)));
+
+document.querySelector("#activate-demo-license").addEventListener("click", () => {
+  const session = loadSession();
+  if (!session?.email) return;
+  const users = loadUsers();
+  users[session.email].licenseStatus = "active";
+  users[session.email].licenseEndsAt = "2026-12-31";
+  saveUsers(users);
+  renderAccessState();
+});
+
+document.querySelector("#license-logout").addEventListener("click", signOut);
+
+document.querySelector("#add-signer").addEventListener("click", () => {
+  signerList.insertAdjacentHTML("beforeend", signerRowTemplate(signerList.querySelectorAll("[data-signer-row]").length));
+});
+
+signerList.addEventListener("click", (event) => {
+  const button = event.target.closest(".remove-signer");
+  if (!button) return;
+  const rows = signerList.querySelectorAll("[data-signer-row]");
+  if (rows.length <= 1) {
+    showToast("Debe quedar al menos un firmante.");
+    return;
+  }
+  button.closest("[data-signer-row]").remove();
+});
+
+signatureForm.addEventListener("submit", submitSignaturePacket);
 
 document.querySelector("#save-contract").addEventListener("click", () => {
   if (!isWorkingCopy) {
@@ -1115,6 +1794,12 @@ document.querySelector("#save-version").addEventListener("click", () => {
     return;
   }
   const key = activeSourceMaster || activeTemplate || `custom-${Date.now()}`;
+  const targetTitle = cleanWorkingTitle((templates[key] || templates[activeTemplate] || {}).title || editorTitle.textContent);
+  const confirmed = window.confirm(`Vas a sustituir el master "${targetTitle}" con esta copia de trabajo.\n\nEl master anterior quedará reemplazado para tu biblioteca. ¿Estás segura de continuar?`);
+  if (!confirmed) {
+    showToast("Sustitución cancelada. La copia sigue editable.");
+    return;
+  }
   const prepared = prepareTemplateFields(editor.value, templates[activeTemplate]?.customFields || []);
   editor.value = prepared.body;
   templates[key] = {
@@ -1131,9 +1816,10 @@ document.querySelector("#save-version").addEventListener("click", () => {
   activeSourceMaster = key;
   isWorkingCopy = false;
   saveMasterTemplates();
+  recordMasterImprovement(key, prepared);
   loadTemplate(key);
   renderVersions();
-  showToast("Master sustituido con la versión trabajada.");
+  showToast("Master sustituido con confirmación. La IA registró la mejora anonimizada.");
 });
 
 document.querySelector("#new-template").addEventListener("click", () => {
@@ -1163,7 +1849,7 @@ document.querySelector("#extract-data").addEventListener("click", () => {
     if (text.trim()) detected = { ...detected, ...inferDataFromText(text, role.side) };
   }
   applyDetectedData(detected);
-  const missing = requiredFieldsForActiveTemplate().filter(([name]) => !String(getPartyData()[name] || "").trim()).length;
+  const missing = missingFieldsForActiveTemplate().length;
   if (Object.keys(detected).length) {
     showToast(missing ? `Se extrajeron ${Object.keys(detected).length} datos. Faltan ${missing}: sube otro documento o llena el campo manualmente.` : "Generales completas. Ya puedes llenar el contrato.");
   } else {
@@ -1215,13 +1901,17 @@ folderList.addEventListener("click", (event) => {
 });
 
 document.querySelector("#create-folder").addEventListener("click", () => {
+  const root = folderRoot.value || "Clientes";
   const parts = folderName.value
     .split("/")
     .map((part) => part.trim())
     .filter(Boolean);
   if (!parts.length) return;
 
-  let path = "";
+  if (parts[0]?.toLowerCase() === root.toLowerCase()) parts.shift();
+  if (!folders.includes(root)) folders.push(root);
+
+  let path = root;
   parts.forEach((part) => {
     path = path ? `${path}/${part}` : part;
     if (!folders.includes(path)) folders.push(path);
@@ -1273,9 +1963,12 @@ editor.addEventListener("input", scheduleAutoSave);
 
 document.querySelector("#apply-legal-format").addEventListener("click", applyDefaultLegalFormat);
 
+renderUserSession();
+renderMasterInsights();
 syncFormatControls();
 renderFolders();
 renderSavedContracts();
 renderVersions();
 renderTemplates();
 loadTemplate(activeTemplate);
+renderAccessState();
