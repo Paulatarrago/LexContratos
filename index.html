@@ -8,81 +8,131 @@
   </head>
   <body>
     <section class="auth-shell" id="auth-shell" aria-label="Acceso a LexContratos">
-      <article class="auth-card" id="auth-login">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
-          <div>
-            <strong>LexContratos</strong>
-            <span>Acceso profesional</span>
-          </div>
-        </div>
-        <h1>Inicia sesión para trabajar contratos.</h1>
-        <p>Tu biblioteca, clientes, proveedores, contratos y versiones quedan separados por usuario y licencia.</p>
-        <form id="login-form" class="auth-form">
-          <label>Correo o usuario<input id="login-email" type="text" autocomplete="username" required /></label>
-          <label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required /></label>
-          <button class="primary-action" type="submit">Entrar</button>
-          <button class="secondary-action" id="demo-login" type="button">Entrar con demo</button>
-        </form>
-        <div class="auth-links">
-          <button type="button" id="show-register">Crear usuario</button>
-          <button type="button" id="show-recover">Recuperar contraseña</button>
-        </div>
-        <p class="auth-demo">Demo local: paula.tarrago / demo123</p>
-      </article>
+      <section class="auth-hero" aria-label="Bienvenida a LexContratos">
+        <div class="auth-badge">Asistente contractual 24/7 para despachos</div>
+        <h1>Contratos menos tediosos. Más tiempo para criterio jurídico.</h1>
+        <p class="auth-lede">LexContratos ayuda a organizar machotes, extraer datos corporativos y prellenar campos repetitivos para que el abogado valide, edite y conserve siempre el control profesional del contrato.</p>
 
-      <article class="auth-card is-hidden" id="auth-register">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
-          <div>
-            <strong>LexContratos</strong>
-            <span>Registro</span>
-          </div>
+        <div class="auth-value-grid">
+          <article>
+            <strong>Machotes vivos</strong>
+            <span>Usa formatos precargados que pueden enriquecerse o importa tus propias plantillas.</span>
+          </article>
+          <article>
+            <strong>Datos por parte</strong>
+            <span>Sube actas, poderes, constancias, identificaciones, Word, PDF, Excel o imágenes en la caja correcta.</span>
+          </article>
+          <article>
+            <strong>Menos captura manual</strong>
+            <span>El asistente extrae información repetitiva y la presenta para revisión antes de completar el contrato.</span>
+          </article>
+          <article>
+            <strong>Expedientes ordenados</strong>
+            <span>Guarda contratos por cliente, asunto, proveedor o folio, junto con documentos soporte y versiones.</span>
+          </article>
         </div>
-        <h1>Crea tu usuario.</h1>
-        <form id="register-form" class="auth-form">
-          <label>Nombre<input id="register-name" type="text" autocomplete="name" required /></label>
-          <label>Correo<input id="register-email" type="email" autocomplete="email" required /></label>
-          <label>Contraseña<input id="register-password" type="password" autocomplete="new-password" minlength="6" required /></label>
-          <button class="primary-action" type="submit">Registrar</button>
-        </form>
-        <div class="auth-links">
-          <button type="button" class="show-login">Ya tengo cuenta</button>
-        </div>
-      </article>
 
-      <article class="auth-card is-hidden" id="auth-recover">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
-          <div>
-            <strong>LexContratos</strong>
-            <span>Recuperación</span>
+        <div class="auth-visual" aria-label="Flujo visual de contrato">
+          <div class="contract-sheet">
+            <span>EXPEDIENTE COCEI-DETECATL-2026-PS-001</span>
+            <strong>Contrato de prestación de servicios</strong>
+            <i></i>
+            <i></i>
+            <i class="short-line"></i>
+            <div class="field-row"><b>Razón social</b><em>Validado</em></div>
+            <div class="field-row"><b>Representante legal</b><em>Validado</em></div>
+            <div class="field-row"><b>Poder notarial</b><em>Pendiente</em></div>
           </div>
+          <div class="visual-card upload-card">Documentos por parte</div>
+          <div class="visual-card sign-card">Word o firma</div>
         </div>
-        <h1>Recupera tu contraseña.</h1>
-        <form id="recover-form" class="auth-form">
-          <label>Correo<input id="recover-email" type="email" autocomplete="email" required /></label>
-          <button class="primary-action" type="submit">Enviar recuperación</button>
-        </form>
-        <div class="auth-links">
-          <button type="button" class="show-login">Volver a inicio</button>
-        </div>
-      </article>
 
-      <article class="auth-card license-card is-hidden" id="license-required">
-        <div class="brand">
-          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
-          <div>
-            <strong>LexContratos</strong>
-            <span>Licencia de uso</span>
-          </div>
+        <div class="auth-flow">
+          <span>1. Elige o sube machote</span>
+          <span>2. Adjunta documentos por parte</span>
+          <span>3. Valida generales</span>
+          <span>4. Edita clausulado</span>
+          <span>5. Exporta o firma</span>
         </div>
-        <h1>Licencia requerida.</h1>
-        <p>Tu usuario existe, pero necesita una licencia activa para acceder al editor de contratos.</p>
-        <div class="license-status" id="license-status"></div>
-        <button class="primary-action" id="activate-demo-license" type="button">Activar licencia demo</button>
-        <button class="secondary-action" id="license-logout" type="button">Cerrar sesión</button>
-      </article>
+      </section>
+
+      <div class="auth-panel-stack">
+        <article class="auth-card" id="auth-login">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
+            <div>
+              <strong>LexContratos</strong>
+              <span>Acceso profesional</span>
+            </div>
+          </div>
+          <h1>Inicia sesión para trabajar contratos.</h1>
+          <p>Tu biblioteca, clientes, proveedores, contratos y versiones quedan separados por usuario y licencia.</p>
+          <form id="login-form" class="auth-form">
+            <label>Correo o usuario<input id="login-email" type="text" autocomplete="username" required /></label>
+            <label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required /></label>
+            <button class="primary-action" type="submit">Entrar</button>
+            <button class="secondary-action" id="demo-login" type="button">Entrar con demo</button>
+          </form>
+          <div class="auth-links">
+            <button type="button" id="show-register">Crear usuario</button>
+            <button type="button" id="show-recover">Recuperar contraseña</button>
+          </div>
+          <p class="auth-demo">Demo local: paula.tarrago / demo123</p>
+        </article>
+
+        <article class="auth-card is-hidden" id="auth-register">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
+            <div>
+              <strong>LexContratos</strong>
+              <span>Registro</span>
+            </div>
+          </div>
+          <h1>Crea tu usuario.</h1>
+          <form id="register-form" class="auth-form">
+            <label>Nombre<input id="register-name" type="text" autocomplete="name" required /></label>
+            <label>Correo<input id="register-email" type="email" autocomplete="email" required /></label>
+            <label>Contraseña<input id="register-password" type="password" autocomplete="new-password" minlength="6" required /></label>
+            <button class="primary-action" type="submit">Registrar</button>
+          </form>
+          <div class="auth-links">
+            <button type="button" class="show-login">Ya tengo cuenta</button>
+          </div>
+        </article>
+
+        <article class="auth-card is-hidden" id="auth-recover">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
+            <div>
+              <strong>LexContratos</strong>
+              <span>Recuperación</span>
+            </div>
+          </div>
+          <h1>Recupera tu contraseña.</h1>
+          <form id="recover-form" class="auth-form">
+            <label>Correo<input id="recover-email" type="email" autocomplete="email" required /></label>
+            <button class="primary-action" type="submit">Enviar recuperación</button>
+          </form>
+          <div class="auth-links">
+            <button type="button" class="show-login">Volver a inicio</button>
+          </div>
+        </article>
+
+        <article class="auth-card license-card is-hidden" id="license-required">
+          <div class="brand">
+            <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
+            <div>
+              <strong>LexContratos</strong>
+              <span>Licencia de uso</span>
+            </div>
+          </div>
+          <h1>Licencia requerida.</h1>
+          <p>Tu usuario existe, pero necesita una licencia activa para acceder al editor de contratos.</p>
+          <div class="license-status" id="license-status"></div>
+          <button class="primary-action" id="activate-demo-license" type="button">Activar licencia demo</button>
+          <button class="secondary-action" id="license-logout" type="button">Cerrar sesión</button>
+        </article>
+      </div>
     </section>
 
     <main class="app-shell is-hidden" id="app-shell">
