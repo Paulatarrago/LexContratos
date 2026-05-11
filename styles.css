@@ -1,15 +1,20 @@
 :root {
-  --ink: #172026;
+  --ink: #101820;
   --muted: #65737d;
   --line: #d9e1e6;
   --paper: #f5f7f8;
   --panel: #ffffff;
-  --teal: #0f766e;
-  --teal-dark: #115e59;
-  --blue: #31588a;
-  --gold: #d9b75f;
+  --teal: #087c75;
+  --teal-dark: #075f5b;
+  --blue: #294b79;
+  --gold: #d6b86a;
+  --midnight: #0a1016;
+  --carbon: #101820;
+  --electric: #4fe7d7;
+  --signal: #85f4ff;
+  --platinum: #eef3f6;
   --red: #b42318;
-  --shadow: 0 18px 42px rgba(23, 32, 38, 0.1);
+  --shadow: 0 18px 42px rgba(16, 24, 32, 0.11);
 }
 
 * {
@@ -20,7 +25,11 @@ body {
   margin: 0;
   min-width: 320px;
   color: var(--ink);
-  background: var(--paper);
+  background:
+    linear-gradient(90deg, rgba(8, 124, 117, 0.035) 1px, transparent 1px),
+    linear-gradient(180deg, rgba(41, 75, 121, 0.03) 1px, transparent 1px),
+    var(--paper);
+  background-size: 42px 42px;
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -46,16 +55,21 @@ button {
   place-items: center;
   padding: 28px;
   background:
-    linear-gradient(180deg, rgba(23, 32, 38, 0.9), rgba(33, 49, 58, 0.88)),
-    #172026;
+    linear-gradient(135deg, rgba(79, 231, 215, 0.11) 0 1px, transparent 1px 16px),
+    linear-gradient(225deg, rgba(133, 244, 255, 0.08) 0 1px, transparent 1px 18px),
+    linear-gradient(180deg, rgba(10, 16, 22, 0.95), rgba(16, 31, 42, 0.92)),
+    var(--midnight);
+  background-size: 18px 18px, 22px 22px, auto;
 }
 
 .auth-card {
   width: min(460px, 100%);
-  border: 1px solid rgba(255, 255, 255, 0.12);
+  border: 1px solid rgba(133, 244, 255, 0.16);
   border-radius: 8px;
-  background: white;
-  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.24);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(246, 250, 251, 0.98)),
+    white;
+  box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.06);
   padding: 24px;
 }
 
@@ -103,6 +117,20 @@ button {
   padding: 0 10px;
 }
 
+.auth-form input:focus,
+.folder-create input:focus,
+.folder-create select:focus,
+.search-field input:focus,
+.party-form input:focus,
+.party-form textarea:focus,
+.party-form select:focus,
+.signature-form input:focus,
+.signature-form select:focus,
+#contract-editor:focus {
+  outline: 2px solid rgba(79, 231, 215, 0.34);
+  border-color: rgba(8, 124, 117, 0.64);
+}
+
 .auth-links {
   display: flex;
   gap: 12px;
@@ -143,8 +171,10 @@ button {
   gap: 18px;
   align-items: center;
   padding: 12px 16px;
-  background: rgba(245, 247, 248, 0.94);
-  border-bottom: 1px solid var(--line);
+  background:
+    linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(244, 249, 250, 0.93)),
+    rgba(245, 247, 248, 0.94);
+  border-bottom: 1px solid rgba(8, 124, 117, 0.16);
   backdrop-filter: blur(14px);
 }
 
@@ -155,24 +185,60 @@ button {
 }
 
 .brand-mark {
-  width: 42px;
-  height: 42px;
+  position: relative;
+  width: 44px;
+  height: 44px;
   border-radius: 8px;
   display: grid;
   place-items: center;
   background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.84), rgba(217, 183, 95, 0.92)),
-    var(--gold);
-  color: #172026;
+    linear-gradient(135deg, rgba(79, 231, 215, 0.94), rgba(133, 244, 255, 0.32) 38%, rgba(214, 184, 106, 0.92)),
+    var(--carbon);
+  color: #061014;
   font-weight: 900;
-  font-size: 13px;
+  font-size: 12px;
   letter-spacing: 0;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.55), 0 12px 22px rgba(23, 32, 38, 0.14);
+  isolation: isolate;
+  overflow: hidden;
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.54), 0 12px 24px rgba(8, 124, 117, 0.28);
+}
+
+.brand-mark::before {
+  content: "";
+  position: absolute;
+  inset: 5px;
+  border-radius: 6px;
+  background:
+    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 42%),
+    var(--midnight);
+  clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
+  z-index: -1;
+}
+
+.brand-mark::after {
+  content: "";
+  position: absolute;
+  width: 23px;
+  height: 2px;
+  right: -5px;
+  bottom: 12px;
+  background: var(--signal);
+  box-shadow: -12px -15px 0 rgba(79, 231, 215, 0.72), -22px 10px 0 rgba(214, 184, 106, 0.78);
+}
+
+.brand-mark span {
+  display: block;
+  color: #f7fbfc;
+  font-weight: 950;
+  letter-spacing: 0;
+  text-shadow: 0 0 16px rgba(133, 244, 255, 0.82);
 }
 
 .brand strong {
   display: block;
   line-height: 1.1;
+  color: var(--ink);
+  font-weight: 900;
 }
 
 .brand span {
@@ -180,6 +246,15 @@ button {
   color: var(--muted);
   font-size: 13px;
   margin-top: 2px;
+}
+
+.brand .brand-mark span {
+  color: #f7fbfc;
+  font-size: 12px;
+  font-weight: 950;
+  letter-spacing: 0;
+  margin-top: 0;
+  text-shadow: 0 0 16px rgba(133, 244, 255, 0.82);
 }
 
 .sidebar .brand span,
@@ -209,20 +284,25 @@ button {
 
 .primary-action {
   padding: 0 15px;
-  color: white;
-  background: var(--teal);
-  border-color: var(--teal);
+  color: #041110;
+  background:
+    linear-gradient(135deg, var(--electric), var(--gold));
+  border-color: rgba(8, 124, 117, 0.44);
+  box-shadow: 0 10px 22px rgba(8, 124, 117, 0.18);
 }
 
 .primary-action:hover {
-  background: var(--teal-dark);
+  background:
+    linear-gradient(135deg, var(--signal), var(--electric));
 }
 
 .secondary-action,
 .ghost-button {
   padding: 0 12px;
   color: var(--ink);
-  background: white;
+  background:
+    linear-gradient(180deg, #ffffff, #f6fafb);
+  border-color: rgba(41, 75, 121, 0.18);
 }
 
 .icon-button {
@@ -259,7 +339,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 8px;
   overflow: hidden;
-  background: #eef3f5;
+  background: #eaf2f4;
 }
 
 .segmented-control button {
@@ -273,7 +353,7 @@ button {
 
 .segmented-control button.active {
   color: var(--ink);
-  background: white;
+  background: linear-gradient(180deg, white, #f7fbfc);
 }
 
 .user-session {
@@ -284,12 +364,13 @@ button {
   gap: 2px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background: white;
+  background:
+    linear-gradient(180deg, white, #f8fbfc);
   padding: 6px 8px;
 }
 
 .user-session span {
-  color: var(--teal);
+  color: var(--teal-dark);
   font-size: 11px;
   font-weight: 850;
 }
@@ -327,9 +408,11 @@ button {
 .assistant-pane,
 .contract-picker,
 .signature-dialog {
-  border: 1px solid var(--line);
+  border: 1px solid rgba(8, 124, 117, 0.14);
   border-radius: 8px;
-  background: var(--panel);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 252, 0.98)),
+    var(--panel);
   box-shadow: var(--shadow);
 }
 
@@ -355,6 +438,33 @@ button {
   margin: 6px 0 0;
   color: var(--muted);
   line-height: 1.42;
+}
+
+.save-destination {
+  display: flex;
+  align-items: end;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-top: 12px;
+}
+
+.save-destination label {
+  min-width: min(360px, 100%);
+  display: grid;
+  gap: 5px;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.save-destination select {
+  min-height: 38px;
+  border: 1px solid rgba(41, 75, 121, 0.18);
+  border-radius: 8px;
+  color: var(--ink);
+  background:
+    linear-gradient(180deg, #ffffff, #f7fbfc);
+  padding: 0 10px;
 }
 
 .summary-actions span {
@@ -389,9 +499,11 @@ button {
   grid-template-columns: repeat(6, minmax(110px, 1fr));
   gap: 8px;
   align-items: end;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(8, 124, 117, 0.14);
   border-radius: 8px;
-  background: #f8fafb;
+  background:
+    linear-gradient(90deg, rgba(79, 231, 215, 0.05), transparent),
+    #f8fafb;
   padding: 10px;
   margin-bottom: 10px;
 }
@@ -429,7 +541,7 @@ button {
   width: 100%;
   min-height: calc(100vh - 270px);
   resize: vertical;
-  border: 1px solid var(--line);
+  border: 1px solid rgba(41, 75, 121, 0.18);
   border-radius: 8px;
   padding: 22px 24px;
   color: #26333a;
@@ -437,7 +549,9 @@ button {
   font-size: 12pt;
   line-height: 1.5;
   text-align: justify;
-  background: #fcfdfd;
+  background:
+    linear-gradient(180deg, #ffffff, #fbfdfd);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
 }
 
 #contract-editor[readonly] {
@@ -457,9 +571,11 @@ button {
 }
 
 .role-drop {
-  border: 1px dashed #8aa4b2;
+  border: 1px dashed rgba(8, 124, 117, 0.45);
   border-radius: 8px;
-  background: #f4f8f9;
+  background:
+    linear-gradient(180deg, rgba(79, 231, 215, 0.045), rgba(255, 255, 255, 0.78)),
+    #f4f8f9;
   padding: 12px;
   display: grid;
   gap: 8px;
@@ -536,7 +652,10 @@ button {
 .side-drawer {
   left: 0;
   color: white;
-  background: linear-gradient(180deg, #172026 0%, #20313a 100%);
+  background:
+    linear-gradient(135deg, rgba(79, 231, 215, 0.08) 0 1px, transparent 1px 18px),
+    linear-gradient(180deg, var(--midnight) 0%, #17313b 100%);
+  background-size: 18px 18px, auto;
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -571,10 +690,10 @@ button {
 }
 
 .sidebar-panel {
-  border: 1px solid rgba(255, 255, 255, 0.14);
+  border: 1px solid rgba(133, 244, 255, 0.14);
   border-radius: 8px;
   padding: 14px;
-  background: rgba(255, 255, 255, 0.06);
+  background: rgba(255, 255, 255, 0.065);
 }
 
 .folder-create {
@@ -608,8 +727,8 @@ button {
 }
 
 .folder-item.active {
-  background: rgba(217, 183, 95, 0.16);
-  border-color: rgba(217, 183, 95, 0.56);
+  background: rgba(79, 231, 215, 0.14);
+  border-color: rgba(79, 231, 215, 0.58);
 }
 
 .saved-contract {
@@ -983,6 +1102,10 @@ dialog::backdrop {
   .selected-summary,
   .section-heading,
   .dialog-close-row {
+    display: grid;
+  }
+
+  .save-destination {
     display: grid;
   }
 

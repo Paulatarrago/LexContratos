@@ -10,7 +10,7 @@
     <section class="auth-shell" id="auth-shell" aria-label="Acceso a LexContratos">
       <article class="auth-card" id="auth-login">
         <div class="brand">
-          <div class="brand-mark" aria-hidden="true">LC</div>
+          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
           <div>
             <strong>LexContratos</strong>
             <span>Acceso profesional</span>
@@ -32,7 +32,7 @@
 
       <article class="auth-card is-hidden" id="auth-register">
         <div class="brand">
-          <div class="brand-mark" aria-hidden="true">LC</div>
+          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
           <div>
             <strong>LexContratos</strong>
             <span>Registro</span>
@@ -52,7 +52,7 @@
 
       <article class="auth-card is-hidden" id="auth-recover">
         <div class="brand">
-          <div class="brand-mark" aria-hidden="true">LC</div>
+          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
           <div>
             <strong>LexContratos</strong>
             <span>Recuperación</span>
@@ -70,7 +70,7 @@
 
       <article class="auth-card license-card is-hidden" id="license-required">
         <div class="brand">
-          <div class="brand-mark" aria-hidden="true">LC</div>
+          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
           <div>
             <strong>LexContratos</strong>
             <span>Licencia de uso</span>
@@ -87,7 +87,7 @@
     <main class="app-shell is-hidden" id="app-shell">
       <header class="topbar">
         <div class="brand app-brand">
-          <div class="brand-mark" aria-hidden="true">LC</div>
+          <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
           <div>
             <strong>LexContratos</strong>
             <span>Contratos, masters y firma</span>
@@ -155,6 +155,13 @@
               <p class="eyebrow" id="selected-category">Servicios</p>
               <h2 id="editor-title">Prestación de servicios bajo demanda</h2>
               <p id="selected-description">Machote robusto para adaptar a una operación concreta.</p>
+              <div class="save-destination">
+                <label>
+                  Guardar en
+                  <select id="contract-folder-select" aria-label="Carpeta donde se guardará este contrato"></select>
+                </label>
+                <button class="secondary-action" id="quick-folder" type="button">Nueva carpeta</button>
+              </div>
             </div>
             <div class="summary-actions">
               <span id="autosave-status">Sin cambios</span>

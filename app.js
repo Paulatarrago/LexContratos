@@ -573,6 +573,7 @@ const roleDropGrid = document.querySelector("#role-drop-grid");
 const folderList = document.querySelector("#folder-list");
 const folderName = document.querySelector("#folder-name");
 const folderRoot = document.querySelector("#folder-root");
+const contractFolderSelect = document.querySelector("#contract-folder-select");
 const savedContractsList = document.querySelector("#saved-contracts");
 const versionList = document.querySelector("#version-list");
 const autosaveStatus = document.querySelector("#autosave-status");
@@ -600,6 +601,7 @@ const assistantPane = document.querySelector("#assistant-pane");
 const signatureDialog = document.querySelector("#signature-dialog");
 const signatureForm = document.querySelector("#signature-form");
 const signerList = document.querySelector("#signer-list");
+const quickFolderButton = document.querySelector("#quick-folder");
 
 let activeUser = loadCurrentUser();
 let templates = loadMasterTemplates();
@@ -1533,6 +1535,14 @@ function renderRequirements() {
     .join("");
 }
 
+function renderFolderSelector() {
+  if (!contractFolderSelect) return;
+  const sorted = folders.slice().sort((a, b) => a.localeCompare(b, "es"));
+  contractFolderSelect.innerHTML = sorted.map((folder) => `<option value="${folder}">${folder}</option>`).join("");
+  if (!sorted.includes(activeFolder)) activeFolder = sorted[0] || "Clientes";
+  contractFolderSelect.value = activeFolder;
+}
+
 function renderFolders() {
   folders.sort((a, b) => a.localeCompare(b, "es"));
   folderList.innerHTML = folders
@@ -1542,6 +1552,7 @@ function renderFolders() {
       return `<button class="folder-item folder-depth-${depth} ${folder === activeFolder ? "active" : ""}" type="button" data-folder="${folder}" title="${folder}">${label}</button>`;
     })
     .join("");
+  renderFolderSelector();
 }
 
 function renderSavedContracts() {
@@ -1686,6 +1697,37 @@ document.querySelector("#replicate-template").addEventListener("click", () => {
 document.querySelector("#rename-template").addEventListener("click", renameActiveTemplate);
 
 document.querySelector("#clear-generales").addEventListener("click", clearGeneralData);
+
+contractFolderSelect.addEventListener("change", () => {
+  activeFolder = contractFolderSelect.value;
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  showToast(`Este contrato se guardará en ${activeFolder}.`);
+});
+
+quickFolderButton.addEventListener("click", () => {
+  const value = window.prompt("Nueva carpeta para este contrato. Ejemplo: Clientes/Cliente Alfa/Servicios 2026", activeFolder.includes("/") ? activeFolder : `${activeFolder}/`);
+  if (!value || !value.trim()) return;
+  const parts = value
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!parts.length) return;
+
+  let path = "";
+  parts.forEach((part) => {
+    path = path ? `${path}/${part}` : part;
+    if (!folders.includes(path)) folders.push(path);
+  });
+
+  activeFolder = path;
+  saveFolders();
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  showToast(`Este contrato se guardará en ${activeFolder}.`);
+});
 
 switchUserButton.addEventListener("click", () => {
   signOut();
@@ -1898,6 +1940,8 @@ folderList.addEventListener("click", (event) => {
   activeFolder = button.dataset.folder;
   renderFolders();
   renderSavedContracts();
+  renderVersions();
+  showToast(`Este contrato se guardará en ${activeFolder}.`);
 });
 
 document.querySelector("#create-folder").addEventListener("click", () => {
