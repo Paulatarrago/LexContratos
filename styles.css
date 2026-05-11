@@ -242,6 +242,36 @@ button {
   font-weight: 760;
 }
 
+.auth-manual {
+  max-width: 780px;
+  border: 1px solid rgba(133, 244, 255, 0.16);
+  border-radius: 8px;
+  padding: 14px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.055));
+}
+
+.auth-manual h2 {
+  margin: 4px 0 10px;
+  color: white;
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.auth-manual ol {
+  display: grid;
+  gap: 7px;
+  margin: 0;
+  padding-left: 20px;
+  color: #c8d8dd;
+  font-size: 13px;
+  line-height: 1.42;
+}
+
+.auth-manual strong {
+  color: white;
+}
+
 .auth-panel-stack {
   width: min(460px, 100%);
 }
@@ -1323,6 +1353,79 @@ dialog::backdrop {
   font-size: 12px;
 }
 
+.user-guide {
+  display: grid;
+  gap: 14px;
+}
+
+.guide-steps {
+  display: grid;
+  gap: 9px;
+}
+
+.guide-steps article {
+  display: grid;
+  grid-template-columns: 32px minmax(0, 1fr);
+  gap: 10px;
+  align-items: start;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background:
+    linear-gradient(180deg, #ffffff, #f8fbfc);
+}
+
+.guide-steps span {
+  width: 32px;
+  height: 32px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
+  color: #041110;
+  background:
+    linear-gradient(135deg, var(--electric), var(--gold));
+  font-weight: 900;
+}
+
+.guide-steps strong,
+.guide-grid strong {
+  display: block;
+  color: var(--ink);
+  font-size: 14px;
+  margin-bottom: 3px;
+}
+
+.guide-steps p,
+.guide-grid p,
+.guide-note {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.guide-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 9px;
+}
+
+.guide-grid article {
+  border: 1px solid rgba(8, 124, 117, 0.14);
+  border-radius: 8px;
+  padding: 10px;
+  background:
+    linear-gradient(180deg, rgba(79, 231, 215, 0.045), rgba(255, 255, 255, 0.82)),
+    #fbfdfd;
+}
+
+.guide-note {
+  border: 1px solid rgba(214, 184, 106, 0.32);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(214, 184, 106, 0.1);
+}
+
 .signature-form {
   display: grid;
   gap: 12px;
@@ -1456,6 +1559,7 @@ dialog::backdrop {
   .format-panel,
   .role-drop-grid,
   .matter-panel,
+  .guide-grid,
   .signer-row {
     grid-template-columns: 1fr;
   }

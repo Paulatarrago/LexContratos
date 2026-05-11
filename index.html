@@ -54,6 +54,19 @@
           <span>4. Edita clausulado</span>
           <span>5. Exporta o firma</span>
         </div>
+
+        <section class="auth-manual" aria-label="Manual rápido de uso">
+          <p class="eyebrow">Manual rápido</p>
+          <h2>Cómo trabajar un contrato en LexContratos</h2>
+          <ol>
+            <li><strong>Selecciona un machote</strong> o importa una plantilla propia.</li>
+            <li><strong>Duplica la plantilla</strong> para trabajar sobre una copia editable.</li>
+            <li><strong>Guarda el contrato</strong> en la carpeta del cliente, proveedor o asunto.</li>
+            <li><strong>Sube documentos por cada parte</strong>: actas, poderes, INE, constancias, correos, Word, PDF, Excel o imágenes.</li>
+            <li><strong>Extrae y revisa los datos</strong>; el abogado valida o corrige antes de completar.</li>
+            <li><strong>Edita el clausulado</strong> libremente y exporta a Word o prepara el envío a firma.</li>
+          </ol>
+        </section>
       </section>
 
       <div class="auth-panel-stack">
@@ -154,6 +167,7 @@
           </label>
           <button class="secondary-action" id="new-template" type="button">Nuevo machote</button>
           <button class="secondary-action" id="toggle-fields" type="button">Datos de partes</button>
+          <button class="secondary-action" id="open-user-guide" type="button">Manual</button>
           <div class="segmented-control language-toggle" role="tablist" aria-label="Idioma del contrato">
             <button class="active" type="button" data-language="es">ES</button>
             <button type="button" data-language="en">EN</button>
@@ -362,6 +376,81 @@
         </section>
       </aside>
     </main>
+
+    <dialog class="user-guide-dialog" id="user-guide-dialog">
+      <form method="dialog" class="dialog-close-row">
+        <div>
+          <p class="eyebrow">Manual de uso</p>
+          <h2>Guía rápida para trabajar contratos</h2>
+          <p class="dialog-copy">LexContratos está pensado para ahorrar captura repetitiva, ordenar expedientes y dejar el contrato listo para revisión, Word o firma. El abogado conserva el control de datos, clausulado y versión final.</p>
+        </div>
+        <button class="icon-button" type="submit" aria-label="Cerrar manual">×</button>
+      </form>
+
+      <section class="user-guide">
+        <div class="guide-steps">
+          <article>
+            <span>1</span>
+            <div>
+              <strong>Elige tu punto de partida</strong>
+              <p>Selecciona un machote precargado o importa tu propio contrato como plantilla.</p>
+            </div>
+          </article>
+          <article>
+            <span>2</span>
+            <div>
+              <strong>Trabaja siempre sobre una copia</strong>
+              <p>Duplica la plantilla para editar sin alterar la versión base.</p>
+            </div>
+          </article>
+          <article>
+            <span>3</span>
+            <div>
+              <strong>Organiza el expediente</strong>
+              <p>Elige dónde guardar el contrato por cliente, proveedor, asunto o carpeta interna.</p>
+            </div>
+          </article>
+          <article>
+            <span>4</span>
+            <div>
+              <strong>Carga documentos por parte</strong>
+              <p>Arrastra actas, poderes, constancias fiscales, INE, correos, Word, PDF, Excel o imágenes en la caja correspondiente.</p>
+            </div>
+          </article>
+          <article>
+            <span>5</span>
+            <div>
+              <strong>Extrae, revisa y corrige</strong>
+              <p>Usa “Extraer y revisar datos” para llenar campos; valida la información y completa manualmente lo que falte.</p>
+            </div>
+          </article>
+          <article>
+            <span>6</span>
+            <div>
+              <strong>Finaliza con criterio profesional</strong>
+              <p>Edita el clausulado, revisa campos pendientes y exporta a Word o prepara el envío a firma.</p>
+            </div>
+          </article>
+        </div>
+
+        <div class="guide-grid">
+          <article>
+            <strong>Consejo práctico</strong>
+            <p>Sube documentos de cada parte en su propia caja para evitar confusiones entre prestador, cliente, proveedor, comprador, vendedor u otro rol.</p>
+          </article>
+          <article>
+            <strong>Antes de exportar</strong>
+            <p>Revisa la lista de datos pendientes. Si falta información, puedes subir otro documento o capturarla manualmente.</p>
+          </article>
+          <article>
+            <strong>Plantillas base</strong>
+            <p>Las plantillas se protegen. Para modificarlas, trabaja una copia y reemplaza la plantilla base solo cuando estés segura.</p>
+          </article>
+        </div>
+
+        <p class="guide-note">LexContratos asiste el llenado y la organización. No sustituye la revisión jurídica ni la decisión final del abogado.</p>
+      </section>
+    </dialog>
 
     <dialog class="contract-picker" id="template-picker">
       <form method="dialog" class="dialog-close-row">
