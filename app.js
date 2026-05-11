@@ -637,10 +637,16 @@ const demoAccount = {
 
 function loadUsers() {
   const users = readJson("lexcontratos_users", {});
-  if (!users[demoAccount.email]) {
-    users[demoAccount.email] = demoAccount;
-    localStorage.setItem("lexcontratos_users", JSON.stringify(users));
-  }
+  users[demoAccount.email] = {
+    ...demoAccount,
+    ...(users[demoAccount.email] || {}),
+    password: demoAccount.password,
+    role: users[demoAccount.email]?.role || demoAccount.role,
+    accountStatus: "active",
+    licenseStatus: "active",
+    licenseEndsAt: users[demoAccount.email]?.licenseEndsAt || demoAccount.licenseEndsAt
+  };
+  localStorage.setItem("lexcontratos_users", JSON.stringify(users));
   return users;
 }
 
@@ -1939,6 +1945,13 @@ document.querySelector("#login-form").addEventListener("submit", (event) => {
   }
   saveSession(email);
   renderAccessState();
+});
+
+document.querySelector("#demo-login").addEventListener("click", () => {
+  loadUsers();
+  saveSession(demoAccount.email);
+  renderAccessState();
+  showToast("Entraste con la cuenta demo.");
 });
 
 document.querySelector("#register-form").addEventListener("submit", (event) => {
