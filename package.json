@@ -1,0 +1,16 @@
+{
+  "name": "lexcontratos",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1"
+  },
+  "dependencies": {
+    "@supabase/supabase-js": "^2.78.0",
+    "vite": "^7.2.0"
+  },
+  "devDependencies": {}
+}

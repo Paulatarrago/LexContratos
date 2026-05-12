@@ -488,6 +488,16 @@
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
+    <script>
+      if (location.protocol === "file:") {
+        window.lexBackend = { enabled: false, reason: "Demo local sin Supabase." };
+      } else {
+        const supabaseRuntime = document.createElement("script");
+        supabaseRuntime.type = "module";
+        supabaseRuntime.src = "./src/supabase-runtime.js";
+        document.currentScript.after(supabaseRuntime);
+      }
+    </script>
     <script src="./template-prestacion-demanda.js"></script>
     <script src="./app.js"></script>
   </body>

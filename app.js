@@ -744,6 +744,8 @@ function loadFolders() {
 
 function saveFolders() {
   localStorage.setItem(userStorageKey("folders"), JSON.stringify(folders));
+  const backend = productionBackend();
+  if (backend) backend.saveFolders(folders).catch((error) => reportBackendError("guardar carpetas", error));
 }
 
 function loadSavedContracts() {
@@ -756,6 +758,9 @@ function loadSavedContracts() {
 
 function saveSavedContracts() {
   localStorage.setItem(userStorageKey("saved_contracts"), JSON.stringify(savedContracts));
+  const backend = productionBackend();
+  const latest = savedContracts[savedContracts.length - 1];
+  if (backend && latest) backend.saveContract(latest).catch((error) => reportBackendError("guardar contrato", error));
 }
 
 function loadVersions() {
@@ -922,8 +927,44 @@ function showAuthPanel(panel) {
   panel.classList.remove("is-hidden");
 }
 
-function renderAccessState() {
+async function renderAccessState() {
   loadUsers();
+  const backend = productionBackend();
+
+  if (backend) {
+    try {
+      const access = await backend.getAccessState();
+      if (!access.user) {
+        appShell.classList.add("is-hidden");
+        authShell.classList.remove("is-hidden");
+        showAuthPanel(authLogin);
+        return;
+      }
+
+      if (!access.hasAccess) {
+        appShell.classList.add("is-hidden");
+        authShell.classList.remove("is-hidden");
+        licenseStatus.innerHTML = `
+          <span>Usuario: ${access.user.email}</span>
+          <span>Estado: ${access.profile?.account_status || "active"}</span>
+          <span>Licencia: ${access.status || "sin licencia"}</span>
+          <span>Rol: ${access.profile?.role || "Usuario"}</span>
+        `;
+        showAuthPanel(licenseRequired);
+        return;
+      }
+
+      authShell.classList.add("is-hidden");
+      appShell.classList.remove("is-hidden");
+      licensePill.textContent = access.profile?.role === "admin" ? "Administrador" : "Licencia activa";
+      currentUserLabel.textContent = access.profile?.full_name || access.user.email;
+      switchActiveUser(access.user.email, false);
+      return;
+    } catch (error) {
+      reportBackendError("validar el acceso", error);
+    }
+  }
+
   const account = currentAccount();
 
   if (!account) {
@@ -953,7 +994,15 @@ function renderAccessState() {
   switchActiveUser(account.email, false);
 }
 
-function signOut() {
+async function signOut() {
+  const backend = productionBackend();
+  if (backend) {
+    try {
+      await backend.signOut();
+    } catch (error) {
+      reportBackendError("cerrar sesión", error);
+    }
+  }
   clearSession();
   appShell.classList.add("is-hidden");
   authShell.classList.remove("is-hidden");
@@ -966,6 +1015,15 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add("visible");
   toastTimer = setTimeout(() => toast.classList.remove("visible"), 3000);
+}
+
+function productionBackend() {
+  return window.lexBackend?.enabled ? window.lexBackend : null;
+}
+
+function reportBackendError(action, error) {
+  console.error(`LexContratos ${action}`, error);
+  showToast(`No se pudo completar ${action}. Revisa la conexión o configuración.`);
 }
 
 function sanitizeFilename(name) {
@@ -1399,7 +1457,12 @@ function autoSaveVersion(reason = "auto") {
   renderVersions();
   autosaveStatus.textContent = "Guardado";
   autosaveStatus.classList.add("autosave-highlight");
-  if (reason === "manual") addMatterEvent("Versión editable guardada");
+  if (reason === "manual") {
+    addMatterEvent("Versión editable guardada");
+    const backend = productionBackend();
+    const latest = versions[versions.length - 1];
+    if (backend && latest) backend.saveVersion(latest).catch((error) => reportBackendError("guardar versión", error));
+  }
 }
 
 function scheduleAutoSave() {
@@ -1867,6 +1930,18 @@ roleDropGrid.addEventListener("change", async (event) => {
     sourceTextsBySide[side].push(entry);
   }
 
+  const backend = productionBackend();
+  if (backend) {
+    const role = getRoles().find((item) => item.side === side);
+    backend
+      .uploadSupportDocuments({
+        folio: previewMatterFolio(),
+        roleLabel: role?.label || "parte",
+        files
+      })
+      .catch((error) => reportBackendError("subir documentos", error));
+  }
+
   renderRoleDrops();
   renderMatterPanel();
   addMatterEvent(`Documentos soporte cargados para ${getRoles().find((role) => role.side === side)?.label || "parte"}`);
@@ -1973,10 +2048,20 @@ switchUserButton.addEventListener("click", () => {
   signOut();
 });
 
-document.querySelector("#login-form").addEventListener("submit", (event) => {
+document.querySelector("#login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const email = document.querySelector("#login-email").value.trim();
   const password = document.querySelector("#login-password").value;
+  const backend = productionBackend();
+  if (backend) {
+    try {
+      await backend.signIn(email, password);
+      await renderAccessState();
+    } catch (error) {
+      showToast(error.message || "No se pudo iniciar sesión.");
+    }
+    return;
+  }
   const user = loadUsers()[email];
   if (!user || user.password !== password) {
     showToast("Usuario o contraseña incorrectos.");
@@ -1987,14 +2072,33 @@ document.querySelector("#login-form").addEventListener("submit", (event) => {
 });
 
 document.querySelector("#demo-login").addEventListener("click", () => {
+  if (productionBackend()) {
+    showToast("El demo local está desactivado cuando Supabase está conectado.");
+    return;
+  }
   loadUsers();
   saveSession(demoAccount.email);
   renderAccessState();
   showToast("Entraste con la cuenta demo.");
 });
 
-document.querySelector("#register-form").addEventListener("submit", (event) => {
+document.querySelector("#register-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const backend = productionBackend();
+  if (backend) {
+    try {
+      await backend.signUp(
+        document.querySelector("#register-email").value.trim(),
+        document.querySelector("#register-password").value,
+        document.querySelector("#register-name").value.trim()
+      );
+      showToast("Usuario creado. Revisa tu correo si Supabase requiere confirmación.");
+      showAuthPanel(authLogin);
+    } catch (error) {
+      showToast(error.message || "No se pudo crear el usuario.");
+    }
+    return;
+  }
   const users = loadUsers();
   const email = document.querySelector("#register-email").value.trim();
   if (users[email]) {
@@ -2015,8 +2119,19 @@ document.querySelector("#register-form").addEventListener("submit", (event) => {
   renderAccessState();
 });
 
-document.querySelector("#recover-form").addEventListener("submit", (event) => {
+document.querySelector("#recover-form").addEventListener("submit", async (event) => {
   event.preventDefault();
+  const backend = productionBackend();
+  if (backend) {
+    try {
+      await backend.resetPassword(document.querySelector("#recover-email").value.trim());
+      showToast("Te enviamos un correo para recuperar tu contraseña.");
+      showAuthPanel(authLogin);
+    } catch (error) {
+      showToast(error.message || "No se pudo enviar la recuperación.");
+    }
+    return;
+  }
   showToast("Recuperación preparada. En producción se enviará un correo seguro.");
   showAuthPanel(authLogin);
 });
@@ -2026,6 +2141,10 @@ document.querySelector("#show-recover").addEventListener("click", () => showAuth
 document.querySelectorAll(".show-login").forEach((button) => button.addEventListener("click", () => showAuthPanel(authLogin)));
 
 document.querySelector("#activate-demo-license").addEventListener("click", () => {
+  if (productionBackend()) {
+    showToast("La licencia debe activarse desde el administrador o el proveedor de pagos.");
+    return;
+  }
   const session = loadSession();
   if (!session?.email) return;
   const users = loadUsers();
@@ -2280,6 +2399,10 @@ editor.addEventListener("input", scheduleAutoSave);
 });
 
 document.querySelector("#apply-legal-format").addEventListener("click", applyDefaultLegalFormat);
+
+window.addEventListener("lexbackendready", () => {
+  renderAccessState();
+});
 
 renderUserSession();
 renderMasterInsights();
