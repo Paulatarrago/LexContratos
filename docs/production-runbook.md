@@ -11,6 +11,8 @@ Esta fase deja la base productiva lista sin romper el demo local.
 - Esquema SQL para usuarios, licencias, carpetas, expedientes, contratos, versiones, documentos, datos extraídos y paquetes de firma.
 - Row Level Security para separar información por usuario.
 - Storage privado para documentos en el bucket `contract-documents`.
+- Endpoint de contacto con Resend y respuesta automatica.
+- Endpoint seguro para extraccion documental con IA.
 - Sin Supabase configurado, la app sigue funcionando como demo local.
 
 ## Pasos para activar Supabase
@@ -29,6 +31,12 @@ Usar `supabase/activate-first-admin.sql` y cambiar `TU_CORREO_AQUI` por el corre
 VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=TU_LLAVE_PUBLICA
 VITE_SUPABASE_STORAGE_BUCKET=contract-documents
+OPENAI_API_KEY=TU_LLAVE_PRIVADA_OPENAI
+OPENAI_MODEL=gpt-4.1-mini
+RESEND_API_KEY=TU_LLAVE_RESEND
+RESEND_FROM=LexContratos <no-reply@lexcontratos.com>
+RESEND_REPLY_TO=contacto@lexcontratos.com
+CONTACT_TO=contacto@lexcontratos.com
 ```
 
 7. Instalar dependencias y correr la app:
@@ -45,12 +53,18 @@ npm run dev
 3. Configurar las mismas variables de entorno.
 4. Build command: `npm run build`.
 5. Output: `dist`.
+6. Conectar `lexcontratos.com` como dominio.
+
+## Correos e IA
+
+- Guia de correo: `docs/email-setup.md`.
+- Guia de extraccion documental: `docs/ai-extraction.md`.
 
 ## Pendientes de fase 2
 
 - Migrar contratos existentes de localStorage a Supabase.
-- Conectar extracción real de PDF, Word, Excel e imágenes.
+- Probar extraccion real de PDF, Word, Excel e imagenes ya desplegada en Vercel con `OPENAI_API_KEY`.
 - Generar `.docx` real en backend.
 - Conectar Dropbox Sign con serverless functions.
-- Conectar Resend para correos propios de producto, si se decide usarlo además de Supabase Auth.
+- Personalizar plantillas de correo en Supabase Auth.
 - Integrar pagos y licencias automáticas.

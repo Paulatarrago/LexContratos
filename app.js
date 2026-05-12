@@ -1043,6 +1043,25 @@ function reportBackendError(action, error) {
   showToast(`No se pudo completar ${action}. Revisa la conexión o configuración.`);
 }
 
+document.querySelector("#contact-form")?.addEventListener("submit", async (event) => {
+  event.preventDefault();
+  const form = event.currentTarget;
+  const payload = Object.fromEntries(new FormData(form).entries());
+  try {
+    const response = await fetch("/api/contact", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) throw new Error(await response.text());
+    form.reset();
+    showToast("Mensaje enviado. Te llegará una confirmación por correo.");
+  } catch (error) {
+    console.warn("LexContratos contacto no disponible", error);
+    showToast("El formulario se activará en producción. Por ahora escribe a contacto@lexcontratos.com.");
+  }
+});
+
 function sanitizeFilename(name) {
   return name
     .normalize("NFD")
@@ -1147,6 +1166,7 @@ function classifySupportDocument(fileName) {
   if (clean.endsWith(".xls") || clean.endsWith(".xlsx") || clean.endsWith(".csv")) return "Base de datos o Excel";
   if (clean.endsWith(".pdf")) return "PDF soporte";
   if (clean.endsWith(".doc") || clean.endsWith(".docx")) return "Word soporte";
+  if (clean.endsWith(".jpg") || clean.endsWith(".jpeg") || clean.endsWith(".png") || clean.endsWith(".webp")) return "Imagen soporte";
   return "Documento soporte";
 }
 
@@ -1823,7 +1843,7 @@ function renderRoleDrops() {
             <span>${files.length} archivo${files.length === 1 ? "" : "s"}</span>
           </header>
           <label>
-            <input class="role-file-input" type="file" multiple accept=".csv,.txt,.eml,.pdf,.xlsx,.xls,.docx" data-side="${role.side}" />
+            <input class="role-file-input" type="file" multiple accept=".csv,.txt,.eml,.pdf,.xlsx,.xls,.docx,.jpg,.jpeg,.png,.webp" data-side="${role.side}" />
             <strong>Sube documentos corporativos, constancias fiscales e identificaciones por cada parte.</strong>
             <small>Esta caja corresponde a ${role.label}. También puedes capturar los datos manualmente.</small>
           </label>
