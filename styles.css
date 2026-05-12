@@ -7,6 +7,8 @@
   --teal: #0b4ea2;
   --teal-dark: #073b7a;
   --blue: #082f6f;
+  --sky: #dbeafe;
+  --sky-strong: #60a5fa;
   --gold: #0b4ea2;
   --midnight: #071e41;
   --carbon: #0b2a55;
@@ -49,27 +51,27 @@ button {
   min-height: 100vh;
   display: grid;
   grid-template-columns: minmax(0, 1.12fr) minmax(340px, 460px);
-  align-items: center;
-  gap: 34px;
-  padding: 42px;
+  align-items: start;
+  gap: 28px;
+  padding: 22px 42px;
   background: var(--midnight);
   overflow: hidden auto;
 }
 
 .auth-hero {
   display: grid;
-  gap: 18px;
+  gap: 12px;
   max-width: 920px;
   color: white;
 }
 
 .auth-badge {
   width: min(760px, 100%);
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(219, 234, 254, 0.75);
   border-radius: 8px;
   padding: 10px 12px;
-  color: white;
-  background: rgba(255, 255, 255, 0.08);
+  color: var(--blue);
+  background: var(--sky);
   font-size: 13px;
   line-height: 1.35;
   font-weight: 860;
@@ -79,7 +81,7 @@ button {
   max-width: 780px;
   margin: 0;
   color: white;
-  font-size: clamp(38px, 5vw, 70px);
+  font-size: clamp(34px, 4.5vw, 62px);
   line-height: 0.98;
   letter-spacing: 0;
 }
@@ -88,21 +90,21 @@ button {
   max-width: 760px;
   margin: 0;
   color: #d8e6f7;
-  font-size: 18px;
+  font-size: 16px;
   line-height: 1.55;
 }
 
 .auth-value-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 10px;
+  gap: 8px;
   max-width: 780px;
 }
 
 .auth-value-grid article {
   border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
-  padding: 12px;
+  padding: 10px;
   background: rgba(255, 255, 255, 0.08);
 }
 
@@ -122,7 +124,7 @@ button {
 
 .auth-visual {
   position: relative;
-  min-height: 250px;
+  min-height: 210px;
   max-width: 760px;
   display: grid;
   align-items: center;
@@ -133,7 +135,7 @@ button {
   width: min(500px, 88%);
   border: 1px solid var(--line);
   border-radius: 8px;
-  padding: 18px;
+  padding: 14px;
   color: var(--ink);
   background: white;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.36);
@@ -233,7 +235,7 @@ button {
   justify-self: center;
   border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 8px;
-  padding: 16px;
+  padding: 14px;
   background: white;
   box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
 }
@@ -258,7 +260,7 @@ button {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
-  background: #f8fbff;
+  background: var(--sky);
 }
 
 .manual-card-grid span {
@@ -268,7 +270,7 @@ button {
   place-items: center;
   border-radius: 8px;
   color: white;
-  background: var(--blue);
+  background: var(--sky-strong);
   font-weight: 900;
 }
 
@@ -292,21 +294,21 @@ button {
   width: min(820px, 100%);
   border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  padding: 14px;
+  padding: 12px;
   background: rgba(255, 255, 255, 0.09);
 }
 
 .auth-security h2 {
   margin: 4px 0 8px;
   color: white;
-  font-size: 20px;
+  font-size: 18px;
   line-height: 1.2;
 }
 
 .auth-security p {
   margin: 0;
   color: #d8e6f7;
-  font-size: 14px;
+  font-size: 13px;
   line-height: 1.5;
 }
 
@@ -322,6 +324,8 @@ button {
 
 .auth-panel-stack {
   width: min(460px, 100%);
+  align-self: start;
+  margin-top: 8px;
 }
 
 .auth-card {
@@ -430,7 +434,7 @@ button {
   justify-content: space-between;
   gap: 18px;
   align-items: center;
-  padding: 12px 16px;
+  padding: 8px 12px;
   background: rgba(255, 255, 255, 0.97);
   border-bottom: 1px solid var(--line);
   backdrop-filter: blur(14px);
@@ -642,12 +646,12 @@ button {
 
 .workspace {
   min-width: 0;
-  padding: 14px 16px 18px;
+  padding: 8px 12px 12px;
 }
 
 .contract-stage {
   display: grid;
-  gap: 12px;
+  gap: 8px;
   max-width: 1720px;
   margin: 0 auto;
 }
@@ -702,9 +706,10 @@ button {
 .selected-summary {
   display: flex;
   justify-content: space-between;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 12px 14px;
+  align-items: center;
+  gap: 12px;
+  padding: 8px 10px;
+  border-top: 3px solid var(--sky-strong);
 }
 
 .selected-summary h2,
@@ -718,9 +723,10 @@ button {
 }
 
 .selected-summary p:not(.eyebrow) {
-  margin: 6px 0 0;
+  margin: 3px 0 0;
   color: var(--muted);
   line-height: 1.42;
+  font-size: 13px;
 }
 
 .save-destination {
@@ -728,7 +734,7 @@ button {
   align-items: end;
   gap: 8px;
   flex-wrap: wrap;
-  margin-top: 12px;
+  margin-top: 6px;
 }
 
 .save-destination label {
@@ -830,7 +836,7 @@ button {
 }
 
 .document-focus {
-  padding: 12px;
+  padding: 8px 10px;
 }
 
 .editor-guidance,
@@ -840,6 +846,11 @@ button {
   color: var(--muted);
   font-size: 13px;
   line-height: 1.45;
+}
+
+.document-focus .editor-guidance,
+.party-upload-section .section-help {
+  display: none;
 }
 
 .dialog-copy {
@@ -853,19 +864,19 @@ button {
   justify-content: space-between;
   align-items: center;
   gap: 12px;
-  margin-bottom: 10px;
+  margin-bottom: 6px;
 }
 
 .format-panel {
   display: grid;
-  grid-template-columns: repeat(6, minmax(110px, 1fr));
-  gap: 8px;
+  grid-template-columns: repeat(6, minmax(90px, 1fr));
+  gap: 6px;
   align-items: end;
-  border: 1px solid rgba(8, 124, 117, 0.14);
+  border: 1px solid var(--line);
   border-radius: 8px;
   background: #f8fbff;
-  padding: 10px;
-  margin-bottom: 10px;
+  padding: 7px;
+  margin-bottom: 7px;
 }
 
 .format-panel label {
@@ -899,11 +910,11 @@ button {
 
 #contract-editor {
   width: 100%;
-  min-height: calc(100vh - 270px);
+  min-height: clamp(330px, 46vh, 620px);
   resize: vertical;
   border: 1px solid rgba(41, 75, 121, 0.18);
   border-radius: 8px;
-  padding: 22px 24px;
+  padding: 18px 22px;
   color: #26333a;
   font-family: "Times New Roman", Times, serif;
   font-size: 12pt;
@@ -920,22 +931,23 @@ button {
 }
 
 .party-upload-section {
-  padding: 12px;
+  padding: 8px 10px;
+  border-top: 3px solid var(--sky);
 }
 
 .role-drop-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 12px;
+  gap: 8px;
 }
 
 .role-drop {
-  border: 1px dashed rgba(8, 124, 117, 0.45);
+  border: 1px dashed rgba(96, 165, 250, 0.75);
   border-radius: 8px;
   background: #f8fbff;
-  padding: 12px;
+  padding: 8px;
   display: grid;
-  gap: 8px;
+  gap: 5px;
 }
 
 .role-drop header {
@@ -947,7 +959,7 @@ button {
 
 .role-drop h3 {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
 }
 
 .role-drop span {
@@ -956,7 +968,7 @@ button {
 }
 
 .role-drop label {
-  min-height: 68px;
+  min-height: 52px;
   display: grid;
   place-items: center;
   gap: 4px;
@@ -966,7 +978,7 @@ button {
   border: 1px solid var(--line);
   color: var(--muted);
   position: relative;
-  padding: 10px;
+  padding: 8px;
 }
 
 .role-drop label strong {
@@ -1536,8 +1548,8 @@ dialog::backdrop {
 
 @media (max-width: 760px) {
   .auth-shell {
-    padding: 18px;
-    gap: 18px;
+    padding: 12px;
+    gap: 12px;
   }
 
   .auth-value-grid {
@@ -1565,7 +1577,45 @@ dialog::backdrop {
 
   .workspace,
   .topbar {
-    padding: 12px;
+    padding: 8px;
+  }
+
+  .topbar {
+    gap: 8px;
+  }
+
+  .brand-mark {
+    width: 36px;
+    height: 36px;
+  }
+
+  .brand span {
+    font-size: 12px;
+  }
+
+  .topbar-actions {
+    gap: 6px;
+  }
+
+  .primary-action,
+  .secondary-action,
+  .ghost-button,
+  .icon-button,
+  .segmented-control button {
+    min-height: 32px;
+    padding: 0 9px;
+    font-size: 13px;
+  }
+
+  .user-session {
+    min-height: 32px;
+    grid-template-columns: auto auto auto;
+    padding: 4px 6px;
+  }
+
+  .user-session .ghost-button {
+    grid-column: auto;
+    min-height: 24px;
   }
 
   .app-brand {
@@ -1579,20 +1629,99 @@ dialog::backdrop {
     display: grid;
   }
 
+  .selected-summary {
+    display: flex;
+    padding: 7px 8px;
+    gap: 8px;
+  }
+
+  .selected-summary h2 {
+    font-size: 16px;
+  }
+
+  .selected-summary p:not(.eyebrow),
+  .save-destination,
+  .summary-actions span {
+    display: none;
+  }
+
+  .summary-actions {
+    gap: 5px;
+  }
+
+  .summary-actions .secondary-action,
+  .summary-actions .primary-action {
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
   .save-destination {
     display: grid;
   }
 
+  .selected-summary .save-destination {
+    display: none;
+  }
+
+  .document-focus {
+    padding: 7px 8px;
+  }
+
+  .section-heading {
+    gap: 6px;
+    margin-bottom: 5px;
+  }
+
+  .section-heading h2 {
+    font-size: 16px;
+  }
+
+  .editor-actions {
+    gap: 5px;
+  }
+
+  .editor-actions .secondary-action {
+    min-height: 32px;
+    padding: 0 8px;
+    font-size: 13px;
+  }
+
+  .format-panel {
+    display: none;
+  }
+
   .format-panel,
-  .role-drop-grid,
   .matter-panel,
   .guide-grid,
   .signer-row {
     grid-template-columns: 1fr;
   }
 
+  .role-drop-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 6px;
+  }
+
   #contract-editor {
-    min-height: 520px;
-    padding: 16px;
+    min-height: 210px;
+    padding: 12px 14px;
+  }
+
+  .party-upload-section {
+    padding: 7px 8px;
+  }
+
+  .role-drop {
+    padding: 7px;
+  }
+
+  .role-drop label {
+    min-height: 46px;
+  }
+
+  .role-drop label strong,
+  .role-drop label small {
+    font-size: 11px;
   }
 }

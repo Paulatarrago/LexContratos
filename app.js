@@ -1712,8 +1712,8 @@ function renderRoleDrops() {
           </header>
           <label>
             <input class="role-file-input" type="file" multiple accept=".csv,.txt,.eml,.pdf,.xlsx,.xls,.docx" data-side="${role.side}" />
-            <strong>Arrastra aquí actas, poderes, constancias fiscales, identificaciones, correos, PDF, Word o Excel de ${role.label}.</strong>
-            <small>También puedes capturar los datos manualmente.</small>
+            <strong>Sube documentos corporativos, constancias fiscales e identificaciones por cada parte.</strong>
+            <small>Esta caja corresponde a ${role.label}. También puedes capturar los datos manualmente.</small>
           </label>
           <ul class="role-file-list">${files.map((file) => `<li><span>${file.type || classifySupportDocument(file.name)} · ${file.name}</span><strong>${file.size}</strong></li>`).join("")}</ul>
         </section>
