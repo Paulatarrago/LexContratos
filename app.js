@@ -922,8 +922,24 @@ function hasActiveAccess(account) {
   return Boolean(account && account.accountStatus === "active" && (account.licenseStatus === "active" || account.role === "Administrador"));
 }
 
+function syncBackendAccount(access) {
+  if (!access?.user?.email) return;
+  const users = loadUsers();
+  users[access.user.email] = {
+    email: access.user.email,
+    password: "",
+    name: access.profile?.full_name || access.user.email,
+    role: access.profile?.role === "admin" ? "Administrador" : "Usuario",
+    accountStatus: access.profile?.account_status || "active",
+    licenseStatus: ["active", "trial"].includes(access.status) || access.profile?.role === "admin" ? "active" : access.status || "inactive",
+    licenseEndsAt: access.license?.ends_at || ""
+  };
+  saveUsers(users);
+}
+
 function showAuthPanel(panel) {
   [authLogin, authRegister, authRecover, licenseRequired].forEach((item) => item.classList.add("is-hidden"));
+  authShell.classList.toggle("production-auth", Boolean(productionBackend()));
   panel.classList.remove("is-hidden");
 }
 
@@ -956,9 +972,10 @@ async function renderAccessState() {
 
       authShell.classList.add("is-hidden");
       appShell.classList.remove("is-hidden");
+      syncBackendAccount(access);
+      switchActiveUser(access.user.email, false);
       licensePill.textContent = access.profile?.role === "admin" ? "Administrador" : "Licencia activa";
       currentUserLabel.textContent = access.profile?.full_name || access.user.email;
-      switchActiveUser(access.user.email, false);
       return;
     } catch (error) {
       reportBackendError("validar el acceso", error);
@@ -1900,6 +1917,36 @@ function applyDetectedData(updates) {
   renderMatterPanel();
 }
 
+function normalizeExtractionValues(result) {
+  const source = result?.values || result?.fields || result || {};
+  const updates = {};
+  Object.entries(source).forEach(([name, payload]) => {
+    const value = typeof payload === "string" ? payload : payload?.value;
+    if (partyForm.elements[name] && String(value || "").trim()) {
+      updates[name] = String(value).trim();
+    }
+  });
+  return updates;
+}
+
+async function extractRoleDataWithAi(role) {
+  const backend = productionBackend();
+  if (!backend?.extractPartyData) return {};
+  const entries = sourceTextsBySide[role.side] || [];
+  const fields = fieldsForRole(role).map(([name, label]) => ({ name, label }));
+  if (!entries.length || !fields.length) return {};
+  const files = entries.map((entry) => entry.file).filter(Boolean);
+  const sourceTexts = entries.map((entry) => entry.text).filter(Boolean);
+  const result = await backend.extractPartyData({
+    roleLabel: role.label,
+    side: role.side,
+    fields,
+    files,
+    sourceTexts
+  });
+  return normalizeExtractionValues(result);
+}
+
 templateGrid.addEventListener("click", (event) => {
   const card = event.target.closest(".template-card");
   if (!card) return;
@@ -1925,7 +1972,7 @@ roleDropGrid.addEventListener("change", async (event) => {
   sourceTextsBySide[side] = [];
 
   for (const file of files) {
-    const entry = { name: file.name, size: `${Math.ceil(file.size / 1024)} KB`, type: classifySupportDocument(file.name), text: "" };
+    const entry = { name: file.name, size: `${Math.ceil(file.size / 1024)} KB`, type: classifySupportDocument(file.name), text: "", file };
     if (/\.(txt|csv|eml)$/i.test(file.name)) entry.text = await file.text();
     sourceTextsBySide[side].push(entry);
   }
@@ -2250,13 +2297,26 @@ document.querySelector("#new-template").addEventListener("click", () => {
   showToast("Machote nuevo listo para redactar.");
 });
 
-document.querySelector("#extract-data").addEventListener("click", () => {
+document.querySelector("#extract-data").addEventListener("click", async () => {
   if (!isWorkingCopy) {
     showToast("Primero duplica la plantilla base. Después carga documentos por parte y revisa los datos.");
     return;
   }
   let detected = {};
+  let aiWasTried = false;
+  showToast("Extrayendo datos por parte. Revisa antes de completar el contrato.");
   for (const role of getRoles()) {
+    try {
+      const aiDetected = await extractRoleDataWithAi(role);
+      if (Object.keys(aiDetected).length) {
+        aiWasTried = true;
+        detected = { ...detected, ...aiDetected };
+        continue;
+      }
+    } catch (error) {
+      aiWasTried = true;
+      console.warn("LexContratos extracción IA no disponible", error);
+    }
     const text = (sourceTextsBySide[role.side] || []).map((file) => file.text).join("\n\n");
     if (text.trim()) detected = { ...detected, ...inferDataFromText(text, role.side) };
   }
@@ -2266,7 +2326,7 @@ document.querySelector("#extract-data").addEventListener("click", () => {
     addMatterEvent(`Datos extraídos y validados: ${Object.keys(detected).length}`);
     showToast(missing ? `Se extrajeron ${Object.keys(detected).length} datos para revisión. Faltan ${missing}: sube otro documento o llena el campo manualmente.` : "Datos de partes completos. Ya puedes completar el contrato.");
   } else {
-    showToast("Carga textos, correos o CSV por cada parte, o llena manualmente los campos faltantes.");
+    showToast(aiWasTried ? "La IA documental aún no está disponible en este entorno. Despliega en Vercel y configura OPENAI_API_KEY." : "Carga textos, correos o CSV por cada parte, o llena manualmente los campos faltantes.");
   }
 });
 

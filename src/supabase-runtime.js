@@ -232,6 +232,27 @@ if (!config.url || !config.publishableKey) {
     return uploaded;
   }
 
+  async function extractPartyData({ roleLabel, side, fields, files, sourceTexts }) {
+    const formData = new FormData();
+    formData.append("roleLabel", roleLabel || "Parte");
+    formData.append("side", side || "");
+    formData.append("fields", JSON.stringify(fields || []));
+    (sourceTexts || []).forEach((text) => {
+      if (text?.trim()) formData.append("sourceText", text);
+    });
+    (files || []).forEach((file) => formData.append("files", file, file.name));
+
+    const response = await fetch("/api/extract-party-data", {
+      method: "POST",
+      body: formData
+    });
+    if (!response.ok) {
+      const message = await response.text();
+      throw new Error(message || "No se pudo extraer información con IA.");
+    }
+    return response.json();
+  }
+
   announceBackend({
     enabled: true,
     supabase,
@@ -243,6 +264,7 @@ if (!config.url || !config.publishableKey) {
     saveFolders,
     saveContract,
     saveVersion,
-    uploadSupportDocuments
+    uploadSupportDocuments,
+    extractPartyData
   });
 }
