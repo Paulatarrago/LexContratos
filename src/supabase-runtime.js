@@ -26,7 +26,13 @@ if (!config.url || !config.publishableKey) {
     reason: "Supabase no configurado. Usando demo local."
   });
 } else {
-  const { createClient } = await import("@supabase/supabase-js");
+  let createClient;
+  try {
+    ({ createClient } = await import("@supabase/supabase-js"));
+  } catch (error) {
+    ({ createClient } = await import("https://esm.sh/@supabase/supabase-js@2"));
+  }
+
   const supabase = createClient(config.url, config.publishableKey, {
     auth: {
       persistSession: true,

@@ -21,18 +21,7 @@ Esta fase deja la base productiva lista sin romper el demo local.
 4. Crear una cuenta desde LexContratos o desde Supabase Auth.
 5. Activar la licencia del usuario en SQL:
 
-```sql
-insert into public.licenses (user_id, status, plan, starts_at)
-select id, 'active', 'internal', now()
-from auth.users
-where email = 'correo@ejemplo.com'
-on conflict (user_id) do update
-set status = 'active', plan = 'internal', updated_at = now();
-
-update public.profiles
-set license_status = 'active'
-where email = 'correo@ejemplo.com';
-```
+Usar `supabase/activate-first-admin.sql` y cambiar `TU_CORREO_AQUI` por el correo registrado.
 
 6. Crear un archivo `.env` local:
 
