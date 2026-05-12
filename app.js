@@ -610,8 +610,8 @@ const matterHistory = document.querySelector("#matter-history");
 
 let activeUser = loadCurrentUser();
 let templates = loadMasterTemplates();
-let activeTemplate = templates.prestacionDemandaEjemplo ? "prestacionDemandaEjemplo" : "services";
-let activeSourceMaster = activeTemplate;
+let activeTemplate = null;
+let activeSourceMaster = null;
 let isWorkingCopy = false;
 let activeCategory = "Todos";
 let activeLanguage = "es";
@@ -818,6 +818,30 @@ function renderMasterInsights() {
     : `<span>Cuando reemplaces una plantilla base, LexContratos registrará mejoras anonimizadas para nutrir la biblioteca.</span>`;
 }
 
+function clearWorkspaceState() {
+  activeTemplate = null;
+  activeSourceMaster = null;
+  isWorkingCopy = false;
+  sourceTextsBySide = { A: [], B: [] };
+  activeMatterFolio = null;
+  matterHistoryEvents = [];
+  selectedCategory.textContent = "Inicio";
+  editorTitle.textContent = "Selecciona o importa un machote";
+  selectedDescription.textContent = "El contrato aparecerá aquí cuando elijas una plantilla base o importes un machote propio.";
+  editor.value = "";
+  editor.readOnly = true;
+  autosaveStatus.textContent = "Sin contrato seleccionado";
+  autosaveStatus.classList.remove("autosave-highlight");
+  renameTemplateButton.textContent = "Nombre protegido";
+  renameTemplateButton.title = "Selecciona un machote y duplica la plantilla para crear una copia editable.";
+  renderTemplates();
+  renderDynamicFields();
+  renderCustomFields();
+  renderRoleDrops();
+  renderRequirements();
+  renderMatterPanel();
+}
+
 function scrubKnownPartyData(text) {
   let scrubbed = text;
   const values = getPartyData();
@@ -865,8 +889,8 @@ function switchActiveUser(user, announce = true) {
   activeUser = user;
   saveCurrentUser(user);
   templates = loadMasterTemplates();
-  activeTemplate = templates.prestacionDemandaEjemplo ? "prestacionDemandaEjemplo" : "services";
-  activeSourceMaster = activeTemplate;
+  activeTemplate = null;
+  activeSourceMaster = null;
   isWorkingCopy = false;
   sourceTextsBySide = { A: [], B: [] };
   folders = loadFolders();
@@ -879,7 +903,7 @@ function switchActiveUser(user, announce = true) {
   renderFolders();
   renderSavedContracts();
   renderVersions();
-  loadTemplate(activeTemplate);
+  clearWorkspaceState();
   if (announce) showToast(`Sesión cambiada a ${activeUser}. Biblioteca personal cargada.`);
 }
 
@@ -1302,6 +1326,7 @@ FIFTH. Documentation. Corporate, tax, operational and legal documents used to pr
 
 function bodyForTemplate(key) {
   const template = templates[key];
+  if (!template) return "";
   if (activeLanguage === "en") return template.bodyEn || buildEnglishTemplate(template);
   const body = template.body || "";
   if (template.master || body.includes("CLÁUSULAS DE PROTECCIÓN REFORZADA") || body.includes("DÉCIMA")) return body;
@@ -1310,7 +1335,10 @@ function bodyForTemplate(key) {
 
 function createWorkingCopy(sourceKey, customBody) {
   const source = templates[sourceKey];
-  if (!source) return;
+  if (!source) {
+    showToast("Primero selecciona un machote.");
+    return;
+  }
   const key = `work-${Date.now()}`;
   const body = customBody || bodyForTemplate(sourceKey);
   const prepared = prepareTemplateFields(body, source.customFields || []);
@@ -1387,6 +1415,10 @@ function scheduleAutoSave() {
 }
 
 function loadTemplate(key) {
+  if (!templates[key]) {
+    clearWorkspaceState();
+    return;
+  }
   activeTemplate = key;
   activeSourceMaster = templates[key]?.sourceMaster || (templates[key]?.master ? key : null);
   isWorkingCopy = !templates[key]?.master;
@@ -1853,6 +1885,10 @@ document.querySelectorAll(".language-toggle button").forEach((button) => {
   button.addEventListener("click", () => {
     activeLanguage = button.dataset.language;
     document.querySelectorAll(".language-toggle button").forEach((item) => item.classList.toggle("active", item === button));
+    if (!activeTemplate) {
+      showToast(activeLanguage === "en" ? "English mode selected. Choose a template to begin." : "Modo español seleccionado. Elige un machote para comenzar.");
+      return;
+    }
     editor.value = bodyForTemplate(activeTemplate);
     showToast(activeLanguage === "en" ? "English working draft loaded." : "Versión en español cargada.");
   });
@@ -2252,5 +2288,5 @@ renderFolders();
 renderSavedContracts();
 renderVersions();
 renderTemplates();
-loadTemplate(activeTemplate);
+clearWorkspaceState();
 renderAccessState();
