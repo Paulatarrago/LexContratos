@@ -1,17 +1,17 @@
 :root {
-  --ink: #101820;
-  --muted: #65737d;
-  --line: #d9e1e6;
-  --paper: #f5f7f8;
+  --ink: #102033;
+  --muted: #64748b;
+  --line: #d7e2ee;
+  --paper: #f6f9fc;
   --panel: #ffffff;
-  --teal: #087c75;
-  --teal-dark: #075f5b;
-  --blue: #294b79;
-  --gold: #d6b86a;
-  --midnight: #0a1016;
-  --carbon: #101820;
-  --electric: #4fe7d7;
-  --signal: #85f4ff;
+  --teal: #0b4ea2;
+  --teal-dark: #073b7a;
+  --blue: #082f6f;
+  --gold: #0b4ea2;
+  --midnight: #071e41;
+  --carbon: #0b2a55;
+  --electric: #0b5bd3;
+  --signal: #e8f1ff;
   --platinum: #eef3f6;
   --red: #b42318;
   --shadow: 0 18px 42px rgba(16, 24, 32, 0.11);
@@ -25,11 +25,7 @@ body {
   margin: 0;
   min-width: 320px;
   color: var(--ink);
-  background:
-    linear-gradient(90deg, rgba(8, 124, 117, 0.035) 1px, transparent 1px),
-    linear-gradient(180deg, rgba(41, 75, 121, 0.03) 1px, transparent 1px),
-    var(--paper);
-  background-size: 42px 42px;
+  background: var(--paper);
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -56,13 +52,7 @@ button {
   align-items: center;
   gap: 34px;
   padding: 42px;
-  background:
-    linear-gradient(135deg, rgba(79, 231, 215, 0.11) 0 1px, transparent 1px 16px),
-    linear-gradient(225deg, rgba(133, 244, 255, 0.08) 0 1px, transparent 1px 18px),
-    linear-gradient(90deg, rgba(79, 231, 215, 0.1), transparent 34%, rgba(214, 184, 106, 0.08)),
-    linear-gradient(180deg, rgba(10, 16, 22, 0.95), rgba(16, 31, 42, 0.92)),
-    var(--midnight);
-  background-size: 18px 18px, 22px 22px, auto, auto;
+  background: var(--midnight);
   overflow: hidden auto;
 }
 
@@ -74,15 +64,15 @@ button {
 }
 
 .auth-badge {
-  width: fit-content;
-  border: 1px solid rgba(133, 244, 255, 0.32);
+  width: min(760px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 8px;
-  padding: 8px 11px;
-  color: var(--signal);
-  background: rgba(255, 255, 255, 0.06);
-  font-size: 12px;
+  padding: 10px 12px;
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  font-size: 13px;
+  line-height: 1.35;
   font-weight: 860;
-  text-transform: uppercase;
 }
 
 .auth-hero h1 {
@@ -97,7 +87,7 @@ button {
 .auth-lede {
   max-width: 760px;
   margin: 0;
-  color: #c8d8dd;
+  color: #d8e6f7;
   font-size: 18px;
   line-height: 1.55;
 }
@@ -110,11 +100,10 @@ button {
 }
 
 .auth-value-grid article {
-  border: 1px solid rgba(133, 244, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.18);
   border-radius: 8px;
   padding: 12px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.09), rgba(255, 255, 255, 0.045));
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .auth-value-grid strong {
@@ -126,7 +115,7 @@ button {
 
 .auth-value-grid span {
   display: block;
-  color: #b9c9cf;
+  color: #d8e6f7;
   font-size: 13px;
   line-height: 1.42;
 }
@@ -142,12 +131,11 @@ button {
 
 .contract-sheet {
   width: min(500px, 88%);
-  border: 1px solid rgba(133, 244, 255, 0.18);
+  border: 1px solid var(--line);
   border-radius: 8px;
   padding: 18px;
   color: var(--ink);
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(238, 246, 248, 0.98));
+  background: white;
   box-shadow: 0 28px 70px rgba(0, 0, 0, 0.36);
 }
 
@@ -203,12 +191,11 @@ button {
   position: absolute;
   right: 9%;
   min-width: 170px;
-  border: 1px solid rgba(133, 244, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.22);
   border-radius: 8px;
   padding: 12px;
   color: white;
-  background:
-    linear-gradient(135deg, rgba(8, 124, 117, 0.94), rgba(41, 75, 121, 0.9));
+  background: var(--blue);
   box-shadow: 0 16px 34px rgba(0, 0, 0, 0.28);
   font-size: 13px;
   font-weight: 850;
@@ -220,9 +207,8 @@ button {
 
 .sign-card {
   bottom: 26px;
-  background:
-    linear-gradient(135deg, rgba(214, 184, 106, 0.95), rgba(79, 231, 215, 0.82));
-  color: #061014;
+  background: white;
+  color: var(--blue);
 }
 
 .auth-flow {
@@ -233,43 +219,105 @@ button {
 }
 
 .auth-flow span {
-  border: 1px solid rgba(133, 244, 255, 0.15);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
   padding: 7px 9px;
-  color: #d7e8ec;
-  background: rgba(255, 255, 255, 0.055);
+  color: #d8e6f7;
+  background: rgba(255, 255, 255, 0.07);
   font-size: 12px;
   font-weight: 760;
 }
 
 .auth-manual {
-  max-width: 780px;
-  border: 1px solid rgba(133, 244, 255, 0.16);
+  width: min(820px, 100%);
+  justify-self: center;
+  border: 1px solid rgba(255, 255, 255, 0.28);
   border-radius: 8px;
-  padding: 14px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.105), rgba(255, 255, 255, 0.055));
+  padding: 16px;
+  background: white;
+  box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
 }
 
 .auth-manual h2 {
-  margin: 4px 0 10px;
+  margin: 4px 0 12px;
+  color: var(--blue);
+  font-size: 20px;
+  line-height: 1.2;
+  text-align: center;
+}
+
+.manual-card-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+}
+
+.manual-card-grid article {
+  display: grid;
+  gap: 6px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 10px;
+  background: #f8fbff;
+}
+
+.manual-card-grid span {
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  border-radius: 8px;
   color: white;
-  font-size: 18px;
+  background: var(--blue);
+  font-weight: 900;
+}
+
+.manual-card-grid strong {
+  color: var(--blue);
+  font-size: 13px;
+  line-height: 1.25;
+}
+
+.manual-card-grid p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.auth-security {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.55fr);
+  gap: 14px;
+  width: min(820px, 100%);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.auth-security h2 {
+  margin: 4px 0 8px;
+  color: white;
+  font-size: 20px;
   line-height: 1.2;
 }
 
-.auth-manual ol {
+.auth-security p {
+  margin: 0;
+  color: #d8e6f7;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.auth-security ul {
   display: grid;
   gap: 7px;
   margin: 0;
-  padding-left: 20px;
-  color: #c8d8dd;
-  font-size: 13px;
-  line-height: 1.42;
-}
-
-.auth-manual strong {
+  padding-left: 18px;
   color: white;
+  font-size: 13px;
+  line-height: 1.35;
 }
 
 .auth-panel-stack {
@@ -278,11 +326,9 @@ button {
 
 .auth-card {
   width: 100%;
-  border: 1px solid rgba(133, 244, 255, 0.16);
+  border: 1px solid rgba(255, 255, 255, 0.2);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.97), rgba(246, 250, 251, 0.98)),
-    white;
+  background: white;
   box-shadow: 0 28px 80px rgba(0, 0, 0, 0.28), 0 0 0 1px rgba(255, 255, 255, 0.06);
   padding: 24px;
 }
@@ -341,8 +387,8 @@ button {
 .signature-form input:focus,
 .signature-form select:focus,
 #contract-editor:focus {
-  outline: 2px solid rgba(79, 231, 215, 0.34);
-  border-color: rgba(8, 124, 117, 0.64);
+  outline: 2px solid rgba(8, 47, 111, 0.22);
+  border-color: rgba(8, 47, 111, 0.64);
 }
 
 .auth-links {
@@ -385,10 +431,8 @@ button {
   gap: 18px;
   align-items: center;
   padding: 12px 16px;
-  background:
-    linear-gradient(90deg, rgba(255, 255, 255, 0.96), rgba(244, 249, 250, 0.93)),
-    rgba(245, 247, 248, 0.94);
-  border-bottom: 1px solid rgba(8, 124, 117, 0.16);
+  background: rgba(255, 255, 255, 0.97);
+  border-bottom: 1px solid var(--line);
   backdrop-filter: blur(14px);
 }
 
@@ -405,16 +449,14 @@ button {
   border-radius: 8px;
   display: grid;
   place-items: center;
-  background:
-    linear-gradient(135deg, rgba(79, 231, 215, 0.94), rgba(133, 244, 255, 0.32) 38%, rgba(214, 184, 106, 0.92)),
-    var(--carbon);
+  background: var(--blue);
   color: #061014;
   font-weight: 900;
   font-size: 12px;
   letter-spacing: 0;
   isolation: isolate;
   overflow: hidden;
-  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.54), 0 12px 24px rgba(8, 124, 117, 0.28);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.24), 0 12px 24px rgba(8, 47, 111, 0.28);
 }
 
 .brand-mark::before {
@@ -422,9 +464,7 @@ button {
   position: absolute;
   inset: 5px;
   border-radius: 6px;
-  background:
-    linear-gradient(135deg, rgba(255, 255, 255, 0.16), transparent 42%),
-    var(--midnight);
+  background: rgba(255, 255, 255, 0.08);
   clip-path: polygon(14% 0, 100% 0, 86% 100%, 0 100%);
   z-index: -1;
 }
@@ -436,8 +476,8 @@ button {
   height: 2px;
   right: -5px;
   bottom: 12px;
-  background: var(--signal);
-  box-shadow: -12px -15px 0 rgba(79, 231, 215, 0.72), -22px 10px 0 rgba(214, 184, 106, 0.78);
+  background: white;
+  box-shadow: -12px -15px 0 rgba(255, 255, 255, 0.54), -22px 10px 0 rgba(255, 255, 255, 0.34);
 }
 
 .brand-mark span {
@@ -445,7 +485,7 @@ button {
   color: #f7fbfc;
   font-weight: 950;
   letter-spacing: 0;
-  text-shadow: 0 0 16px rgba(133, 244, 255, 0.82);
+  text-shadow: none;
 }
 
 .brand strong {
@@ -468,7 +508,7 @@ button {
   font-weight: 950;
   letter-spacing: 0;
   margin-top: 0;
-  text-shadow: 0 0 16px rgba(133, 244, 255, 0.82);
+  text-shadow: none;
 }
 
 .sidebar .brand span,
@@ -498,24 +538,21 @@ button {
 
 .primary-action {
   padding: 0 15px;
-  color: #041110;
-  background:
-    linear-gradient(135deg, var(--electric), var(--gold));
-  border-color: rgba(8, 124, 117, 0.44);
-  box-shadow: 0 10px 22px rgba(8, 124, 117, 0.18);
+  color: white;
+  background: var(--blue);
+  border-color: var(--blue);
+  box-shadow: 0 10px 22px rgba(8, 47, 111, 0.16);
 }
 
 .primary-action:hover {
-  background:
-    linear-gradient(135deg, var(--signal), var(--electric));
+  background: var(--teal);
 }
 
 .secondary-action,
 .ghost-button {
   padding: 0 12px;
   color: var(--ink);
-  background:
-    linear-gradient(180deg, #ffffff, #f6fafb);
+  background: white;
   border-color: rgba(41, 75, 121, 0.18);
 }
 
@@ -567,7 +604,7 @@ button {
 
 .segmented-control button.active {
   color: var(--ink);
-  background: linear-gradient(180deg, white, #f7fbfc);
+  background: white;
 }
 
 .user-session {
@@ -578,8 +615,7 @@ button {
   gap: 2px 8px;
   border: 1px solid var(--line);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, white, #f8fbfc);
+  background: white;
   padding: 6px 8px;
 }
 
@@ -624,11 +660,9 @@ button {
 .assistant-pane,
 .contract-picker,
 .signature-dialog {
-  border: 1px solid rgba(8, 124, 117, 0.14);
+  border: 1px solid var(--line);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(255, 255, 255, 0.99), rgba(248, 252, 252, 0.98)),
-    var(--panel);
+  background: var(--panel);
   box-shadow: var(--shadow);
 }
 
@@ -660,8 +694,7 @@ button {
   border-radius: 8px;
   padding: 0 9px;
   color: var(--ink);
-  background:
-    linear-gradient(180deg, #ffffff, #f6fafb);
+  background: white;
   font-size: 12px;
   font-weight: 760;
 }
@@ -712,9 +745,12 @@ button {
   border: 1px solid rgba(41, 75, 121, 0.18);
   border-radius: 8px;
   color: var(--ink);
-  background:
-    linear-gradient(180deg, #ffffff, #f7fbfc);
+  background: white;
   padding: 0 10px;
+}
+
+.matter-panel {
+  display: none !important;
 }
 
 .summary-actions span {
@@ -752,9 +788,7 @@ button {
   border: 1px solid rgba(8, 124, 117, 0.12);
   border-radius: 8px;
   padding: 9px;
-  background:
-    linear-gradient(180deg, rgba(79, 231, 215, 0.04), rgba(255, 255, 255, 0.74)),
-    #fbfdfd;
+  background: #f8fbff;
 }
 
 .matter-tree strong,
@@ -829,9 +863,7 @@ button {
   align-items: end;
   border: 1px solid rgba(8, 124, 117, 0.14);
   border-radius: 8px;
-  background:
-    linear-gradient(90deg, rgba(79, 231, 215, 0.05), transparent),
-    #f8fafb;
+  background: #f8fbff;
   padding: 10px;
   margin-bottom: 10px;
 }
@@ -877,8 +909,7 @@ button {
   font-size: 12pt;
   line-height: 1.5;
   text-align: justify;
-  background:
-    linear-gradient(180deg, #ffffff, #fbfdfd);
+  background: white;
   box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.72);
 }
 
@@ -901,9 +932,7 @@ button {
 .role-drop {
   border: 1px dashed rgba(8, 124, 117, 0.45);
   border-radius: 8px;
-  background:
-    linear-gradient(180deg, rgba(79, 231, 215, 0.045), rgba(255, 255, 255, 0.78)),
-    #f4f8f9;
+  background: #f8fbff;
   padding: 12px;
   display: grid;
   gap: 8px;
@@ -993,10 +1022,7 @@ button {
 .side-drawer {
   left: 0;
   color: white;
-  background:
-    linear-gradient(135deg, rgba(79, 231, 215, 0.08) 0 1px, transparent 1px 18px),
-    linear-gradient(180deg, var(--midnight) 0%, #17313b 100%);
-  background-size: 18px 18px, auto;
+  background: var(--midnight);
   padding: 18px;
   display: flex;
   flex-direction: column;
@@ -1031,7 +1057,7 @@ button {
 }
 
 .sidebar-panel {
-  border: 1px solid rgba(133, 244, 255, 0.14);
+  border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 8px;
   padding: 14px;
   background: rgba(255, 255, 255, 0.065);
@@ -1068,8 +1094,8 @@ button {
 }
 
 .folder-item.active {
-  background: rgba(79, 231, 215, 0.14);
-  border-color: rgba(79, 231, 215, 0.58);
+  background: rgba(255, 255, 255, 0.16);
+  border-color: rgba(255, 255, 255, 0.52);
 }
 
 .saved-contract {
@@ -1371,8 +1397,7 @@ dialog::backdrop {
   border: 1px solid var(--line);
   border-radius: 8px;
   padding: 10px;
-  background:
-    linear-gradient(180deg, #ffffff, #f8fbfc);
+  background: white;
 }
 
 .guide-steps span {
@@ -1381,9 +1406,8 @@ dialog::backdrop {
   display: grid;
   place-items: center;
   border-radius: 8px;
-  color: #041110;
-  background:
-    linear-gradient(135deg, var(--electric), var(--gold));
+  color: white;
+  background: var(--blue);
   font-weight: 900;
 }
 
@@ -1414,16 +1438,14 @@ dialog::backdrop {
   border: 1px solid rgba(8, 124, 117, 0.14);
   border-radius: 8px;
   padding: 10px;
-  background:
-    linear-gradient(180deg, rgba(79, 231, 215, 0.045), rgba(255, 255, 255, 0.82)),
-    #fbfdfd;
+  background: #f8fbff;
 }
 
 .guide-note {
-  border: 1px solid rgba(214, 184, 106, 0.32);
+  border: 1px solid rgba(8, 47, 111, 0.2);
   border-radius: 8px;
   padding: 10px;
-  background: rgba(214, 184, 106, 0.1);
+  background: #f8fbff;
 }
 
 .signature-form {
@@ -1519,6 +1541,11 @@ dialog::backdrop {
   }
 
   .auth-value-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .manual-card-grid,
+  .auth-security {
     grid-template-columns: 1fr;
   }
 
