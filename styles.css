@@ -101,6 +101,46 @@ button {
   color: white;
 }
 
+.landing-nav {
+  position: sticky;
+  top: 0;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  width: min(100%, 1100px);
+  padding: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 10px;
+  background: rgba(7, 30, 65, 0.9);
+  box-shadow: 0 16px 40px rgba(3, 10, 28, 0.18);
+  backdrop-filter: blur(16px);
+}
+
+.landing-brand strong,
+.landing-brand span {
+  color: white;
+}
+
+.landing-brand span {
+  color: #c8d7ec;
+}
+
+.landing-nav-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+.landing-nav-actions a {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
 .auth-badge {
   width: min(760px, 100%);
   border: 1px solid var(--accent-line);
@@ -1854,6 +1894,23 @@ dialog::backdrop {
   .auth-shell {
     padding: 12px;
     gap: 12px;
+  }
+
+  .landing-nav {
+    position: static;
+    align-items: flex-start;
+    flex-direction: column;
+  }
+
+  .landing-nav-actions {
+    width: 100%;
+    justify-content: stretch;
+  }
+
+  .landing-nav-actions .primary-action,
+  .landing-nav-actions .secondary-action {
+    flex: 1;
+    justify-content: center;
   }
 
   .auth-value-grid {
