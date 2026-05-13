@@ -1800,7 +1800,7 @@ function prepareSignaturePacket() {
   signatureDialog.showModal();
 }
 
-function submitSignaturePacket(event) {
+async function submitSignaturePacket(event) {
   event.preventDefault();
   const title = cleanWorkingTitle(editorTitle.textContent);
   const signers = getSignatureRequestSigners();
@@ -1808,10 +1808,35 @@ function submitSignaturePacket(event) {
     showToast("Completa nombre, correo y rol de cada firmante.");
     return;
   }
-  const config = dropboxSignConfigurationStatus();
-  const status = config.configured ? "Enviado a firma" : "Pendiente de envío";
   ensureMatterFolio();
-  const eventLabel = config.configured ? "Contrato enviado a firma" : "Contrato preparado para firma";
+  let sendResult = null;
+  let status = "Pendiente de envío";
+  let signatureState = "pending_configuration";
+
+  try {
+    const response = await fetch("/api/send-signature", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title,
+        folio: previewMatterFolio(),
+        body: fillPlaceholders(editor.value),
+        signers
+      })
+    });
+    if (response.ok) {
+      sendResult = await response.json();
+      status = sendResult.testMode ? "Enviado a firma en modo prueba" : "Enviado a firma";
+      signatureState = sendResult.testMode ? "sent_test" : "sent";
+    } else if (response.status !== 503) {
+      const data = await response.json().catch(() => ({}));
+      showToast(data.error || "No se pudo enviar a firma. El paquete quedará guardado.");
+    }
+  } catch (error) {
+    console.warn("LexContratos firma no disponible", error);
+  }
+
+  const eventLabel = sendResult ? "Contrato enviado a firma electrónica" : "Contrato preparado para firma";
   addMatterEvent(eventLabel);
   savedContracts.push({
     id: Date.now().toString(),
@@ -1823,7 +1848,9 @@ function submitSignaturePacket(event) {
     body: fillPlaceholders(editor.value),
     status,
     signatureProvider: "Firma electrónica",
-    signatureState: config.configured ? "sent" : "pending_configuration",
+    signatureState,
+    signatureRequestId: sendResult?.signatureRequestId || "",
+    signatureDetailsUrl: sendResult?.detailsUrl || "",
     signers,
     matter: matterSnapshot(status, true)
   });
@@ -1831,7 +1858,7 @@ function submitSignaturePacket(event) {
   renderSavedContracts();
   autoSaveVersion("manual");
   signatureDialog.close();
-  showToast(config.configured ? "Contrato enviado a firma." : "Paquete de firma guardado. La integración de firma electrónica se activará cuando esté configurada.");
+  showToast(sendResult ? "Contrato enviado a firma electrónica." : "Paquete de firma guardado. La integración se activará cuando esté configurada.");
 }
 
 function buildLocalCriticalReview(mode) {

@@ -13,13 +13,14 @@ Sirve la carpeta con un servidor local para probar la landing publica, el acceso
 - `app.js`: logica de interaccion, catalogo, versiones y exportacion.
 - `template-prestacion-demanda.js`: machote importado de prestacion de servicios bajo demanda.
 - `src/supabase-runtime.js`: conexion opcional a Supabase para modo productivo.
+- `api/send-signature.js`: envio seguro a firma electronica cuando Dropbox Sign esta configurado.
 - `supabase/schema.sql`: base de datos, RLS y storage para produccion.
 
 ## Modulos preparados
 
 - Autenticacion y licencia: prototipo local con usuario, sesion, recuperacion y licencia activa/inactiva.
 - Supabase: base productiva opcional para auth, usuarios, licencias, expedientes, contratos, versiones y storage privado.
-- Firma electronica: flujo visual y paquete de firma preparado. Para produccion se debe conectar un backend seguro con las variables de `.env.example`.
+- Firma electronica: flujo visual y envio server-side preparado con Dropbox Sign. Requiere configurar las variables privadas de `.env.example` en Vercel.
 - Licencias/pagos: la app ya bloquea el editor si el usuario no tiene licencia activa; falta conectar proveedor de cobro.
 
 ## Modo productivo fase 1
