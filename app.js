@@ -2350,12 +2350,12 @@ document.querySelector("#new-template").addEventListener("click", () => {
 
 document.querySelector("#extract-data").addEventListener("click", async () => {
   if (!isWorkingCopy) {
-    showToast("Primero duplica la plantilla base. Después carga documentos por parte y revisa los datos.");
+    showToast("Primero duplica la plantilla base. Después carga documentos de cada parte y revisa los datos.");
     return;
   }
   let detected = {};
   let aiWasTried = false;
-  showToast("Extrayendo datos por parte. Revisa antes de completar el contrato.");
+  showToast("Extrayendo datos de cada parte. Revisa antes de completar el contrato.");
   for (const role of getRoles()) {
     try {
       const aiDetected = await extractRoleDataWithAi(role);
@@ -2407,7 +2407,7 @@ templateImport.addEventListener("change", async () => {
     templates[activeTemplate].fields = prepared.fields.length;
     showToast(addToMaster ? `Machote guardado con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} limpio${prepared.fields.length === 1 ? "" : "s"}. Duplica la plantilla para trabajarlo.` : `Copia de trabajo importada con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"}.`);
   } else {
-    templates[activeTemplate].body = `MACHOTE IMPORTADO: ${file.name}\n\nEn la versión completa, LexContratos extraería el texto de PDF o Word, conservaría su estructura y detectaría campos rellenables por parte.`;
+    templates[activeTemplate].body = `MACHOTE IMPORTADO: ${file.name}\n\nEn la versión completa, LexContratos extraería el texto de PDF o Word, conservaría su estructura y detectaría campos rellenables para cada parte.`;
     showToast(addToMaster ? "Machote creado. PDF y Word requieren extracción documental en backend para limpiar campos con precisión." : "Contrato abierto como trabajo temporal. PDF y Word requieren extracción documental en backend.");
   }
 
