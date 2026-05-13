@@ -1494,7 +1494,7 @@ function renderTemplates() {
         <h2>${template.title}</h2>
         <p>${template.category} · ${template.fields} campos</p>
         <footer>
-          <span>Plantilla base</span>
+          <span>${template.personal ? "Documento base propio" : "Plantilla base protegida"}</span>
           <button class="ghost-button clone-template" type="button">Duplicar plantilla</button>
         </footer>
       </article>
@@ -1561,6 +1561,42 @@ function createWorkingCopy(sourceKey, customBody) {
   editor.readOnly = false;
   addMatterEvent("Copia editable creada");
   showToast("Copia creada. Ahora puedes editar sin tocar la plantilla base.");
+}
+
+function saveAsPersonalBaseTemplate() {
+  if (!activeTemplate || !editor.value.trim()) {
+    showToast("Primero selecciona o importa un contrato para guardarlo como machote propio.");
+    return;
+  }
+  if (!isWorkingCopy) {
+    showToast("Las plantillas originales están protegidas. Duplica la plantilla o importa tu propio machote antes de guardarlo como documento base.");
+    return;
+  }
+
+  const defaultName = cleanWorkingTitle(editorTitle.textContent).replace(/\s+-\s+copia(?:\s+de\s+trabajo)?$/i, "");
+  const name = window.prompt("Nombre para guardar en tus documentos base. Ejemplo: Contrato marco de prestación de servicios", defaultName);
+  if (!name || !name.trim()) {
+    showToast("Guardado cancelado. La copia sigue editable.");
+    return;
+  }
+
+  const key = `personal-base-${Date.now()}`;
+  const prepared = prepareTemplateFields(editor.value, templates[activeTemplate]?.customFields || []);
+  templates[key] = {
+    ...(templates[activeSourceMaster] || templates[activeTemplate] || {}),
+    title: name.trim(),
+    category: "Documentos base propios",
+    description: "Machote propio guardado en tu biblioteca personal de documentos base.",
+    fields: prepared.fields.length,
+    body: prepared.body,
+    master: true,
+    personal: true,
+    customFields: prepared.fields
+  };
+  saveMasterTemplates();
+  renderTemplates();
+  autoSaveVersion("manual");
+  showToast("Machote propio guardado en Documentos base propios. La copia actual sigue editable.");
 }
 
 function renderVersions() {
@@ -2356,7 +2392,7 @@ openTemplatePicker.addEventListener("click", () => {
 
 document.querySelector("#toggle-archive").addEventListener("click", () => archiveDrawer.classList.add("open"));
 document.querySelector("#close-archive").addEventListener("click", () => archiveDrawer.classList.remove("open"));
-document.querySelector("#toggle-fields").addEventListener("click", () => assistantPane.classList.add("open"));
+document.querySelector("#toggle-fields").addEventListener("click", () => assistantPane.classList.toggle("open"));
 document.querySelector("#close-fields").addEventListener("click", () => assistantPane.classList.remove("open"));
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
 
@@ -2385,7 +2421,7 @@ document.querySelector("#critical-observations")?.addEventListener("click", () =
 document.querySelector("#critical-suggest")?.addEventListener("click", () => runCriticalReview("propose"));
 applyCriticalReviewButton?.addEventListener("click", applyCriticalReviewSuggestion);
 
-document.querySelector("#copy-contract").addEventListener("click", async () => {
+document.querySelector("#copy-contract")?.addEventListener("click", async () => {
   await navigator.clipboard.writeText(editor.value);
   showToast("Contrato copiado al portapapeles.");
 });
@@ -2623,37 +2659,7 @@ document.querySelector("#save-contract").addEventListener("click", () => {
 });
 
 document.querySelector("#save-version").addEventListener("click", () => {
-  if (!isWorkingCopy) {
-    showToast("No se trabaja directo sobre plantillas base. Duplica, ajusta la copia y luego reemplaza la plantilla base.");
-    return;
-  }
-  const key = activeSourceMaster || activeTemplate || `custom-${Date.now()}`;
-  const targetTitle = cleanWorkingTitle((templates[key] || templates[activeTemplate] || {}).title || editorTitle.textContent);
-  const confirmed = window.confirm(`Vas a reemplazar la plantilla base "${targetTitle}" con esta copia de trabajo.\n\nLa plantilla base anterior quedará reemplazada para tu biblioteca. ¿Estás segura de continuar?`);
-  if (!confirmed) {
-    showToast("Sustitución cancelada. La copia sigue editable.");
-    return;
-  }
-  const prepared = prepareTemplateFields(editor.value, templates[activeTemplate]?.customFields || []);
-  editor.value = prepared.body;
-  templates[key] = {
-    ...(templates[activeSourceMaster] || templates[activeTemplate] || {}),
-    title: cleanWorkingTitle(editorTitle.textContent),
-    category: templates[activeTemplate]?.category || "Operación",
-    description: "Plantilla base validada por el despacho.",
-    fields: prepared.fields.length,
-    body: prepared.body,
-    master: true,
-    customFields: prepared.fields
-  };
-  activeTemplate = key;
-  activeSourceMaster = key;
-  isWorkingCopy = false;
-  saveMasterTemplates();
-  recordMasterImprovement(key, prepared);
-  loadTemplate(key);
-  renderVersions();
-  showToast("Plantilla base reemplazada con confirmación. La mejora quedó registrada de forma anonimizada.");
+  saveAsPersonalBaseTemplate();
 });
 
 document.querySelector("#new-template").addEventListener("click", () => {

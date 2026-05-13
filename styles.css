@@ -903,6 +903,29 @@ button {
   flex-wrap: wrap;
 }
 
+.editor-actions {
+  justify-content: flex-start;
+}
+
+.editor-actions #review-fields,
+.editor-actions #fill-contract,
+.editor-actions #critical-review {
+  border-color: rgba(8, 47, 111, 0.18);
+  background: #f8fbff;
+}
+
+.editor-actions #export-word,
+.editor-actions #send-signature {
+  border-color: rgba(211, 154, 67, 0.38);
+}
+
+.editor-actions #save-version {
+  margin-left: auto;
+  color: var(--accent-ink);
+  border-color: rgba(211, 154, 67, 0.42);
+  background: var(--accent-soft);
+}
+
 .primary-action,
 .secondary-action,
 .ghost-button,
@@ -2104,6 +2127,10 @@ dialog::backdrop {
     min-height: 32px;
     padding: 0 8px;
     font-size: 13px;
+  }
+
+  .editor-actions #save-version {
+    margin-left: 0;
   }
 
   .format-panel {

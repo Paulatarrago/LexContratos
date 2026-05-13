@@ -275,7 +275,7 @@
             <input id="template-import" type="file" accept=".txt,.csv,.eml,.docx,.pdf" />
           </label>
           <button class="secondary-action" id="new-template" type="button">Nuevo machote</button>
-          <button class="secondary-action" id="toggle-fields" type="button">Datos de partes</button>
+          <button class="secondary-action" id="toggle-fields" type="button">Datos manuales de las partes</button>
           <button class="secondary-action" id="open-user-guide" type="button">Manual de Uso</button>
           <div class="segmented-control language-toggle" role="tablist" aria-label="Idioma del contrato">
             <button class="active" type="button" data-language="es">ES</button>
@@ -364,13 +364,12 @@
                 <h2 id="editor-mode-title">Documento principal</h2>
               </div>
               <div class="editor-actions">
+                <button class="secondary-action" id="review-fields" type="button">1. Revisar campos pendientes</button>
+                <button class="secondary-action" id="fill-contract" type="button">2. Completar contrato</button>
+                <button class="secondary-action" id="critical-review" type="button">3. Revisión crítica IA</button>
                 <button class="secondary-action" id="export-word" type="button">Exportar Word</button>
-                <button class="secondary-action" id="send-signature" type="button">Enviar a firma</button>
-                <button class="secondary-action" id="critical-review" type="button">Revisión crítica IA</button>
-                <button class="secondary-action" id="copy-contract" type="button">Copiar texto</button>
-                <button class="secondary-action" id="review-fields" type="button">Revisar campos pendientes</button>
-                <button class="secondary-action" id="fill-contract" type="button">Completar contrato</button>
-                <button class="secondary-action" id="save-version" type="button">Reemplazar plantilla base</button>
+                <button class="secondary-action" id="send-signature" type="button">Preparar firma</button>
+                <button class="secondary-action" id="save-version" type="button">Guardar como machote propio</button>
               </div>
             </div>
             <p class="editor-guidance">El contrato sigue siendo editable. LexContratos te ayuda con datos, campos y tareas repetitivas, pero el criterio jurídico y el contenido final permanecen bajo tu control. Cuando el contrato esté revisado, puedes exportarlo a Word o enviarlo a firma.</p>
@@ -429,10 +428,10 @@
       <aside class="assistant-pane field-drawer" id="assistant-pane" aria-label="Panel de datos">
         <div class="drawer-heading light">
           <div>
-            <p class="eyebrow">Datos de partes</p>
-            <h2>Datos del contrato</h2>
+            <p class="eyebrow">Captura manual</p>
+            <h2>Datos manuales de las partes</h2>
           </div>
-          <button class="icon-button" id="close-fields" type="button" title="Cerrar datos de partes" aria-label="Cerrar datos de partes">×</button>
+          <button class="icon-button" id="close-fields" type="button" title="Cerrar datos manuales de las partes" aria-label="Cerrar datos manuales de las partes">×</button>
         </div>
         <details class="data-section compact-fields" open>
           <summary>
@@ -555,7 +554,7 @@
         <div>
           <p class="eyebrow">Machotes / plantillas precargadas</p>
           <h2>Seleccionar machote o plantilla</h2>
-          <p class="dialog-copy">Elige una plantilla precargada o importa tu propio machote. LexContratos prellena campos repetitivos con datos extraídos de documentos; tú conservas el control del clausulado.</p>
+          <p class="dialog-copy">Elige una plantilla precargada o importa tu propio machote. Tus formatos guardados aparecerán como documentos base propios para reutilizarlos sin alterar las plantillas originales.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar selector">×</button>
       </form>
