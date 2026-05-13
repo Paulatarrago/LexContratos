@@ -1183,7 +1183,7 @@ function classifySupportDocument(fileName) {
   if (clean.includes("acta")) return "Acta constitutiva";
   if (clean.includes("constancia") || clean.includes("csf") || clean.includes("situacion fiscal")) return "Constancia de situación fiscal";
   if (clean.includes("poder")) return "Poder del representante legal";
-  if (clean.includes("ine") || clean.includes("identificacion") || clean.includes("id")) return "INE o identificación oficial";
+  if (clean.includes("ine") || clean.includes("identificacion") || clean.includes("id")) return "Identificación oficial";
   if (clean.includes("domicilio")) return "Comprobante de domicilio";
   if (clean.includes("correo") || clean.includes("mail") || clean.endsWith(".eml")) return "Correo o comunicación";
   if (clean.endsWith(".xls") || clean.endsWith(".xlsx") || clean.endsWith(".csv")) return "Base de datos o Excel";
