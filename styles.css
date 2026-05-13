@@ -82,12 +82,31 @@ button {
 }
 
 .auth-hero h1 {
+  position: relative;
   max-width: 780px;
-  margin: 0;
+  margin: 2px 0 0;
+  padding-left: 16px;
   color: white;
-  font-size: clamp(34px, 4.5vw, 62px);
-  line-height: 0.98;
+  font-size: clamp(30px, 3.4vw, 46px);
+  line-height: 1.04;
   letter-spacing: 0;
+}
+
+.auth-hero h1::before {
+  content: "";
+  position: absolute;
+  left: 0;
+  top: 0.12em;
+  bottom: 0.08em;
+  width: 4px;
+  border-radius: 999px;
+  background: var(--accent);
+  box-shadow: 0 0 18px rgba(211, 154, 67, 0.34);
+}
+
+.auth-hero h1 span {
+  color: var(--accent-soft);
+  text-shadow: 0 0 22px rgba(211, 154, 67, 0.24);
 }
 
 .auth-lede {
