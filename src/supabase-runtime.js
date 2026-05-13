@@ -23,7 +23,7 @@ function normalizePathPart(value) {
 if (!config.url || !config.publishableKey) {
   announceBackend({
     enabled: false,
-    reason: "Supabase no configurado. Usando demo local."
+    reason: "Supabase no configurado. Revisa VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY en Vercel."
   });
 } else {
   let createClient;

@@ -476,6 +476,17 @@ button {
   font-size: 13px;
 }
 
+.auth-config-warning {
+  display: none;
+  margin-top: 14px !important;
+  padding: 10px 12px;
+  border: 1px solid rgba(220, 38, 38, 0.22);
+  border-radius: 8px;
+  background: rgba(220, 38, 38, 0.08);
+  color: #7f1d1d !important;
+  font-size: 13px;
+}
+
 .production-auth .auth-production-note {
   display: block;
 }
@@ -483,6 +494,10 @@ button {
 .production-auth #demo-login,
 .production-auth .auth-demo {
   display: none;
+}
+
+.demo-auth .auth-config-warning {
+  display: block;
 }
 
 .license-status {

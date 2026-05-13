@@ -940,6 +940,7 @@ function syncBackendAccount(access) {
 function showAuthPanel(panel) {
   [authLogin, authRegister, authRecover, licenseRequired].forEach((item) => item.classList.add("is-hidden"));
   authShell.classList.toggle("production-auth", Boolean(productionBackend()));
+  authShell.classList.toggle("demo-auth", !productionBackend());
   panel.classList.remove("is-hidden");
 }
 
