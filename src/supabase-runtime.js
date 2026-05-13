@@ -1,9 +1,14 @@
 const env = import.meta.env || {};
+const publicFallbackConfig = {
+  url: "https://zaoqgkqbpfcfgilntbsa.supabase.co",
+  publishableKey: "sb_publishable_tSlI2ilSvCjw-wT1YaF9Cw_WBXGgfI7",
+  bucket: "contract-documents"
+};
 
 const config = {
-  url: env.VITE_SUPABASE_URL || window.lexSupabaseConfig?.supabaseUrl || "",
-  publishableKey: env.VITE_SUPABASE_PUBLISHABLE_KEY || window.lexSupabaseConfig?.supabasePublishableKey || "",
-  bucket: env.VITE_SUPABASE_STORAGE_BUCKET || window.lexSupabaseConfig?.storageBucket || "contract-documents"
+  url: env.VITE_SUPABASE_URL || window.lexSupabaseConfig?.supabaseUrl || publicFallbackConfig.url,
+  publishableKey: env.VITE_SUPABASE_PUBLISHABLE_KEY || window.lexSupabaseConfig?.supabasePublishableKey || publicFallbackConfig.publishableKey,
+  bucket: env.VITE_SUPABASE_STORAGE_BUCKET || window.lexSupabaseConfig?.storageBucket || publicFallbackConfig.bucket
 };
 
 function announceBackend(runtime) {
