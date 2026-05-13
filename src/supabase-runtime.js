@@ -1,14 +1,9 @@
 const env = import.meta.env || {};
-const publicFallbackConfig = {
-  url: "https://zaoqgkqbpfcfgilntbsa.supabase.co",
-  publishableKey: "sb_publishable_tSlI2ilSvCjw-wT1YaF9Cw_WBXGgfI7",
-  bucket: "contract-documents"
-};
 
 const config = {
-  url: env.VITE_SUPABASE_URL || window.lexSupabaseConfig?.supabaseUrl || publicFallbackConfig.url,
-  publishableKey: env.VITE_SUPABASE_PUBLISHABLE_KEY || window.lexSupabaseConfig?.supabasePublishableKey || publicFallbackConfig.publishableKey,
-  bucket: env.VITE_SUPABASE_STORAGE_BUCKET || window.lexSupabaseConfig?.storageBucket || publicFallbackConfig.bucket
+  url: env.VITE_SUPABASE_URL || window.lexSupabaseConfig?.supabaseUrl || "",
+  publishableKey: env.VITE_SUPABASE_PUBLISHABLE_KEY || window.lexSupabaseConfig?.supabasePublishableKey || "",
+  bucket: env.VITE_SUPABASE_STORAGE_BUCKET || window.lexSupabaseConfig?.storageBucket || "contract-documents"
 };
 
 function announceBackend(runtime) {
@@ -28,7 +23,8 @@ function normalizePathPart(value) {
 if (!config.url || !config.publishableKey) {
   announceBackend({
     enabled: false,
-    reason: "Supabase no configurado. Revisa VITE_SUPABASE_URL y VITE_SUPABASE_PUBLISHABLE_KEY en Vercel."
+    locked: Boolean(window.lexBackend?.locked),
+    reason: "Acceso privado no configurado."
   });
 } else {
   let createClient;

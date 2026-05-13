@@ -4,12 +4,7 @@ Prototipo web para organizar, importar, editar y replicar machotes de contratos,
 
 ## Uso local
 
-Abre `index.html` en el navegador o sirve la carpeta con un servidor local.
-
-Demo local de acceso:
-
-- Usuario: `paula.tarrago`
-- Contraseña: `demo123`
+Sirve la carpeta con un servidor local para probar la landing publica, el acceso privado y los flujos de app. Las cuentas reales deben crearse desde el formulario de registro y activarse por un administrador.
 
 ## Archivos principales
 
@@ -24,7 +19,7 @@ Demo local de acceso:
 
 - Autenticacion y licencia: prototipo local con usuario, sesion, recuperacion y licencia activa/inactiva.
 - Supabase: base productiva opcional para auth, usuarios, licencias, expedientes, contratos, versiones y storage privado.
-- Dropbox Sign: flujo visual y paquete de firma preparado. Para produccion se debe conectar un backend con las variables de `.env.example`.
+- Firma electronica: flujo visual y paquete de firma preparado. Para produccion se debe conectar un backend seguro con las variables de `.env.example`.
 - Licencias/pagos: la app ya bloquea el editor si el usuario no tiene licencia activa; falta conectar proveedor de cobro.
 
 ## Modo productivo fase 1

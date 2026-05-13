@@ -3,10 +3,11 @@
   <head>
     <meta charset="utf-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta id="robots-meta" name="robots" content="index,follow" />
     <title>LexContratos</title>
     <link rel="stylesheet" href="./styles.css" />
   </head>
-  <body>
+  <body class="route-home">
     <section class="auth-shell" id="auth-shell" aria-label="Acceso a LexContratos">
       <section class="auth-hero" aria-label="Bienvenida a LexContratos">
         <div class="auth-badge">Integración automatizada de las generales del contrato a partir de la extracción de datos desde diversos formatos: Word, PDF, Excel, JPG y correos.</div>
@@ -72,7 +73,7 @@
 
         <div class="auth-visual" aria-label="Flujo visual de contrato">
           <div class="contract-sheet">
-            <span>EXPEDIENTE COCEI-DETECATL-2026-PS-001</span>
+            <span>EXPEDIENTE EXP-DEMO-2026-001</span>
             <strong>Contrato de prestación de servicios</strong>
             <i></i>
             <i></i>
@@ -93,19 +94,72 @@
           <span>5. Archiva, exporta o firma</span>
         </div>
 
-        <section class="contact-card" aria-label="Contacto LexContratos">
+        <div class="landing-actions" aria-label="Acciones principales">
+          <button class="primary-action" type="button" data-route-link="/login">Acceso privado</button>
+          <a href="#contacto" class="secondary-action">Solicitar activación</a>
+          <button class="ghost-button light" type="button" data-route-link="/aviso-privacidad">Aviso de privacidad</button>
+          <button class="ghost-button light" type="button" data-route-link="/terminos">Términos de uso</button>
+        </div>
+
+        <section class="contact-card" id="contacto" aria-label="Contacto LexContratos">
           <div>
             <p class="eyebrow">Contacto</p>
-            <h2>¿Quieres activar una licencia o agendar una demo?</h2>
-            <p>Escríbenos y recibirás una confirmación automática. También puedes escribir a contacto@lexcontratos.com.</p>
+            <h2>Acceso privado para uso interno</h2>
+            <p>LexContratos se encuentra en una etapa privada. Solicita activación para una cuenta autorizada o escribe a contacto@lexcontratos.com.</p>
           </div>
           <form id="contact-form" class="contact-form">
             <label>Nombre<input id="contact-name" name="name" autocomplete="name" required /></label>
             <label>Correo<input id="contact-email" name="email" type="email" autocomplete="email" required /></label>
-            <label>Mensaje<textarea id="contact-message" name="message" rows="3" required>Quiero conocer LexContratos y activar una licencia.</textarea></label>
-            <button class="primary-action" type="submit">Enviar mensaje</button>
+            <label>Mensaje<textarea id="contact-message" name="message" rows="3" required>Quiero solicitar activación de acceso privado a LexContratos.</textarea></label>
+            <button class="primary-action" type="submit">Solicitar activación</button>
           </form>
         </section>
+      </section>
+
+      <section class="legal-shell is-hidden" id="privacy-page" aria-label="Aviso de privacidad">
+        <p class="eyebrow">Documento inicial</p>
+        <h1>Aviso de privacidad</h1>
+        <p>LexContratos se encuentra en uso privado inicial. Este aviso describe, de forma preliminar, cómo se pretende tratar la información cargada para preparar contratos y expedientes.</p>
+        <article>
+          <h2>Responsable</h2>
+          <p>Pendiente de completar con la razón social, domicilio y datos de contacto del responsable del tratamiento antes de uso comercial o apertura pública.</p>
+        </article>
+        <article>
+          <h2>Datos tratados</h2>
+          <p>Podrán cargarse datos de identificación, fiscales, corporativos, notariales, de representación legal, contacto y documentos soporte necesarios para preparar contratos.</p>
+        </article>
+        <article>
+          <h2>Finalidades</h2>
+          <p>Preparar contratos, organizar expedientes, extraer datos para revisión, conservar versiones editables y habilitar flujos de exportación o firma electrónica cuando estén configurados.</p>
+        </article>
+        <article>
+          <h2>Control del usuario</h2>
+          <p>El usuario autorizado conserva control sobre la información, revisión de datos, contenido contractual y versión final. No se debe cargar información innecesaria para el contrato o expediente.</p>
+        </article>
+        <button class="secondary-action" type="button" data-route-link="/">Volver</button>
+      </section>
+
+      <section class="legal-shell is-hidden" id="terms-page" aria-label="Términos de uso">
+        <p class="eyebrow">Documento inicial</p>
+        <h1>Términos de uso</h1>
+        <p>Estos términos son una base inicial para uso privado interno. Deben revisarse y completarse antes de ofrecer LexContratos comercialmente o abrirlo al público.</p>
+        <article>
+          <h2>Uso permitido</h2>
+          <p>LexContratos se ofrece como herramienta de apoyo operativo para preparar contratos, organizar expedientes y reducir captura repetitiva. No sustituye la revisión profesional ni la decisión final del usuario.</p>
+        </article>
+        <article>
+          <h2>Acceso privado</h2>
+          <p>El acceso está limitado a usuarios autorizados. Las cuentas pueden requerir activación manual, licencia vigente o aprobación administrativa.</p>
+        </article>
+        <article>
+          <h2>Información cargada</h2>
+          <p>El usuario es responsable de cargar únicamente documentos necesarios, revisar los datos extraídos y validar la versión final antes de exportar o enviar a firma.</p>
+        </article>
+        <article>
+          <h2>Integraciones</h2>
+          <p>Los flujos de firma electrónica, correo y extracción documental dependen de configuraciones externas. Las funciones no configuradas deben considerarse en preparación.</p>
+        </article>
+        <button class="secondary-action" type="button" data-route-link="/">Volver</button>
       </section>
 
       <div class="auth-panel-stack">
@@ -120,19 +174,16 @@
           <h1>Inicia sesión para trabajar contratos.</h1>
           <p>Tu biblioteca, clientes, proveedores, contratos y versiones quedan separados por usuario y licencia.</p>
           <p class="auth-config-warning" id="auth-config-warning">El acceso seguro no está disponible temporalmente. Intenta nuevamente en unos minutos.</p>
-          <p class="auth-production-note auth-login-note">Acceso seguro activo.</p>
           <form id="login-form" class="auth-form">
             <label>Correo electrónico<input id="login-email" type="email" autocomplete="username" required /></label>
             <label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required /></label>
             <button class="primary-action" type="submit">Entrar</button>
-            <button class="secondary-action" id="demo-login" type="button">Entrar con demo</button>
             <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
           </form>
           <div class="auth-links">
             <button type="button" id="show-register">Crear usuario</button>
             <button type="button" id="show-recover">Recuperar contraseña</button>
           </div>
-          <p class="auth-demo">Demo local: paula.tarrago / demo123</p>
         </article>
 
         <article class="auth-card is-hidden" id="auth-register">
@@ -144,7 +195,7 @@
             </div>
           </div>
           <h1>Crea tu usuario.</h1>
-          <p class="auth-production-note">Después del registro, activa la licencia del correo en Supabase para entrar al editor.</p>
+          <p class="auth-production-note">Después del registro, tu cuenta quedará pendiente de activación por el administrador.</p>
           <form id="register-form" class="auth-form">
             <label>Nombre<input id="register-name" type="text" autocomplete="name" required /></label>
             <label>Correo<input id="register-email" type="email" autocomplete="email" required /></label>
@@ -182,10 +233,10 @@
               <span>Acceso con licencia</span>
             </div>
           </div>
-          <h1>Licencia requerida.</h1>
-          <p>Tu usuario existe, pero necesita una licencia activa para acceder al editor de contratos.</p>
+          <h1>Cuenta pendiente de activación.</h1>
+          <p>Tu usuario existe, pero aún no tiene acceso activo a este espacio. Contacta al administrador para habilitar tu cuenta.</p>
           <div class="license-status" id="license-status"></div>
-          <button class="primary-action" id="activate-demo-license" type="button">Activar licencia demo</button>
+          <button class="primary-action" id="activate-demo-license" type="button">Solicitar activación</button>
           <button class="secondary-action" id="license-logout" type="button">Cerrar sesión</button>
         </article>
       </div>
@@ -299,7 +350,8 @@
               </div>
               <div class="editor-actions">
                 <button class="secondary-action" id="export-word" type="button">Exportar Word</button>
-                <button class="secondary-action" id="send-signature" type="button">Enviar a firma</button>
+                <button class="secondary-action" id="send-signature" type="button">Preparar firma electrónica</button>
+                <button class="secondary-action" id="critical-review" type="button">Revisión crítica IA</button>
                 <button class="secondary-action" id="copy-contract" type="button">Copiar texto</button>
                 <button class="secondary-action" id="review-fields" type="button">Revisar campos pendientes</button>
                 <button class="secondary-action" id="fill-contract" type="button">Completar contrato</button>
@@ -502,8 +554,9 @@
     <dialog class="signature-dialog" id="signature-dialog">
       <form method="dialog" class="dialog-close-row">
         <div>
-          <p class="eyebrow">Dropbox Sign</p>
-          <h2>Enviar contrato a firma</h2>
+          <p class="eyebrow">Firma electrónica</p>
+          <h2>Preparar paquete de firma</h2>
+          <p class="dialog-copy">La integración de firma electrónica está en configuración. Puedes capturar firmantes y dejar el paquete preparado en el expediente.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar firma">×</button>
       </form>
@@ -512,10 +565,29 @@
         <button class="secondary-action" id="add-signer" type="button">Agregar firmante</button>
         <div class="signature-status">
           <strong>Estado inicial:</strong>
-          <span>Pendiente de envío</span>
+          <span>Integración de firma electrónica en configuración</span>
         </div>
-        <button class="primary-action" type="submit">Preparar envío a Dropbox Sign</button>
+        <button class="primary-action" type="submit">Guardar paquete de firma</button>
       </form>
+    </dialog>
+
+    <dialog class="critical-review-dialog" id="critical-review-dialog">
+      <form method="dialog" class="dialog-close-row">
+        <div>
+          <p class="eyebrow">Revisión crítica IA</p>
+          <h2>Observaciones finales del contrato</h2>
+          <p class="dialog-copy">LexContratos puede señalar ambigüedades, datos faltantes, contradicciones, errores de forma y redacciones débiles. Tú decides qué integrar.</p>
+        </div>
+        <button class="icon-button" type="submit" aria-label="Cerrar revisión">×</button>
+      </form>
+      <div class="critical-review-actions">
+        <button class="secondary-action" id="critical-observations" type="button">Solo observaciones</button>
+        <button class="primary-action" id="critical-suggest" type="button">Proponer ajustes</button>
+      </div>
+      <div class="critical-review-output" id="critical-review-output" aria-live="polite">
+        Selecciona un modo de revisión para analizar el contrato activo.
+      </div>
+      <button class="primary-action is-hidden" id="apply-critical-review" type="button">Aplicar versión sugerida</button>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>

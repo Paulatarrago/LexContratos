@@ -7,7 +7,12 @@ async function loadOptionalLocalConfig() {
   );
 
   if (window.location.protocol === "file:") {
-    window.lexBackend = { enabled: false, reason: "Demo local sin Supabase." };
+    window.lexBackend = { enabled: false, reason: "Acceso privado no disponible en esta vista local." };
+    return;
+  }
+
+  if (isProductionHost && !hasBuildConfig && !window.lexSupabaseConfig) {
+    window.lexBackend = { enabled: false, locked: true, reason: "Acceso privado en configuración." };
     return;
   }
 

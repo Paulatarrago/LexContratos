@@ -49,7 +49,7 @@ export default async function handler(request) {
   const contactTo = env.CONTACT_TO || "contacto@lexcontratos.com";
 
   if (!apiKey) {
-    return jsonResponse({ error: "Falta RESEND_API_KEY en el backend." }, 503);
+    return jsonResponse({ error: "El envío de solicitudes no está disponible temporalmente." }, 503);
   }
 
   const body = await request.json().catch(() => ({}));

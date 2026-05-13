@@ -10,7 +10,7 @@ select
   'active',
   'active'
 from auth.users
-where email = 'paula.tarrago@outlook.com'
+where email = 'TU_CORREO_AQUI'
 on conflict (id) do update
 set
   email = excluded.email,
@@ -23,10 +23,10 @@ set
 insert into public.licenses (user_id, status, plan, starts_at)
 select id, 'active', 'internal', now()
 from auth.users
-where email = 'paula.tarrago@outlook.com'
+where email = 'TU_CORREO_AQUI'
 on conflict (user_id) do update
 set status = 'active', plan = 'internal', updated_at = now();
 
 update public.profiles
 set license_status = 'active', role = 'admin', account_status = 'active', updated_at = now()
-where email = 'paula.tarrago@outlook.com';
+where email = 'TU_CORREO_AQUI';

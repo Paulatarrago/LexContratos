@@ -61,7 +61,7 @@ export default async function handler(request) {
   const env = typeof process !== "undefined" ? process.env : {};
   const apiKey = env.OPENAI_API_KEY;
   if (!apiKey) {
-    return jsonResponse({ error: "Falta OPENAI_API_KEY en el backend." }, 503);
+    return jsonResponse({ error: "La extracción documental no está disponible temporalmente." }, 503);
   }
 
   const formData = await request.formData();

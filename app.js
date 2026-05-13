@@ -604,6 +604,9 @@ const assistantPane = document.querySelector("#assistant-pane");
 const signatureDialog = document.querySelector("#signature-dialog");
 const signatureForm = document.querySelector("#signature-form");
 const signerList = document.querySelector("#signer-list");
+const criticalReviewDialog = document.querySelector("#critical-review-dialog");
+const criticalReviewOutput = document.querySelector("#critical-review-output");
+const applyCriticalReviewButton = document.querySelector("#apply-critical-review");
 const quickFolderButton = document.querySelector("#quick-folder");
 const matterFolio = document.querySelector("#matter-folio");
 const matterTree = document.querySelector("#matter-tree");
@@ -627,11 +630,12 @@ let activeMatterFolio = null;
 let matterHistoryEvents = [];
 let toastTimer;
 let autosaveTimer;
+let pendingCriticalReviewBody = "";
 
 const demoAccount = {
-  email: "paula.tarrago",
-  password: "demo123",
-  name: "Paula Tarrago",
+  email: "usuario.demo@lexcontratos.local",
+  password: "demo-interno",
+  name: "Usuario Demo",
   role: "Administrador",
   accountStatus: "active",
   licenseStatus: "active",
@@ -679,7 +683,7 @@ function normalizeUserKey(value) {
 
 function loadCurrentUser() {
   const session = loadSession();
-  return session?.email || localStorage.getItem("lexcontratos_current_user") || "paula.tarrago";
+  return session?.email || localStorage.getItem("lexcontratos_current_user") || "usuario-demo";
 }
 
 function saveCurrentUser(user) {
@@ -941,9 +945,63 @@ function syncBackendAccount(access) {
 function showAuthPanel(panel) {
   [authLogin, authRegister, authRecover, licenseRequired].forEach((item) => item.classList.add("is-hidden"));
   authShell.classList.toggle("production-auth", Boolean(productionBackend()));
-  authShell.classList.toggle("demo-auth", !productionBackend());
+  authShell.classList.toggle("demo-auth", !productionBackend() || backendAccessLocked());
   setAuthMessage("");
   panel.classList.remove("is-hidden");
+}
+
+function normalizedRoute() {
+  const path = window.location.pathname.replace(/\/+$/, "") || "/";
+  if (path === "/privacy" || path === "/aviso-privacidad") return "privacy";
+  if (path === "/terms" || path === "/terminos") return "terms";
+  if (path === "/login") return "login";
+  if (path === "/app" || path === "/dashboard") return "app";
+  return "home";
+}
+
+function normalizedRouteName(path) {
+  if (path === "/privacy" || path === "/aviso-privacidad") return "privacy";
+  if (path === "/terms" || path === "/terminos") return "terms";
+  if (path === "/login") return "login";
+  if (path === "/app" || path === "/dashboard") return "app";
+  return "home";
+}
+
+function routePath(route) {
+  return {
+    home: "/",
+    privacy: "/aviso-privacidad",
+    terms: "/terminos",
+    login: "/login",
+    app: "/app"
+  }[route] || "/";
+}
+
+function setRoute(route, replace = false) {
+  const path = routePath(route);
+  if (window.location.pathname === path) return;
+  const method = replace ? "replaceState" : "pushState";
+  window.history[method]({}, "", path);
+}
+
+function applyRouteShell(route) {
+  document.body.classList.remove("route-home", "route-login", "route-app", "route-privacy", "route-terms", "route-pending");
+  document.body.classList.add(`route-${route}`);
+  const robots = document.querySelector("#robots-meta");
+  if (robots) robots.setAttribute("content", route === "app" || route === "login" || route === "pending" ? "noindex,nofollow" : "index,follow");
+}
+
+function showPublicRoute(route) {
+  applyRouteShell(route);
+  appShell.classList.add("is-hidden");
+  authShell.classList.remove("is-hidden");
+}
+
+function showLoginRoute(panel = authLogin, route = "login") {
+  applyRouteShell(route);
+  appShell.classList.add("is-hidden");
+  authShell.classList.remove("is-hidden");
+  showAuthPanel(panel);
 }
 
 function setAuthMessage(message, type = "") {
@@ -961,12 +1019,18 @@ function readableAuthError(error) {
     return "Tu correo aún no está confirmado. Revisa tu bandeja de entrada y correo no deseado.";
   }
   if (/rate limit|too many/i.test(message)) {
-    return "Supabase bloqueó temporalmente nuevos intentos. Espera unos minutos y vuelve a probar.";
+    return "El acceso está temporalmente limitado por seguridad. Espera unos minutos y vuelve a probar.";
   }
-  return message || "No se pudo iniciar sesión. Revisa el correo, la contraseña o la configuración.";
+  return "Hubo un problema al iniciar sesión. Intenta nuevamente o contacta al administrador.";
 }
 
 async function renderAccessState() {
+  const route = normalizedRoute();
+  if (["home", "privacy", "terms"].includes(route)) {
+    showPublicRoute(route);
+    return;
+  }
+
   loadUsers();
   const backend = productionBackend();
 
@@ -974,25 +1038,22 @@ async function renderAccessState() {
     try {
       const access = await backend.getAccessState();
       if (!access.user) {
-        appShell.classList.add("is-hidden");
-        authShell.classList.remove("is-hidden");
-        showAuthPanel(authLogin);
+        if (route === "app") setRoute("login", true);
+        showLoginRoute(authLogin);
         return;
       }
 
       if (!access.hasAccess) {
-        appShell.classList.add("is-hidden");
-        authShell.classList.remove("is-hidden");
         licenseStatus.innerHTML = `
-          <span>Usuario: ${access.user.email}</span>
-          <span>Estado: ${access.profile?.account_status || "active"}</span>
-          <span>Licencia: ${access.status || "sin licencia"}</span>
-          <span>Rol: ${access.profile?.role || "Usuario"}</span>
+          <span>Cuenta: ${access.user.email}</span>
+          <span>Estado: pendiente de activación</span>
         `;
-        showAuthPanel(licenseRequired);
+        showLoginRoute(licenseRequired, "pending");
         return;
       }
 
+      if (route !== "app") setRoute("app", true);
+      applyRouteShell("app");
       authShell.classList.add("is-hidden");
       appShell.classList.remove("is-hidden");
       syncBackendAccount(access);
@@ -1005,28 +1066,31 @@ async function renderAccessState() {
     }
   }
 
+  if (backendAccessLocked()) {
+    if (route === "app") setRoute("login", true);
+    showLoginRoute(authLogin);
+    return;
+  }
+
   const account = currentAccount();
 
   if (!account) {
-    appShell.classList.add("is-hidden");
-    authShell.classList.remove("is-hidden");
-    showAuthPanel(authLogin);
+    if (route === "app") setRoute("login", true);
+    showLoginRoute(authLogin);
     return;
   }
 
   if (!hasActiveAccess(account)) {
-    appShell.classList.add("is-hidden");
-    authShell.classList.remove("is-hidden");
     licenseStatus.innerHTML = `
-      <span>Usuario: ${account.email}</span>
-      <span>Estado: ${account.accountStatus}</span>
-      <span>Licencia: ${account.licenseStatus || "sin licencia"}</span>
-      <span>Rol: ${account.role || "Usuario"}</span>
+      <span>Cuenta: ${account.email}</span>
+      <span>Estado: pendiente de activación</span>
     `;
-    showAuthPanel(licenseRequired);
+    showLoginRoute(licenseRequired, "pending");
     return;
   }
 
+  if (route !== "app") setRoute("app", true);
+  applyRouteShell("app");
   authShell.classList.add("is-hidden");
   appShell.classList.remove("is-hidden");
   licensePill.textContent = account.role === "Administrador" ? "Administrador" : "Licencia activa";
@@ -1044,9 +1108,8 @@ async function signOut() {
     }
   }
   clearSession();
-  appShell.classList.add("is-hidden");
-  authShell.classList.remove("is-hidden");
-  showAuthPanel(authLogin);
+  setRoute("login", true);
+  showLoginRoute(authLogin);
   showToast("Sesión cerrada.");
 }
 
@@ -1061,16 +1124,26 @@ function productionBackend() {
   return window.lexBackend?.enabled ? window.lexBackend : null;
 }
 
+function backendAccessLocked() {
+  return Boolean(window.lexBackend?.locked);
+}
+
 function reportBackendError(action, error) {
   console.error(`LexContratos ${action}`, error);
-  showToast(`No se pudo completar ${action}. Revisa la conexión o configuración.`);
+  showToast(`No se pudo completar ${action}. Intenta nuevamente o contacta al administrador.`);
 }
 
 document.querySelector("#contact-form")?.addEventListener("submit", async (event) => {
   event.preventDefault();
   const form = event.currentTarget;
+  const submitButton = form.querySelector("button[type='submit']");
   const payload = Object.fromEntries(new FormData(form).entries());
+  if (!String(payload.email || "").includes("@")) {
+    showToast("Ingresa un correo válido para poder contactarte.");
+    return;
+  }
   try {
+    if (submitButton) submitButton.disabled = true;
     const response = await fetch("/api/contact", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -1078,10 +1151,12 @@ document.querySelector("#contact-form")?.addEventListener("submit", async (event
     });
     if (!response.ok) throw new Error(await response.text());
     form.reset();
-    showToast("Mensaje enviado. Te llegará una confirmación por correo.");
+    showToast("Recibimos tu solicitud. Revisaremos tu acceso y te contactaremos.");
   } catch (error) {
     console.warn("LexContratos contacto no disponible", error);
-    showToast("El formulario se activará en producción. Por ahora escribe a contacto@lexcontratos.com.");
+    showToast("No pudimos enviar la solicitud. Intenta nuevamente o escribe a contacto@lexcontratos.com.");
+  } finally {
+    if (submitButton) submitButton.disabled = false;
   }
 });
 
@@ -1712,12 +1787,7 @@ function getSignatureRequestSigners() {
 function dropboxSignConfigurationStatus() {
   return {
     configured: false,
-    missing: [
-      "DROPBOX_SIGN_API_KEY",
-      "DROPBOX_SIGN_CLIENT_ID",
-      "DROPBOX_SIGN_CLIENT_SECRET",
-      "DROPBOX_SIGN_WEBHOOK_SECRET"
-    ]
+    label: "Integración de firma electrónica en configuración"
   };
 }
 
@@ -1752,7 +1822,7 @@ function submitSignaturePacket(event) {
     date: new Date().toLocaleString("es-MX"),
     body: fillPlaceholders(editor.value),
     status,
-    signatureProvider: "Dropbox Sign",
+    signatureProvider: "Firma electrónica",
     signatureState: config.configured ? "sent" : "pending_configuration",
     signers,
     matter: matterSnapshot(status, true)
@@ -1761,7 +1831,161 @@ function submitSignaturePacket(event) {
   renderSavedContracts();
   autoSaveVersion("manual");
   signatureDialog.close();
-  showToast(config.configured ? "Contrato enviado a Dropbox Sign." : "Envío preparado. Falta conectar credenciales de Dropbox Sign en backend.");
+  showToast(config.configured ? "Contrato enviado a firma." : "Paquete de firma guardado. La integración de firma electrónica se activará cuando esté configurada.");
+}
+
+function buildLocalCriticalReview(mode) {
+  const body = editor.value || "";
+  const missingFields = missingFieldsForActiveTemplate().map(([, label]) => label);
+  const findings = [];
+
+  if (!body.trim()) {
+    findings.push({
+      severity: "Alta",
+      section: "Documento",
+      observation: "No hay contrato cargado para revisar.",
+      recommendation: "Selecciona o importa un machote, crea una copia editable y vuelve a ejecutar la revisión."
+    });
+  }
+  if (missingFields.length) {
+    findings.push({
+      severity: "Alta",
+      section: "Datos de partes",
+      observation: `Faltan datos por completar: ${missingFields.slice(0, 8).join(", ")}${missingFields.length > 8 ? "..." : ""}.`,
+      recommendation: "Carga documentos adicionales por cada parte o captura manualmente los campos antes de exportar o enviar a firma."
+    });
+  }
+  if (/\{\{[^}]+\}\}|\b(PENDIENTE|POR COMPLETAR|XXX)\b/i.test(body)) {
+    findings.push({
+      severity: "Alta",
+      section: "Campos pendientes",
+      observation: "El contrato conserva marcadores o textos temporales.",
+      recommendation: "Completa o elimina los marcadores antes de circular la versión final."
+    });
+  }
+  if (!/confidencial/i.test(body)) {
+    findings.push({
+      severity: "Media",
+      section: "Confidencialidad",
+      observation: "No se detecta una cláusula clara de confidencialidad.",
+      recommendation: "Valora incluir obligaciones de uso, resguardo, excepciones, vigencia y devolución o destrucción de información."
+    });
+  }
+  if (!/datos personales|protecci[oó]n de datos/i.test(body)) {
+    findings.push({
+      severity: "Media",
+      section: "Datos personales",
+      observation: "No se detecta una regulación expresa sobre datos personales.",
+      recommendation: "Si las partes tratarán datos personales, agrega responsabilidades, medidas de seguridad e instrucciones de tratamiento."
+    });
+  }
+  if (!/jurisdicci[oó]n|tribunales|ley aplicable/i.test(body)) {
+    findings.push({
+      severity: "Media",
+      section: "Ley aplicable y jurisdicción",
+      observation: "No se detecta una cláusula suficiente de ley aplicable o jurisdicción.",
+      recommendation: "Incluye ley aplicable, tribunales competentes o mecanismo de solución de controversias."
+    });
+  }
+  if (!/terminaci[oó]n|rescisi[oó]n/i.test(body)) {
+    findings.push({
+      severity: "Media",
+      section: "Terminación",
+      observation: "No se detectan reglas claras de terminación o rescisión.",
+      recommendation: "Define causas, avisos, efectos, pagos pendientes y supervivencia de obligaciones."
+    });
+  }
+  if (!/notificaci[oó]n|domicilio|correo electr[oó]nico/i.test(body)) {
+    findings.push({
+      severity: "Baja",
+      section: "Notificaciones",
+      observation: "No se detecta un mecanismo completo para notificaciones.",
+      recommendation: "Agrega domicilios, correos autorizados, momento de surtimiento de efectos y cambios de datos de contacto."
+    });
+  }
+  if (!/firma|firmado|aceptaci[oó]n/i.test(body)) {
+    findings.push({
+      severity: "Baja",
+      section: "Firma",
+      observation: "No se detecta cierre de firma o aceptación.",
+      recommendation: "Incluye bloque de firmas, nombres, cargos y representación de cada parte."
+    });
+  }
+
+  if (!findings.length) {
+    findings.push({
+      severity: "Baja",
+      section: "Revisión general",
+      observation: "No se detectaron alertas evidentes en la revisión local básica.",
+      recommendation: "Aun así, revisa coherencia comercial, anexos, montos, plazos, obligaciones y facultades de representación."
+    });
+  }
+
+  return {
+    source: "revisión local",
+    summary: "Revisión preliminar basada en campos pendientes y cláusulas usuales. No sustituye la revisión profesional del contrato.",
+    findings,
+    revisedBody: mode === "propose" ? "" : ""
+  };
+}
+
+function formatCriticalReview(result) {
+  const findings = result.findings?.length ? result.findings : [];
+  const lines = [
+    result.summary || "Revisión preliminar del contrato.",
+    "",
+    ...findings.flatMap((finding, index) => [
+      `${index + 1}. [${finding.severity || "Media"}] ${finding.section || "Contrato"}`,
+      `Observación: ${finding.observation || "Revisar este punto."}`,
+      `Recomendación: ${finding.recommendation || "Validar y ajustar si corresponde."}`,
+      ""
+    ])
+  ];
+  return lines.join("\n").trim();
+}
+
+async function runCriticalReview(mode) {
+  if (!isWorkingCopy || !editor.value.trim()) {
+    showToast("Primero carga o duplica una plantilla para revisar un contrato editable.");
+    return;
+  }
+
+  pendingCriticalReviewBody = "";
+  applyCriticalReviewButton.classList.add("is-hidden");
+  criticalReviewOutput.textContent = mode === "propose" ? "Revisando contrato y preparando ajustes sugeridos..." : "Revisando contrato...";
+
+  try {
+    const response = await fetch("/api/review-contract", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({
+        title: cleanWorkingTitle(editorTitle.textContent),
+        mode,
+        contract: editor.value,
+        missingFields: missingFieldsForActiveTemplate().map(([name, label]) => ({ name, label })),
+        partyData: getPartyData()
+      })
+    });
+    if (!response.ok) throw new Error("critical review unavailable");
+    const result = await response.json();
+    pendingCriticalReviewBody = mode === "propose" && result.revisedBody ? result.revisedBody : "";
+    criticalReviewOutput.textContent = formatCriticalReview(result);
+    applyCriticalReviewButton.classList.toggle("is-hidden", !pendingCriticalReviewBody);
+  } catch (error) {
+    const result = buildLocalCriticalReview(mode);
+    criticalReviewOutput.textContent = `${formatCriticalReview(result)}\n\nLa revisión avanzada estará disponible cuando la IA documental esté activa.`;
+  }
+}
+
+function applyCriticalReviewSuggestion() {
+  if (!pendingCriticalReviewBody) return;
+  editor.value = pendingCriticalReviewBody;
+  pendingCriticalReviewBody = "";
+  applyCriticalReviewButton.classList.add("is-hidden");
+  autoSaveVersion("manual");
+  addMatterEvent("Ajustes sugeridos por revisión crítica integrados");
+  criticalReviewDialog.close();
+  showToast("Cambios sugeridos integrados. Revisa el contrato antes de exportar o firmar.");
 }
 
 function renameActiveTemplate() {
@@ -2088,6 +2312,17 @@ document.querySelector("#export-word").addEventListener("click", exportWordDocum
 
 document.querySelector("#send-signature").addEventListener("click", prepareSignaturePacket);
 
+document.querySelector("#critical-review")?.addEventListener("click", () => {
+  criticalReviewDialog.showModal();
+  criticalReviewOutput.textContent = "Elige si quieres solo observaciones o una propuesta de ajustes para integrar después de revisar.";
+  pendingCriticalReviewBody = "";
+  applyCriticalReviewButton.classList.add("is-hidden");
+});
+
+document.querySelector("#critical-observations")?.addEventListener("click", () => runCriticalReview("observations"));
+document.querySelector("#critical-suggest")?.addEventListener("click", () => runCriticalReview("propose"));
+applyCriticalReviewButton?.addEventListener("click", applyCriticalReviewSuggestion);
+
 document.querySelector("#copy-contract").addEventListener("click", async () => {
   await navigator.clipboard.writeText(editor.value);
   showToast("Contrato copiado al portapapeles.");
@@ -2146,7 +2381,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   setAuthMessage("");
   if (backend) {
     if (!email.includes("@")) {
-      setAuthMessage("Para entrar con Supabase usa el correo completo, por ejemplo nombre@dominio.com.", "error");
+      setAuthMessage("Usa el correo completo asociado a tu cuenta.", "error");
       return;
     }
     try {
@@ -2160,6 +2395,10 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
     }
     return;
   }
+  if (backendAccessLocked()) {
+    setAuthMessage("El acceso privado no está disponible temporalmente. Contacta al administrador.", "error");
+    return;
+  }
   const user = loadUsers()[email];
   if (!user || user.password !== password) {
     showToast("Usuario o contraseña incorrectos.");
@@ -2169,15 +2408,15 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   renderAccessState();
 });
 
-document.querySelector("#demo-login").addEventListener("click", () => {
-  if (productionBackend()) {
-    showToast("El demo local está desactivado cuando Supabase está conectado.");
+document.querySelector("#demo-login")?.addEventListener("click", () => {
+  if (productionBackend() || backendAccessLocked()) {
+    showToast("El acceso de prueba no está disponible en este espacio.");
     return;
   }
   loadUsers();
   saveSession(demoAccount.email);
   renderAccessState();
-  showToast("Entraste con la cuenta demo.");
+  showToast("Entraste con una cuenta interna de prueba.");
 });
 
 document.querySelector("#register-form").addEventListener("submit", async (event) => {
@@ -2190,11 +2429,15 @@ document.querySelector("#register-form").addEventListener("submit", async (event
         document.querySelector("#register-password").value,
         document.querySelector("#register-name").value.trim()
       );
-      showToast("Usuario creado. Revisa tu correo si Supabase requiere confirmación.");
+      showToast("Usuario creado. Revisa tu correo si se solicita confirmación. Tu cuenta quedará pendiente de activación.");
       showAuthPanel(authLogin);
     } catch (error) {
-      showToast(error.message || "No se pudo crear el usuario.");
+      showToast("No se pudo crear el usuario. Intenta nuevamente o contacta al administrador.");
     }
+    return;
+  }
+  if (backendAccessLocked()) {
+    showToast("El registro no está disponible temporalmente. Contacta al administrador.");
     return;
   }
   const users = loadUsers();
@@ -2226,8 +2469,12 @@ document.querySelector("#recover-form").addEventListener("submit", async (event)
       showToast("Te enviamos un correo para recuperar tu contraseña.");
       showAuthPanel(authLogin);
     } catch (error) {
-      showToast(error.message || "No se pudo enviar la recuperación.");
+      showToast("No se pudo enviar la recuperación. Intenta nuevamente o contacta al administrador.");
     }
+    return;
+  }
+  if (backendAccessLocked()) {
+    showToast("La recuperación no está disponible temporalmente. Contacta al administrador.");
     return;
   }
   showToast("Recuperación preparada. En producción se enviará un correo seguro.");
@@ -2237,10 +2484,21 @@ document.querySelector("#recover-form").addEventListener("submit", async (event)
 document.querySelector("#show-register").addEventListener("click", () => showAuthPanel(authRegister));
 document.querySelector("#show-recover").addEventListener("click", () => showAuthPanel(authRecover));
 document.querySelectorAll(".show-login").forEach((button) => button.addEventListener("click", () => showAuthPanel(authLogin)));
+document.querySelectorAll("[data-route-link]").forEach((control) => {
+  control.addEventListener("click", () => {
+    const route = normalizedRouteName(control.dataset.routeLink || "/");
+    setRoute(route);
+    renderAccessState();
+  });
+});
 
-document.querySelector("#activate-demo-license").addEventListener("click", () => {
-  if (productionBackend()) {
-    showToast("La licencia debe activarse desde el administrador o el proveedor de pagos.");
+window.addEventListener("popstate", () => {
+  renderAccessState();
+});
+
+document.querySelector("#activate-demo-license")?.addEventListener("click", () => {
+  if (productionBackend() || backendAccessLocked()) {
+    showToast("Tu solicitud de activación será revisada por el administrador.");
     return;
   }
   const session = loadSession();
@@ -2377,7 +2635,7 @@ document.querySelector("#extract-data").addEventListener("click", async () => {
     addMatterEvent(`Datos extraídos y validados: ${Object.keys(detected).length}`);
     showToast(missing ? `Se extrajeron ${Object.keys(detected).length} datos para revisión. Faltan ${missing}: sube otro documento o llena el campo manualmente.` : "Datos de partes completos. Ya puedes completar el contrato.");
   } else {
-    showToast(aiWasTried ? "La IA documental aún no está disponible en este entorno. Despliega en Vercel y configura OPENAI_API_KEY." : "Carga textos, correos o CSV por cada parte, o llena manualmente los campos faltantes.");
+    showToast(aiWasTried ? "La extracción documental no está disponible temporalmente. Puedes capturar o corregir los datos manualmente." : "Carga textos, correos o CSV por cada parte, o llena manualmente los campos faltantes.");
   }
 });
 

@@ -62,6 +62,38 @@ button {
   overflow: hidden auto;
 }
 
+.route-home .auth-shell,
+.route-privacy .auth-shell,
+.route-terms .auth-shell {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.route-home .auth-panel-stack,
+.route-privacy .auth-panel-stack,
+.route-terms .auth-panel-stack {
+  display: none;
+}
+
+.route-login .auth-shell,
+.route-pending .auth-shell {
+  grid-template-columns: minmax(320px, 520px);
+  justify-content: center;
+  align-content: center;
+}
+
+.route-login .auth-hero,
+.route-login .legal-shell,
+.route-pending .auth-hero,
+.route-pending .legal-shell,
+.route-privacy .auth-hero,
+.route-terms .auth-hero {
+  display: none;
+}
+
+.route-app .auth-shell {
+  display: none;
+}
+
 .auth-hero {
   display: grid;
   gap: 12px;
@@ -270,6 +302,62 @@ button {
   background: rgba(255, 255, 255, 0.07);
   font-size: 12px;
   font-weight: 760;
+}
+
+.landing-actions {
+  display: flex;
+  gap: 9px;
+  flex-wrap: wrap;
+  max-width: 820px;
+}
+
+.landing-actions a {
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+}
+
+.ghost-button.light {
+  color: white;
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.18);
+}
+
+.legal-shell {
+  width: min(880px, 100%);
+  color: white;
+  display: grid;
+  gap: 14px;
+}
+
+.route-privacy #privacy-page,
+.route-terms #terms-page {
+  display: grid !important;
+}
+
+.legal-shell h1 {
+  margin: 0;
+  font-size: clamp(30px, 4vw, 48px);
+  line-height: 1.05;
+}
+
+.legal-shell h2 {
+  margin: 0 0 6px;
+  color: var(--accent-soft);
+  font-size: 18px;
+}
+
+.legal-shell p {
+  margin: 0;
+  color: #d8e6f7;
+  line-height: 1.55;
+}
+
+.legal-shell article {
+  border: 1px solid var(--accent-line);
+  border-radius: 8px;
+  padding: 14px;
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .contact-card {
@@ -851,7 +939,8 @@ button {
 .party-upload-section,
 .assistant-pane,
 .contract-picker,
-.signature-dialog {
+.signature-dialog,
+.critical-review-dialog {
   border: 1px solid var(--line);
   border-radius: 8px;
   background: var(--panel);
@@ -1499,6 +1588,29 @@ dialog {
   max-height: min(760px, calc(100vh - 28px));
   border: 1px solid var(--line);
   padding: 14px;
+}
+
+.critical-review-dialog {
+  width: min(820px, calc(100vw - 28px));
+}
+
+.critical-review-actions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin: 12px 0;
+}
+
+.critical-review-output {
+  max-height: 48vh;
+  overflow: auto;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 14px;
+  background: #f8fbff;
+  color: var(--ink);
+  white-space: pre-wrap;
+  line-height: 1.5;
 }
 
 dialog::backdrop {
