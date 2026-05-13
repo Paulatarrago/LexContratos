@@ -66,6 +66,7 @@ button {
 .route-privacy .auth-shell,
 .route-terms .auth-shell {
   grid-template-columns: minmax(0, 1fr);
+  justify-items: center;
 }
 
 .route-home .auth-panel-stack,
@@ -101,6 +102,32 @@ button {
   color: white;
 }
 
+.route-home .auth-hero {
+  width: min(100%, 1120px);
+  max-width: 1120px;
+  justify-items: center;
+}
+
+.route-home .auth-badge,
+.route-home .auth-hero h1,
+.route-home .auth-lede,
+.route-home .source-chip-row,
+.route-home .auth-flow,
+.route-home .landing-actions {
+  width: min(100%, 820px);
+}
+
+.route-home .auth-security,
+.route-home .auth-manual,
+.route-home .auth-value-grid {
+  width: min(100%, 900px);
+}
+
+.route-home .auth-visual,
+.route-home .contact-card {
+  width: min(100%, 1000px);
+}
+
 .landing-nav {
   position: sticky;
   top: 0;
@@ -110,6 +137,7 @@ button {
   justify-content: space-between;
   gap: 12px;
   width: min(100%, 1100px);
+  margin: 0 auto 6px;
   padding: 10px;
   border: 1px solid rgba(255, 255, 255, 0.16);
   border-radius: 10px;
@@ -139,6 +167,15 @@ button {
   text-decoration: none;
   display: inline-flex;
   align-items: center;
+}
+
+.landing-nav-actions .primary-action {
+  min-height: 44px;
+  min-width: 164px;
+  background: var(--accent);
+  border-color: var(--accent);
+  color: #071e41;
+  box-shadow: 0 12px 26px rgba(211, 154, 67, 0.24);
 }
 
 .auth-badge {
@@ -680,6 +717,27 @@ button {
   color: var(--teal);
   font-weight: 780;
   padding: 0;
+}
+
+.remember-line {
+  display: flex !important;
+  align-items: center;
+  gap: 8px;
+  color: var(--muted);
+  font-size: 13px;
+  font-weight: 760;
+}
+
+.remember-line input {
+  width: 16px;
+  height: 16px;
+}
+
+.password-helper {
+  margin: -4px 0 2px !important;
+  color: var(--muted) !important;
+  font-size: 12px !important;
+  line-height: 1.35 !important;
 }
 
 .auth-demo {

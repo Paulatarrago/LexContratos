@@ -662,16 +662,25 @@ function saveUsers(users) {
 }
 
 function loadSession() {
-  return readJson("lexcontratos_session", null);
+  return readJson("lexcontratos_session", null) || readJson("lexcontratos_session_once", null);
 }
 
-function saveSession(email) {
-  localStorage.setItem("lexcontratos_session", JSON.stringify({ email, date: new Date().toISOString() }));
+function saveSession(email, remember = true) {
+  const session = JSON.stringify({ email, date: new Date().toISOString() });
+  if (remember) {
+    localStorage.setItem("lexcontratos_session", session);
+    sessionStorage.removeItem("lexcontratos_session_once");
+  } else {
+    sessionStorage.setItem("lexcontratos_session_once", session);
+    localStorage.removeItem("lexcontratos_session");
+  }
   localStorage.setItem("lexcontratos_current_user", email);
+  localStorage.setItem("lexcontratos_last_login_email", email);
 }
 
 function clearSession() {
   localStorage.removeItem("lexcontratos_session");
+  sessionStorage.removeItem("lexcontratos_session_once");
 }
 
 function normalizeUserKey(value) {
@@ -2404,6 +2413,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
   event.preventDefault();
   const email = document.querySelector("#login-email").value.trim().toLowerCase();
   const password = document.querySelector("#login-password").value;
+  const rememberSession = document.querySelector("#remember-session")?.checked !== false;
   const backend = productionBackend();
   setAuthMessage("");
   if (backend) {
@@ -2413,6 +2423,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
     }
     try {
       await backend.signIn(email, password);
+      localStorage.setItem("lexcontratos_last_login_email", email);
       setAuthMessage("Acceso validado. Cargando tu biblioteca...", "success");
       await renderAccessState();
     } catch (error) {
@@ -2431,7 +2442,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
     showToast("Usuario o contraseña incorrectos.");
     return;
   }
-  saveSession(email);
+  saveSession(email, rememberSession);
   renderAccessState();
 });
 
@@ -2451,11 +2462,13 @@ document.querySelector("#register-form").addEventListener("submit", async (event
   const backend = productionBackend();
   if (backend) {
     try {
+      const registerEmail = document.querySelector("#register-email").value.trim().toLowerCase();
       await backend.signUp(
-        document.querySelector("#register-email").value.trim(),
+        registerEmail,
         document.querySelector("#register-password").value,
         document.querySelector("#register-name").value.trim()
       );
+      localStorage.setItem("lexcontratos_last_login_email", registerEmail);
       showToast("Usuario creado. Revisa tu correo si se solicita confirmación. Tu cuenta quedará pendiente de activación.");
       showAuthPanel(authLogin);
     } catch (error) {
@@ -2468,7 +2481,7 @@ document.querySelector("#register-form").addEventListener("submit", async (event
     return;
   }
   const users = loadUsers();
-  const email = document.querySelector("#register-email").value.trim();
+  const email = document.querySelector("#register-email").value.trim().toLowerCase();
   if (users[email]) {
     showToast("Ese usuario ya existe.");
     return;
@@ -2483,7 +2496,7 @@ document.querySelector("#register-form").addEventListener("submit", async (event
     licenseEndsAt: ""
   };
   saveUsers(users);
-  saveSession(email);
+  saveSession(email, true);
   renderAccessState();
 });
 
@@ -2795,6 +2808,9 @@ editor.addEventListener("input", scheduleAutoSave);
 });
 
 document.querySelector("#apply-legal-format").addEventListener("click", applyDefaultLegalFormat);
+
+const lastLoginEmail = localStorage.getItem("lexcontratos_last_login_email");
+if (lastLoginEmail) document.querySelector("#login-email").value = lastLoginEmail;
 
 window.addEventListener("lexbackendready", () => {
   renderAccessState();
