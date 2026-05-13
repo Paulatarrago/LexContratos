@@ -604,6 +604,9 @@ const assistantPane = document.querySelector("#assistant-pane");
 const signatureDialog = document.querySelector("#signature-dialog");
 const signatureForm = document.querySelector("#signature-form");
 const signerList = document.querySelector("#signer-list");
+const signatureDialogCopy = document.querySelector("#signature-dialog-copy");
+const signatureStatusLabel = document.querySelector("#signature-status-label");
+const signatureSubmitButton = document.querySelector("#signature-submit");
 const criticalReviewDialog = document.querySelector("#critical-review-dialog");
 const criticalReviewOutput = document.querySelector("#critical-review-output");
 const applyCriticalReviewButton = document.querySelector("#apply-critical-review");
@@ -1793,11 +1796,32 @@ function getSignatureRequestSigners() {
   }));
 }
 
-function dropboxSignConfigurationStatus() {
-  return {
-    configured: false,
-    label: "Integración de firma electrónica en configuración"
-  };
+async function refreshSignatureStatus() {
+  if (!signatureStatusLabel || !signatureSubmitButton) return;
+  signatureStatusLabel.textContent = "Verificando firma electrónica...";
+  signatureSubmitButton.textContent = "Enviar a firma";
+  try {
+    const response = await fetch("/api/send-signature", { method: "GET" });
+    if (!response.ok) throw new Error("signature status unavailable");
+    const status = await response.json();
+    if (status.configured) {
+      signatureStatusLabel.textContent = status.testMode ? "Dropbox Sign conectado · modo prueba" : "Dropbox Sign conectado · envío real";
+      signatureSubmitButton.textContent = status.testMode ? "Enviar prueba de firma" : "Enviar a firma";
+      if (signatureDialogCopy) {
+        signatureDialogCopy.textContent = status.testMode
+          ? "Dropbox Sign está conectado en modo prueba. El envío no será legalmente vinculante hasta desactivar el modo prueba."
+          : "Dropbox Sign está conectado. El contrato se enviará por correo a los firmantes capturados.";
+      }
+      return;
+    }
+  } catch (error) {
+    console.warn("LexContratos estado de firma no disponible", error);
+  }
+  signatureStatusLabel.textContent = "Firma electrónica en configuración";
+  signatureSubmitButton.textContent = "Guardar paquete de firma";
+  if (signatureDialogCopy) {
+    signatureDialogCopy.textContent = "Captura los firmantes y su orden. La integración se activará cuando Dropbox Sign esté configurado en producción.";
+  }
 }
 
 function prepareSignaturePacket() {
@@ -1807,6 +1831,7 @@ function prepareSignaturePacket() {
   }
   renderSignatureRows();
   signatureDialog.showModal();
+  refreshSignatureStatus();
 }
 
 async function submitSignaturePacket(event) {
@@ -1823,6 +1848,7 @@ async function submitSignaturePacket(event) {
   let signatureState = "pending_configuration";
 
   try {
+    showToast("Preparando envío a firma electrónica...");
     const response = await fetch("/api/send-signature", {
       method: "POST",
       headers: { "content-type": "application/json" },

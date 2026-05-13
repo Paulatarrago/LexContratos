@@ -49,12 +49,20 @@ function contractDocumentHtml({ title, folio, body }) {
 }
 
 export default async function handler(request) {
+  const env = typeof process !== "undefined" ? process.env : {};
+  const apiKey = env.DROPBOX_SIGN_API_KEY;
+
+  if (request.method === "GET") {
+    return jsonResponse({
+      configured: Boolean(apiKey),
+      testMode: env.DROPBOX_SIGN_TEST_MODE !== "false"
+    });
+  }
+
   if (request.method !== "POST") {
     return jsonResponse({ error: "Metodo no permitido." }, 405);
   }
 
-  const env = typeof process !== "undefined" ? process.env : {};
-  const apiKey = env.DROPBOX_SIGN_API_KEY;
   if (!apiKey) {
     return jsonResponse({ error: "La firma electrónica aún no está configurada." }, 503);
   }
@@ -92,6 +100,7 @@ export default async function handler(request) {
   formData.append("signing_options[phone]", "0");
   formData.append("signing_options[default_type]", "draw");
   formData.append("field_options[date_format]", "DD/MM/YYYY");
+  formData.append("allow_decline", "1");
   if (env.DROPBOX_SIGN_CLIENT_ID) formData.append("client_id", env.DROPBOX_SIGN_CLIENT_ID);
   if (folio) formData.append("metadata[folio]", folio.slice(0, 1000));
 

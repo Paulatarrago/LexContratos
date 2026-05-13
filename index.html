@@ -365,7 +365,7 @@
               </div>
               <div class="editor-actions">
                 <button class="secondary-action" id="export-word" type="button">Exportar Word</button>
-                <button class="secondary-action" id="send-signature" type="button">Preparar firma electrónica</button>
+                <button class="secondary-action" id="send-signature" type="button">Enviar a firma</button>
                 <button class="secondary-action" id="critical-review" type="button">Revisión crítica IA</button>
                 <button class="secondary-action" id="copy-contract" type="button">Copiar texto</button>
                 <button class="secondary-action" id="review-fields" type="button">Revisar campos pendientes</button>
@@ -570,8 +570,8 @@
       <form method="dialog" class="dialog-close-row">
         <div>
           <p class="eyebrow">Firma electrónica</p>
-          <h2>Preparar paquete de firma</h2>
-          <p class="dialog-copy">La integración de firma electrónica está en configuración. Puedes capturar firmantes y dejar el paquete preparado en el expediente.</p>
+          <h2>Enviar contrato a firma</h2>
+          <p class="dialog-copy" id="signature-dialog-copy">Captura los firmantes y su orden. Si la integración está activa, LexContratos enviará el contrato por Dropbox Sign; si no, guardará el paquete en el expediente.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar firma">×</button>
       </form>
@@ -579,10 +579,10 @@
         <div class="signer-list" id="signer-list"></div>
         <button class="secondary-action" id="add-signer" type="button">Agregar firmante</button>
         <div class="signature-status">
-          <strong>Estado inicial:</strong>
-          <span>Integración de firma electrónica en configuración</span>
+          <strong>Estado:</strong>
+          <span id="signature-status-label">Verificando firma electrónica...</span>
         </div>
-        <button class="primary-action" type="submit">Guardar paquete de firma</button>
+        <button class="primary-action" id="signature-submit" type="submit">Enviar a firma</button>
       </form>
     </dialog>
 
