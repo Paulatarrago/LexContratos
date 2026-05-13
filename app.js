@@ -594,6 +594,7 @@ const authRecover = document.querySelector("#auth-recover");
 const licenseRequired = document.querySelector("#license-required");
 const licenseStatus = document.querySelector("#license-status");
 const licensePill = document.querySelector("#license-pill");
+const authMessage = document.querySelector("#auth-message");
 const templatePicker = document.querySelector("#template-picker");
 const openTemplatePicker = document.querySelector("#open-template-picker");
 const userGuideDialog = document.querySelector("#user-guide-dialog");
@@ -941,7 +942,28 @@ function showAuthPanel(panel) {
   [authLogin, authRegister, authRecover, licenseRequired].forEach((item) => item.classList.add("is-hidden"));
   authShell.classList.toggle("production-auth", Boolean(productionBackend()));
   authShell.classList.toggle("demo-auth", !productionBackend());
+  setAuthMessage("");
   panel.classList.remove("is-hidden");
+}
+
+function setAuthMessage(message, type = "") {
+  if (!authMessage) return;
+  authMessage.textContent = message || "";
+  authMessage.className = `auth-message${message ? " visible" : ""}${type ? ` ${type}` : ""}`;
+}
+
+function readableAuthError(error) {
+  const message = String(error?.message || error || "");
+  if (/invalid login credentials/i.test(message)) {
+    return "Correo o contraseña incorrectos. Usa el correo completo con el que te registraste.";
+  }
+  if (/email not confirmed/i.test(message)) {
+    return "Tu correo aún no está confirmado. Revisa tu bandeja de entrada y correo no deseado.";
+  }
+  if (/rate limit|too many/i.test(message)) {
+    return "Supabase bloqueó temporalmente nuevos intentos. Espera unos minutos y vuelve a probar.";
+  }
+  return message || "No se pudo iniciar sesión. Revisa el correo, la contraseña o la configuración.";
 }
 
 async function renderAccessState() {
@@ -2118,15 +2140,23 @@ switchUserButton.addEventListener("click", () => {
 
 document.querySelector("#login-form").addEventListener("submit", async (event) => {
   event.preventDefault();
-  const email = document.querySelector("#login-email").value.trim();
+  const email = document.querySelector("#login-email").value.trim().toLowerCase();
   const password = document.querySelector("#login-password").value;
   const backend = productionBackend();
+  setAuthMessage("");
   if (backend) {
+    if (!email.includes("@")) {
+      setAuthMessage("Para entrar con Supabase usa el correo completo, por ejemplo nombre@dominio.com.", "error");
+      return;
+    }
     try {
       await backend.signIn(email, password);
+      setAuthMessage("Acceso validado. Cargando tu biblioteca...", "success");
       await renderAccessState();
     } catch (error) {
-      showToast(error.message || "No se pudo iniciar sesión.");
+      const message = readableAuthError(error);
+      setAuthMessage(message, "error");
+      showToast(message);
     }
     return;
   }

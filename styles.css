@@ -445,6 +445,33 @@ button {
   border-color: rgba(8, 47, 111, 0.64);
 }
 
+.auth-message {
+  display: none;
+  margin: 0 !important;
+  padding: 10px 12px;
+  border-radius: 8px;
+  border: 1px solid rgba(8, 47, 111, 0.16);
+  background: rgba(42, 169, 224, 0.1);
+  color: var(--ink) !important;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.auth-message.visible {
+  display: block;
+}
+
+.auth-message.error {
+  border-color: rgba(185, 28, 28, 0.22);
+  background: rgba(185, 28, 28, 0.08);
+  color: #7f1d1d !important;
+}
+
+.auth-message.success {
+  border-color: rgba(8, 47, 111, 0.22);
+  background: rgba(42, 169, 224, 0.12);
+}
+
 .auth-links {
   display: flex;
   gap: 12px;

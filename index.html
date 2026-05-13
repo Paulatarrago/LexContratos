@@ -109,10 +109,11 @@
           <p class="auth-config-warning" id="auth-config-warning">Modo demo activo: falta configurar Supabase en producción.</p>
           <p class="auth-production-note">Supabase conectado. Crea o usa tu usuario real; el acceso demo queda desactivado.</p>
           <form id="login-form" class="auth-form">
-            <label>Correo o usuario<input id="login-email" type="text" autocomplete="username" required /></label>
+            <label>Correo electrónico<input id="login-email" type="email" autocomplete="username" required /></label>
             <label>Contraseña<input id="login-password" type="password" autocomplete="current-password" required /></label>
             <button class="primary-action" type="submit">Entrar</button>
             <button class="secondary-action" id="demo-login" type="button">Entrar con demo</button>
+            <p class="auth-message" id="auth-message" role="status" aria-live="polite"></p>
           </form>
           <div class="auth-links">
             <button type="button" id="show-register">Crear usuario</button>
