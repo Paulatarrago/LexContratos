@@ -518,6 +518,10 @@ button {
   display: block;
 }
 
+.production-auth .auth-login-note {
+  display: none;
+}
+
 .production-auth #demo-login,
 .production-auth .auth-demo {
   display: none;
