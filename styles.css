@@ -339,37 +339,61 @@ button {
 
 .auth-security {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(230px, 0.55fr);
-  gap: 14px;
+  grid-template-columns: minmax(0, 1.05fr) minmax(250px, 0.75fr);
+  gap: 18px;
+  align-items: stretch;
   width: min(820px, 100%);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  border: 1px solid rgba(103, 199, 239, 0.28);
   border-radius: 8px;
-  padding: 12px;
-  background: rgba(255, 255, 255, 0.09);
+  padding: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.13), rgba(42, 169, 224, 0.08));
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.12), 0 18px 46px rgba(0, 0, 0, 0.18);
 }
 
 .auth-security h2 {
-  margin: 4px 0 8px;
+  margin: 4px 0 10px;
   color: white;
-  font-size: 18px;
+  font-size: 21px;
   line-height: 1.2;
 }
 
 .auth-security p {
   margin: 0;
   color: #d8e6f7;
-  font-size: 13px;
-  line-height: 1.5;
+  font-size: 14px;
+  line-height: 1.55;
 }
 
-.auth-security ul {
+.security-proof-grid {
   display: grid;
-  gap: 7px;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px;
   margin: 0;
-  padding-left: 18px;
+}
+
+.security-proof-grid article {
+  min-height: 76px;
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  border-radius: 8px;
+  padding: 10px;
+  background: rgba(255, 255, 255, 0.09);
+}
+
+.security-proof-grid span {
+  display: block;
+  margin-bottom: 7px;
+  color: var(--sky);
+  font-size: 10px;
+  font-weight: 900;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.security-proof-grid strong {
+  display: block;
   color: white;
   font-size: 13px;
-  line-height: 1.35;
+  line-height: 1.25;
 }
 
 .auth-panel-stack {
