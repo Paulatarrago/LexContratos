@@ -94,6 +94,24 @@ button {
   line-height: 1.55;
 }
 
+.source-chip-row {
+  display: flex;
+  gap: 7px;
+  flex-wrap: wrap;
+  max-width: 780px;
+}
+
+.source-chip-row span {
+  border: 1px solid rgba(103, 199, 239, 0.26);
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: white;
+  background: rgba(96, 165, 250, 0.12);
+  font-size: 11px;
+  font-weight: 850;
+  letter-spacing: 0.02em;
+}
+
 .auth-value-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
