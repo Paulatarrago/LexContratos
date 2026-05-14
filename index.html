@@ -293,13 +293,13 @@
         <div class="drawer-heading">
           <div>
             <p class="eyebrow">Expedientes</p>
-            <h2>Clientes, proveedores y personales</h2>
+            <h2>Archivo contractual</h2>
           </div>
           <button class="icon-button dark" id="close-archive" type="button" title="Cerrar expedientes" aria-label="Cerrar expedientes">×</button>
         </div>
 
         <section class="sidebar-panel">
-          <p class="eyebrow">Carpetas</p>
+          <p class="eyebrow">Explorador</p>
           <div class="folder-create">
             <select id="folder-root" aria-label="Tipo de carpeta">
               <option value="Clientes">Clientes</option>
@@ -308,17 +308,18 @@
             </select>
             <input id="folder-name" type="text" placeholder="Nombre/Subcarpeta y Enter" />
           </div>
-          <p class="folder-help">Presiona Enter para crear carpetas o subcarpetas.</p>
+          <p class="folder-help">Presiona Enter para crear carpetas o subcarpetas. Da doble clic en una carpeta para abrirla.</p>
+          <div class="finder-path" id="finder-path" aria-live="polite"></div>
           <div class="folder-list" id="folder-list" aria-label="Carpetas personalizadas"></div>
         </section>
 
         <section class="sidebar-panel">
-          <p class="eyebrow">Contratos creados</p>
+          <p class="eyebrow">Contenido de la carpeta</p>
           <div class="saved-contracts" id="saved-contracts" aria-live="polite"></div>
         </section>
 
         <section class="sidebar-panel">
-          <p class="eyebrow">Versiones guardadas</p>
+          <p class="eyebrow">Versiones del expediente</p>
           <div class="saved-contracts" id="version-list" aria-live="polite"></div>
         </section>
       </aside>

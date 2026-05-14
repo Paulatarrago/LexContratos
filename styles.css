@@ -1437,6 +1437,7 @@ button {
 
 .side-drawer {
   left: 0;
+  width: min(720px, calc(100vw - 28px));
   color: white;
   background: var(--midnight);
   padding: 18px;
@@ -1500,7 +1501,125 @@ button {
   line-height: 1.35;
 }
 
-.folder-list,
+.finder-path {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  margin-bottom: 10px;
+  padding: 7px 8px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 8px;
+  color: #cfdaeb;
+  background: rgba(0, 0, 0, 0.12);
+  font-size: 12px;
+  overflow-x: auto;
+}
+
+.finder-path span {
+  color: #7487a1;
+}
+
+.finder-crumb {
+  border: 0;
+  padding: 0;
+  color: #e9f2ff;
+  background: transparent;
+  font: inherit;
+  font-weight: 800;
+  white-space: nowrap;
+}
+
+.folder-list {
+  overflow-x: auto;
+}
+
+.finder-columns {
+  display: grid;
+  grid-auto-columns: minmax(184px, 1fr);
+  grid-auto-flow: column;
+  gap: 8px;
+  min-height: 188px;
+}
+
+.finder-column {
+  min-width: 0;
+  display: grid;
+  align-content: start;
+  gap: 7px;
+  padding: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.045);
+}
+
+.finder-column header {
+  color: #91a3bd;
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+}
+
+.finder-item {
+  display: grid;
+  gap: 7px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  padding: 8px;
+  color: #e9eef1;
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.finder-item.active {
+  background: rgba(82, 168, 255, 0.18);
+  border-color: rgba(147, 197, 253, 0.6);
+}
+
+.finder-item.ancestor {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.24);
+}
+
+.finder-folder {
+  display: grid;
+  grid-template-columns: 24px minmax(0, 1fr);
+  gap: 8px;
+  align-items: center;
+  width: 100%;
+}
+
+.finder-folder strong,
+.finder-folder small {
+  display: block;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.finder-folder small {
+  margin-top: 2px;
+  color: #aebbc3;
+  font-size: 11px;
+  font-weight: 650;
+}
+
+.finder-icon {
+  width: 24px;
+  height: 22px;
+  display: grid;
+  place-items: center;
+  border-radius: 6px;
+  color: #d39a43;
+  background: rgba(211, 154, 67, 0.13);
+}
+
+.finder-empty {
+  padding: 12px;
+  border: 1px dashed rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: #aebbc3;
+  font-size: 12px;
+}
+
 .saved-contracts {
   display: grid;
   gap: 8px;
