@@ -1060,6 +1060,7 @@ button {
 .party-upload-section,
 .assistant-pane,
 .contract-picker,
+.save-location-dialog,
 .signature-dialog,
 .critical-review-dialog {
   border: 1px solid var(--line);
@@ -1923,6 +1924,55 @@ dialog {
 
 .critical-review-dialog {
   width: min(820px, calc(100vw - 28px));
+}
+
+.save-location-dialog {
+  width: min(860px, calc(100vw - 28px));
+}
+
+.save-location-current {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  margin: 10px 0;
+  padding: 9px 10px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  color: var(--muted);
+  background: #f8fbff;
+  font-size: 13px;
+}
+
+.save-location-current strong {
+  color: var(--ink);
+  text-align: right;
+}
+
+.save-location-browser {
+  max-height: 360px;
+  overflow: auto;
+  padding: 10px;
+  border-radius: 8px;
+  background: #081f3c;
+}
+
+.save-location-columns {
+  min-height: 220px;
+}
+
+.save-location-create,
+.dialog-actions {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  justify-content: flex-end;
+  margin-top: 12px;
+}
+
+.save-location-create input {
+  flex: 1;
+  min-width: 0;
 }
 
 .critical-review-actions {

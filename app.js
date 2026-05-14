@@ -602,6 +602,14 @@ const userGuideDialog = document.querySelector("#user-guide-dialog");
 const openUserGuide = document.querySelector("#open-user-guide");
 const archiveDrawer = document.querySelector("#archive-drawer");
 const assistantPane = document.querySelector("#assistant-pane");
+const saveLocationDialog = document.querySelector("#save-location-dialog");
+const saveLocationTitle = document.querySelector("#save-location-title");
+const saveLocationBrowser = document.querySelector("#save-location-browser");
+const saveLocationSelected = document.querySelector("#save-location-selected");
+const saveLocationNewName = document.querySelector("#save-location-new-name");
+const saveLocationCreateFolder = document.querySelector("#save-location-create-folder");
+const saveLocationCancel = document.querySelector("#save-location-cancel");
+const saveLocationConfirm = document.querySelector("#save-location-confirm");
 const signatureDialog = document.querySelector("#signature-dialog");
 const signatureForm = document.querySelector("#signature-form");
 const signerList = document.querySelector("#signer-list");
@@ -637,6 +645,8 @@ let matterHistoryEvents = [];
 let toastTimer;
 let autosaveTimer;
 let folderClickTimer;
+let saveLocationResolve = null;
+let saveLocationState = { folder: "Clientes", confirmLabel: "Guardar aquí" };
 let pendingCriticalReviewBody = "";
 let lastCriticalReviewFindings = [];
 let restoringDraft = false;
@@ -1701,21 +1711,22 @@ function createWorkingCopy(sourceKey, customBody, { announce = true } = {}) {
   return true;
 }
 
-function startContractFromTemplate(sourceKey) {
+async function startContractFromTemplate(sourceKey) {
   const source = templates[sourceKey];
   if (!source) {
     showToast("Primero selecciona un machote.");
     return false;
   }
-  const destination = window.prompt(
-    "¿Dónde quieres guardar este contrato? Puedes escribir una carpeta nueva, por ejemplo: Clientes/Cliente Demo/Asunto 2026",
-    activeFolder || "Clientes"
-  );
-  if (!destination || !destination.trim()) {
+  const destination = await openSaveLocationDialog({
+    title: `Guardar copia de ${source.title}`,
+    initialFolder: activeFolder || "Clientes",
+    confirmLabel: "Crear contrato aquí"
+  });
+  if (!destination) {
     showToast("Selección cancelada. No se creó una copia de trabajo.");
     return false;
   }
-  activeFolder = ensureFolderPath(destination.trim(), activeFolder.split("/")[0] || "Clientes");
+  activeFolder = ensureFolderPath(destination, activeFolder.split("/")[0] || "Clientes");
   renderFolders();
   renderSavedContracts();
   renderVersions();
@@ -1775,7 +1786,11 @@ function saveAsPersonalBaseTemplate() {
 }
 
 function renderVersions() {
-  const visible = versions.filter((version) => version.folder === activeFolder).slice(-8).reverse();
+  const visible = versions
+    .filter((version) => version.folder === activeFolder)
+    .filter((version) => version.kind === "manual" || !/autosave/i.test(version.title || ""))
+    .slice(-6)
+    .reverse();
   versionList.innerHTML = visible.length
     ? visible
         .map((version) => `
@@ -1792,7 +1807,7 @@ function renderVersions() {
           </article>
         `)
         .join("")
-    : `<span>Las versiones se guardan solas mientras redactas.</span>`;
+    : `<span>El autoguardado protege el borrador en segundo plano. Aquí aparecerán solo versiones manuales o relevantes.</span>`;
 }
 
 function autoSaveVersion(reason = "auto") {
@@ -1811,6 +1826,7 @@ function autoSaveVersion(reason = "auto") {
   versions.push({
     id: Date.now().toString(),
     title: `${templates[activeTemplate]?.title || editorTitle.textContent} · ${reason === "manual" ? "versión manual" : "autosave"}`,
+    kind: reason === "manual" ? "manual" : "auto",
     folder: activeFolder,
     template: activeTemplate,
     language: activeLanguage,
@@ -2545,10 +2561,7 @@ function manualFieldMarkup(name, label, value = "") {
   return `
     <div class="manual-field">
       <span>${escapeHtml(label)}</span>
-      <div class="manual-field-row">
-        <input name="${escapeHtml(name)}" value="${escapeHtml(value)}" aria-label="${escapeHtml(label)}" />
-        <button class="folder-action apply-manual-field" type="button" data-field="${escapeHtml(name)}">Agregar</button>
-      </div>
+      <input name="${escapeHtml(name)}" value="${escapeHtml(value)}" aria-label="${escapeHtml(label)}" />
     </div>
   `;
 }
@@ -2696,6 +2709,94 @@ function renderFinderPath() {
       return `${separator}<button type="button" class="finder-crumb" data-folder="${escapeHtml(path)}">${escapeHtml(part)}</button>`;
     })
     .join("");
+}
+
+function folderColumnParentsFor(folder) {
+  const parts = String(folder || "Clientes").split("/").filter(Boolean);
+  const columns = [""];
+  let path = "";
+  parts.forEach((part) => {
+    path = path ? `${path}/${part}` : part;
+    columns.push(path);
+  });
+  return columns.filter((value, index, list) => list.indexOf(value) === index);
+}
+
+function renderSaveLocationBrowser() {
+  if (!saveLocationBrowser || !saveLocationSelected) return;
+  const selected = saveLocationState.folder || activeFolder || "Clientes";
+  saveLocationSelected.textContent = selected;
+  saveLocationConfirm.textContent = saveLocationState.confirmLabel || "Guardar aquí";
+  const columns = folderColumnParentsFor(selected);
+  saveLocationBrowser.innerHTML = `
+    <div class="finder-columns save-location-columns" role="list">
+      ${columns
+        .map((parent) => {
+          const items = directChildFolders(parent);
+          const title = parent ? parent.split("/").pop() : "Raíz";
+          return `
+            <section class="finder-column" aria-label="${escapeHtml(title)}">
+              <header>${escapeHtml(title)}</header>
+              ${
+                items.length
+                  ? items
+                      .map((folder) => {
+                        const label = folder.split("/").pop();
+                        const isActive = folder === selected;
+                        const isAncestor = !isActive && selected.startsWith(`${folder}/`);
+                        return `
+                          <article class="finder-item ${isActive ? "active" : ""} ${isAncestor ? "ancestor" : ""}" data-save-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
+                            <button class="folder-item finder-folder save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
+                              <span class="finder-icon" aria-hidden="true">▣</span>
+                              <span>
+                                <strong>${escapeHtml(label)}</strong>
+                                <small>${escapeHtml(folderMetaText(folder))}</small>
+                              </span>
+                            </button>
+                          </article>
+                        `;
+                      })
+                      .join("")
+                  : `<div class="finder-empty">Sin subcarpetas</div>`
+              }
+            </section>
+          `;
+        })
+        .join("")}
+    </div>
+  `;
+}
+
+function resolveSaveLocation(folder) {
+  const resolver = saveLocationResolve;
+  saveLocationResolve = null;
+  if (saveLocationDialog?.open) saveLocationDialog.close();
+  if (resolver) resolver(folder);
+}
+
+function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder = activeFolder, confirmLabel = "Guardar aquí" } = {}) {
+  if (!saveLocationDialog) return Promise.resolve(initialFolder || activeFolder);
+  return new Promise((resolve) => {
+    saveLocationResolve = resolve;
+    saveLocationState = {
+      folder: ensureFolderPath(initialFolder || activeFolder || "Clientes"),
+      confirmLabel
+    };
+    if (saveLocationTitle) saveLocationTitle.textContent = title;
+    if (saveLocationNewName) saveLocationNewName.value = "";
+    renderSaveLocationBrowser();
+    saveLocationDialog.showModal();
+  });
+}
+
+function createFolderInsideSaveLocation() {
+  const rawName = saveLocationNewName?.value.trim();
+  if (!rawName) return;
+  saveLocationState.folder = ensureFolderPath(`${saveLocationState.folder}/${rawName}`, saveLocationState.folder.split("/")[0] || "Clientes");
+  if (saveLocationNewName) saveLocationNewName.value = "";
+  renderFolders();
+  renderSaveLocationBrowser();
+  showToast(`Carpeta lista: ${saveLocationState.folder}.`);
 }
 
 function ensureFolderPath(value, fallbackRoot = activeFolder.split("/")[0] || "Clientes") {
@@ -3062,26 +3163,6 @@ function applyDetectedData(updates) {
   saveActiveDraft("Datos extraídos");
 }
 
-function applyManualField(fieldName) {
-  const input = partyForm.elements[fieldName];
-  if (!input) return;
-  if (!String(input.value || "").trim()) {
-    showToast("Captura un valor antes de agregarlo al contrato.");
-    return;
-  }
-  const integrated = integrateKnownDataIntoContract("Dato manual integrado");
-  const missing = missingFieldsForActiveTemplate().length;
-  if (!integrated) {
-    showToast("Ese dato ya no tiene un campo pendiente dentro del contrato.");
-    renderDynamicFields();
-    renderCustomFields();
-    renderRequirements();
-    return;
-  }
-  showToast(missing ? `Dato agregado al contrato. Quedan ${missing} campo${missing === 1 ? "" : "s"} pendiente${missing === 1 ? "" : "s"}.` : "Datos pendientes completos. El panel se cerró automáticamente.");
-  if (!missing) assistantPane.classList.remove("open");
-}
-
 function integrateCompletedManualFields(event) {
   if (event) event.preventDefault();
   if (!ensureEditableWorkspace("integrar datos")) return;
@@ -3169,10 +3250,11 @@ async function addFilesToRole(side, fileList) {
   }
 }
 
-templateGrid.addEventListener("click", (event) => {
+templateGrid.addEventListener("click", async (event) => {
   const card = event.target.closest(".template-card");
   if (!card) return;
-  if (startContractFromTemplate(card.dataset.template) && templatePicker.open) templatePicker.close();
+  if (templatePicker.open) templatePicker.close();
+  await startContractFromTemplate(card.dataset.template);
 });
 
 roleDropGrid.addEventListener("change", async (event) => {
@@ -3297,20 +3379,19 @@ contractFolderSelect.addEventListener("change", () => {
   showToast(`Este contrato se guardará en ${activeFolder}.`);
 });
 
-quickFolderButton.addEventListener("click", () => {
-  const value = window.prompt("Nueva carpeta para este contrato. Ejemplo: Clientes/Cliente Alfa/Servicios 2026", activeFolder.includes("/") ? activeFolder : `${activeFolder}/`);
-  if (!value || !value.trim()) return;
-  const parts = value
-    .split("/")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (!parts.length) return;
-
-  activeFolder = ensureFolderPath(parts.join("/"));
+quickFolderButton.addEventListener("click", async () => {
+  const destination = await openSaveLocationDialog({
+    title: "Elegir carpeta de trabajo",
+    initialFolder: activeFolder || "Clientes",
+    confirmLabel: "Usar esta carpeta"
+  });
+  if (!destination) return;
+  activeFolder = ensureFolderPath(destination);
   renderFolders();
   renderSavedContracts();
   renderVersions();
-  saveActiveDraft("Carpeta creada");
+  renderFolderSelector();
+  saveActiveDraft("Carpeta actualizada");
   showToast(`Este contrato se guardará en ${activeFolder}.`);
 });
 
@@ -3478,11 +3559,23 @@ signerList.addEventListener("click", (event) => {
 
 signatureForm.addEventListener("submit", submitSignaturePacket);
 
-document.querySelector("#save-contract").addEventListener("click", () => {
+document.querySelector("#save-contract").addEventListener("click", async () => {
   if (!isWorkingCopy) {
     showToast("Primero duplica la plantilla base para crear un contrato.");
     return;
   }
+  const destination = await openSaveLocationDialog({
+    title: "Guardar contrato en expediente",
+    initialFolder: activeFolder || "Clientes",
+    confirmLabel: "Guardar contrato aquí"
+  });
+  if (!destination) {
+    showToast("Guardado cancelado. El contrato sigue como borrador.");
+    return;
+  }
+  activeFolder = ensureFolderPath(destination, activeFolder.split("/")[0] || "Clientes");
+  renderFolders();
+  renderFolderSelector();
   const filled = fillPlaceholders(editor.value);
   editor.value = filled;
   const folio = ensureMatterFolio();
@@ -3502,6 +3595,7 @@ document.querySelector("#save-contract").addEventListener("click", () => {
   savedContracts.push(contract);
   saveSavedContracts(contract);
   renderSavedContracts();
+  renderVersions();
   autoSaveVersion("manual");
   saveActiveDraft("Contrato creado");
   showToast(`Contrato creado en la carpeta ${activeFolder}.`);
@@ -3647,6 +3741,39 @@ finderPath?.addEventListener("click", (event) => {
   openArchiveFolder(crumb.dataset.folder);
 });
 
+saveLocationBrowser?.addEventListener("click", (event) => {
+  const button = event.target.closest(".save-folder-option");
+  if (!button) return;
+  saveLocationState.folder = button.dataset.saveFolder;
+  renderSaveLocationBrowser();
+});
+
+saveLocationBrowser?.addEventListener("dblclick", (event) => {
+  const button = event.target.closest(".save-folder-option");
+  if (!button) return;
+  saveLocationState.folder = button.dataset.saveFolder;
+  renderSaveLocationBrowser();
+});
+
+saveLocationCreateFolder?.addEventListener("click", createFolderInsideSaveLocation);
+
+saveLocationNewName?.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  createFolderInsideSaveLocation();
+});
+
+saveLocationConfirm?.addEventListener("click", () => {
+  const folder = ensureFolderPath(saveLocationState.folder || activeFolder || "Clientes");
+  resolveSaveLocation(folder);
+});
+
+saveLocationCancel?.addEventListener("click", () => resolveSaveLocation(null));
+
+saveLocationDialog?.addEventListener("close", () => {
+  if (saveLocationResolve) resolveSaveLocation(null);
+});
+
 document.querySelector("#create-folder")?.addEventListener("click", createFolderFromInput);
 
 folderName.addEventListener("keydown", (event) => {
@@ -3764,16 +3891,10 @@ versionList.addEventListener("click", (event) => {
   showToast("Versión guardada abierta en el editor.");
 });
 
-partyForm.addEventListener("click", (event) => {
-  const button = event.target.closest(".apply-manual-field");
-  if (!button) return;
-  applyManualField(button.dataset.field);
-});
-
 partyForm.addEventListener("keydown", (event) => {
   if (event.key !== "Enter" || !event.target.matches("input")) return;
   event.preventDefault();
-  applyManualField(event.target.name);
+  integrateCompletedManualFields();
 });
 
 partyForm.addEventListener("input", () => {

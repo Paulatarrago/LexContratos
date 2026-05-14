@@ -336,7 +336,7 @@
                   Guardar en
                   <select id="contract-folder-select" aria-label="Carpeta donde se guardará este contrato"></select>
                 </label>
-                <button class="secondary-action" id="quick-folder" type="button">Nueva carpeta</button>
+                <button class="secondary-action" id="quick-folder" type="button">Elegir carpeta</button>
               </div>
             </div>
             <div class="summary-actions">
@@ -344,7 +344,7 @@
               <span id="template-count">13 machotes</span>
               <button class="secondary-action" id="rename-template" type="button">Renombrar copia</button>
               <button class="secondary-action" id="replicate-template" type="button">Nueva copia</button>
-              <button class="primary-action" id="save-contract" type="button">Crear contrato</button>
+              <button class="primary-action" id="save-contract" type="button">Guardar contrato</button>
             </div>
           </article>
 
@@ -441,8 +441,8 @@
               <p class="eyebrow">Campos</p>
               <strong>Pendientes</strong>
             </div>
+            <button class="secondary-action mini-action" id="integrate-manual-data" type="button">Integrar datos capturados</button>
             <button class="secondary-action mini-action" id="clear-generales" type="button">Borrar datos</button>
-            <button class="secondary-action mini-action" id="integrate-manual-data" type="button">Integrar completados</button>
           </summary>
           <form class="party-form" id="party-form">
             <div class="dynamic-fields" id="dynamic-fields"></div>
@@ -566,6 +566,30 @@
         <input id="template-search" type="search" placeholder="Arrendamiento, renta, prestación de servicios, fideicomiso..." />
       </label>
       <div class="template-list" id="template-grid" aria-label="Lista compacta de machotes"></div>
+    </dialog>
+
+    <dialog class="save-location-dialog" id="save-location-dialog">
+      <form method="dialog" class="dialog-close-row">
+        <div>
+          <p class="eyebrow">Guardar en expediente</p>
+          <h2 id="save-location-title">Elige dónde guardar</h2>
+          <p class="dialog-copy">Selecciona una carpeta existente o crea una nueva dentro de la carpeta abierta. Da doble clic para entrar, como en un explorador de archivos.</p>
+        </div>
+        <button class="icon-button" type="submit" aria-label="Cerrar selector de carpeta">×</button>
+      </form>
+      <div class="save-location-current">
+        <span>Guardar en</span>
+        <strong id="save-location-selected">Clientes</strong>
+      </div>
+      <div class="save-location-browser" id="save-location-browser" aria-label="Explorador de carpetas para guardar"></div>
+      <div class="save-location-create">
+        <input id="save-location-new-name" type="text" placeholder="Nueva carpeta dentro de la seleccionada" />
+        <button class="secondary-action" id="save-location-create-folder" type="button">Crear carpeta</button>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-action" id="save-location-cancel" type="button">Cancelar</button>
+        <button class="primary-action" id="save-location-confirm" type="button">Guardar aquí</button>
+      </div>
     </dialog>
 
     <dialog class="signature-dialog" id="signature-dialog">
