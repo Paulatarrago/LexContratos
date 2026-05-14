@@ -606,6 +606,7 @@ const saveLocationDialog = document.querySelector("#save-location-dialog");
 const saveLocationTitle = document.querySelector("#save-location-title");
 const saveLocationBrowser = document.querySelector("#save-location-browser");
 const saveLocationSelected = document.querySelector("#save-location-selected");
+const saveLocationFileName = document.querySelector("#save-location-file-name");
 const saveLocationNewName = document.querySelector("#save-location-new-name");
 const saveLocationCreateFolder = document.querySelector("#save-location-create-folder");
 const saveLocationCancel = document.querySelector("#save-location-cancel");
@@ -633,11 +634,12 @@ let activeCategory = "Todos";
 let activeLanguage = "es";
 let partyDataStore = {};
 let sourceTextsBySide = { A: [], B: [] };
-const rootFolders = ["Clientes", "Proveedores", "Personales"];
+const rootFolders = ["Clientes", "Proveedores", "Personales", "Documentos de las partes"];
 let folders = loadFolders();
 let activeFolder = folders[0] || "Clientes";
 let savedContracts = loadSavedContracts();
 let versions = loadVersions();
+let supportDocuments = loadSupportDocuments();
 let legalFormat = loadLegalFormat();
 let masterInsights = loadMasterInsights();
 let activeMatterFolio = null;
@@ -646,7 +648,7 @@ let toastTimer;
 let autosaveTimer;
 let folderClickTimer;
 let saveLocationResolve = null;
-let saveLocationState = { folder: "Clientes", confirmLabel: "Guardar aquí" };
+let saveLocationState = { folder: "Clientes", confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
 let pendingCriticalReviewBody = "";
 let lastCriticalReviewFindings = [];
 let restoringDraft = false;
@@ -808,6 +810,14 @@ function loadVersions() {
 
 function saveVersions() {
   localStorage.setItem(userStorageKey("versions"), JSON.stringify(versions));
+}
+
+function loadSupportDocuments() {
+  return readJson(userStorageKey("support_documents"), []);
+}
+
+function saveSupportDocuments() {
+  localStorage.setItem(userStorageKey("support_documents"), JSON.stringify(supportDocuments));
 }
 
 function activeDraftKey() {
@@ -1720,17 +1730,23 @@ async function startContractFromTemplate(sourceKey) {
   const destination = await openSaveLocationDialog({
     title: `Guardar copia de ${source.title}`,
     initialFolder: activeFolder || "Clientes",
-    confirmLabel: "Crear contrato aquí"
+    confirmLabel: "Crear contrato aquí",
+    defaultName: cleanWorkingTitle(source.title),
+    requireName: true
   });
   if (!destination) {
     showToast("Selección cancelada. No se creó una copia de trabajo.");
     return false;
   }
-  activeFolder = ensureFolderPath(destination, activeFolder.split("/")[0] || "Clientes");
+  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || "Clientes");
   renderFolders();
   renderSavedContracts();
   renderVersions();
   createWorkingCopy(sourceKey, bodyForTemplate(sourceKey), { announce: false });
+  if (destination.fileName) {
+    templates[activeTemplate].title = destination.fileName;
+    editorTitle.textContent = destination.fileName;
+  }
   renderFolderSelector();
   saveActiveDraft("Contrato iniciado desde machote");
   showToast(`Copia editable creada y lista para guardarse en ${activeFolder}.`);
@@ -1751,23 +1767,24 @@ function ensureEditableWorkspace(actionLabel = "trabajar este contrato") {
 
 function saveAsPersonalBaseTemplate() {
   if (!activeTemplate || !editor.value.trim()) {
-    showToast("Primero selecciona o importa un contrato para guardarlo como machote propio.");
+    showToast("Primero selecciona o importa un contrato para guardarlo como plantilla base.");
     return;
   }
   if (!isWorkingCopy) {
-    showToast("Las plantillas originales están protegidas. Duplica la plantilla o importa tu propio machote antes de guardarlo como documento base.");
+    showToast("Las plantillas base están protegidas. Trabaja una copia antes de guardar una versión limpia en la matriz de contratos master.");
     return;
   }
 
   const defaultName = cleanWorkingTitle(editorTitle.textContent).replace(/\s+-\s+copia(?:\s+de\s+trabajo)?$/i, "");
-  const name = window.prompt("Nombre para guardar en tus documentos base. Ejemplo: Contrato marco de prestación de servicios", defaultName);
+  const name = window.prompt("Nombre para guardar la versión limpia en la matriz de contratos master. Ejemplo: Contrato marco de prestación de servicios", defaultName);
   if (!name || !name.trim()) {
     showToast("Guardado cancelado. La copia sigue editable.");
     return;
   }
 
   const key = `personal-base-${Date.now()}`;
-  const prepared = prepareTemplateFields(editor.value, templates[activeTemplate]?.customFields || []);
+  const cleanBody = scrubKnownPartyData(editor.value);
+  const prepared = prepareTemplateFields(cleanBody, templates[activeTemplate]?.customFields || []);
   templates[key] = {
     ...(templates[activeSourceMaster] || templates[activeTemplate] || {}),
     title: name.trim(),
@@ -1782,7 +1799,7 @@ function saveAsPersonalBaseTemplate() {
   saveMasterTemplates();
   renderTemplates();
   autoSaveVersion("manual");
-  showToast("Machote propio guardado en Documentos base propios. La copia actual sigue editable.");
+  showToast("Versión limpia guardada como plantilla base. La copia actual sigue editable con sus datos.");
 }
 
 function renderVersions() {
@@ -2686,14 +2703,16 @@ function folderCounts(folder) {
   const subfolders = directChildFolders(folder).length;
   const contracts = savedContracts.filter((contract) => contract.folder === folder).length;
   const savedVersions = versions.filter((version) => version.folder === folder).length;
-  return { subfolders, contracts, savedVersions };
+  const documents = supportDocuments.filter((document) => document.folder === folder).length;
+  return { subfolders, contracts, savedVersions, documents };
 }
 
 function folderMetaText(folder) {
-  const { subfolders, contracts, savedVersions } = folderCounts(folder);
+  const { subfolders, contracts, savedVersions, documents } = folderCounts(folder);
   const parts = [];
   if (subfolders) parts.push(`${subfolders} carpeta${subfolders === 1 ? "" : "s"}`);
   if (contracts) parts.push(`${contracts} contrato${contracts === 1 ? "" : "s"}`);
+  if (documents) parts.push(`${documents} documento${documents === 1 ? "" : "s"}`);
   if (savedVersions) parts.push(`${savedVersions} versión${savedVersions === 1 ? "" : "es"}`);
   return parts.join(" · ") || "Vacía";
 }
@@ -2726,43 +2745,74 @@ function renderSaveLocationBrowser() {
   if (!saveLocationBrowser || !saveLocationSelected) return;
   const selected = saveLocationState.folder || activeFolder || "Clientes";
   saveLocationSelected.textContent = selected;
+  if (saveLocationFileName) {
+    saveLocationFileName.value = saveLocationState.fileName || saveLocationState.defaultName || "";
+    saveLocationFileName.closest("label")?.classList.toggle("is-hidden", !saveLocationState.requireName);
+  }
   saveLocationConfirm.textContent = saveLocationState.confirmLabel || "Guardar aquí";
-  const columns = folderColumnParentsFor(selected);
+  const parent = folderParent(selected);
+  const folderRows = directChildFolders(selected)
+    .map((folder) => {
+      const label = folder.split("/").pop();
+      return `
+        <button class="save-file-row save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
+          <span class="save-file-name"><span class="finder-icon" aria-hidden="true">▣</span><strong>${escapeHtml(label)}</strong></span>
+          <span>${escapeHtml(folderMetaText(folder))}</span>
+          <span>Carpeta</span>
+        </button>
+      `;
+    })
+    .join("");
+  const contractRows = savedContracts
+    .filter((contract) => contract.folder === selected)
+    .slice()
+    .reverse()
+    .map((contract) => `
+      <div class="save-file-row is-file">
+        <span class="save-file-name"><span aria-hidden="true">□</span><strong>${escapeHtml(contract.title)}</strong></span>
+        <span>${escapeHtml(contract.date || "")}</span>
+        <span>Contrato</span>
+      </div>
+    `)
+    .join("");
+  const documentRows = supportDocuments
+    .filter((document) => document.folder === selected)
+    .slice()
+    .reverse()
+    .map((document) => `
+      <div class="save-file-row is-file">
+        <span class="save-file-name"><span aria-hidden="true">□</span><strong>${escapeHtml(document.name)}</strong></span>
+        <span>${escapeHtml(document.date || "")}</span>
+        <span>${escapeHtml(document.type || "Documento")}</span>
+      </div>
+    `)
+    .join("");
+  const emptyRows = !folderRows && !contractRows && !documentRows ? `<div class="save-file-empty">Esta carpeta está vacía.</div>` : "";
   saveLocationBrowser.innerHTML = `
-    <div class="finder-columns save-location-columns" role="list">
-      ${columns
-        .map((parent) => {
-          const items = directChildFolders(parent);
-          const title = parent ? parent.split("/").pop() : "Raíz";
-          return `
-            <section class="finder-column" aria-label="${escapeHtml(title)}">
-              <header>${escapeHtml(title)}</header>
-              ${
-                items.length
-                  ? items
-                      .map((folder) => {
-                        const label = folder.split("/").pop();
-                        const isActive = folder === selected;
-                        const isAncestor = !isActive && selected.startsWith(`${folder}/`);
-                        return `
-                          <article class="finder-item ${isActive ? "active" : ""} ${isAncestor ? "ancestor" : ""}" data-save-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
-                            <button class="folder-item finder-folder save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
-                              <span class="finder-icon" aria-hidden="true">▣</span>
-                              <span>
-                                <strong>${escapeHtml(label)}</strong>
-                                <small>${escapeHtml(folderMetaText(folder))}</small>
-                              </span>
-                            </button>
-                          </article>
-                        `;
-                      })
-                      .join("")
-                  : `<div class="finder-empty">Sin subcarpetas</div>`
-              }
-            </section>
-          `;
-        })
-        .join("")}
+    <div class="save-location-shell">
+      <aside class="save-location-roots" aria-label="Carpetas raíz">
+        ${rootFolders
+          .map((root) => `
+            <button class="save-folder-option ${selected === root || selected.startsWith(`${root}/`) ? "active" : ""}" type="button" data-save-folder="${escapeHtml(root)}">
+              <span class="finder-icon" aria-hidden="true">▣</span>${escapeHtml(root)}
+            </button>
+          `)
+          .join("")}
+      </aside>
+      <section class="save-location-files" aria-label="Contenido de carpeta">
+        <div class="save-location-toolbar">
+          <button class="secondary-action mini-action save-folder-option" type="button" data-save-folder="${escapeHtml(parent || selected)}" ${parent ? "" : "disabled"}>Atrás</button>
+          <strong>${escapeHtml(selected)}</strong>
+        </div>
+        <div class="save-file-header">
+          <span>Nombre</span>
+          <span>Fecha de modificación</span>
+          <span>Clase</span>
+        </div>
+        <div class="save-file-list">
+          ${folderRows}${contractRows}${documentRows}${emptyRows}
+        </div>
+      </section>
     </div>
   `;
 }
@@ -2774,13 +2824,16 @@ function resolveSaveLocation(folder) {
   if (resolver) resolver(folder);
 }
 
-function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder = activeFolder, confirmLabel = "Guardar aquí" } = {}) {
-  if (!saveLocationDialog) return Promise.resolve(initialFolder || activeFolder);
+function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder = activeFolder, confirmLabel = "Guardar aquí", defaultName = "", requireName = false } = {}) {
+  if (!saveLocationDialog) return Promise.resolve({ folder: initialFolder || activeFolder, fileName: defaultName });
   return new Promise((resolve) => {
     saveLocationResolve = resolve;
     saveLocationState = {
       folder: ensureFolderPath(initialFolder || activeFolder || "Clientes"),
-      confirmLabel
+      confirmLabel,
+      defaultName,
+      fileName: defaultName,
+      requireName
     };
     if (saveLocationTitle) saveLocationTitle.textContent = title;
     if (saveLocationNewName) saveLocationNewName.value = "";
@@ -2792,6 +2845,7 @@ function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder 
 function createFolderInsideSaveLocation() {
   const rawName = saveLocationNewName?.value.trim();
   if (!rawName) return;
+  saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
   saveLocationState.folder = ensureFolderPath(`${saveLocationState.folder}/${rawName}`, saveLocationState.folder.split("/")[0] || "Clientes");
   if (saveLocationNewName) saveLocationNewName.value = "";
   renderFolders();
@@ -2814,6 +2868,14 @@ function ensureFolderPath(value, fallbackRoot = activeFolder.split("/")[0] || "C
   });
   saveFolders();
   return path;
+}
+
+function safeFolderName(value, fallback = "Parte") {
+  return String(value || fallback)
+    .replace(/\//g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 90) || fallback;
 }
 
 function renderFolders() {
@@ -2871,7 +2933,8 @@ function renderFolders() {
 
 function renderSavedContracts() {
   const visible = savedContracts.filter((contract) => contract.folder === activeFolder);
-  savedContractsList.innerHTML = visible.length
+  const documents = supportDocuments.filter((document) => document.folder === activeFolder);
+  const contractHtml = visible.length
     ? visible
         .slice()
         .reverse()
@@ -2889,7 +2952,24 @@ function renderSavedContracts() {
           </article>
         `)
         .join("")
-    : `<span>No hay contratos guardados en ${activeFolder}. Selecciona un machote, crea un contrato y quedará archivado aquí.</span>`;
+    : "";
+  const documentHtml = documents.length
+    ? documents
+        .slice()
+        .reverse()
+        .map((document) => `
+          <article class="saved-contract support-document">
+            <button class="saved-contract-open" type="button" disabled>
+              <strong>${escapeHtml(document.name)}</strong>
+              <span>${escapeHtml(document.type || "Documento soporte")} · ${escapeHtml(document.size || "")} · ${escapeHtml(document.date || "")}</span>
+            </button>
+          </article>
+        `)
+        .join("")
+    : "";
+  savedContractsList.innerHTML = contractHtml || documentHtml
+    ? `${contractHtml}${documentHtml}`
+    : `<span>No hay contratos ni documentos guardados en ${activeFolder}. Selecciona un machote o carga documentos por parte.</span>`;
 }
 
 function createFolderFromInput() {
@@ -2956,6 +3036,10 @@ function renameFolder(folder) {
     ...contract,
     folder: replaceFolderPath(contract.folder || "Clientes", folder, newPath)
   }));
+  supportDocuments = supportDocuments.map((document) => ({
+    ...document,
+    folder: replaceFolderPath(document.folder || "Documentos de las partes", folder, newPath)
+  }));
   versions = versions.map((version) => ({
     ...version,
     folder: replaceFolderPath(version.folder || "Clientes", folder, newPath)
@@ -2963,6 +3047,7 @@ function renameFolder(folder) {
   activeFolder = replaceFolderPath(activeFolder, folder, newPath);
   saveFolders();
   saveSavedContracts();
+  saveSupportDocuments();
   saveVersions();
   renderFolders();
   renderSavedContracts();
@@ -2979,6 +3064,7 @@ function deleteFolder(folder) {
 
   const affectedContracts = savedContracts.filter((contract) => pathInFolder(contract.folder || "", folder)).length;
   const affectedVersions = versions.filter((version) => pathInFolder(version.folder || "", folder)).length;
+  const affectedDocuments = supportDocuments.filter((document) => pathInFolder(document.folder || "", folder)).length;
   const childFolders = folders.filter((path) => pathInFolder(path, folder)).length;
   const confirmed = window.confirm(`¿Seguro que quieres eliminar "${folder}" y ${childFolders - 1} subcarpeta(s)?\n\nNo se borrarán contratos ni versiones: se moverán a Personales.`);
   if (!confirmed) return;
@@ -2991,15 +3077,19 @@ function deleteFolder(folder) {
   versions = versions.map((version) => (
     pathInFolder(version.folder || "", folder) ? { ...version, folder: "Personales" } : version
   ));
+  supportDocuments = supportDocuments.map((document) => (
+    pathInFolder(document.folder || "", folder) ? { ...document, folder: "Documentos de las partes" } : document
+  ));
   activeFolder = pathInFolder(activeFolder, folder) ? "Personales" : activeFolder;
   saveFolders();
   saveSavedContracts();
+  saveSupportDocuments();
   saveVersions();
   renderFolders();
   renderSavedContracts();
   renderVersions();
   saveActiveDraft("Carpeta eliminada");
-  showToast(affectedContracts || affectedVersions ? "Carpeta eliminada. Su contenido se movió a Personales." : "Carpeta eliminada.");
+  showToast(affectedContracts || affectedVersions || affectedDocuments ? "Carpeta eliminada. Su contenido se movió a una carpeta raíz." : "Carpeta eliminada.");
 }
 
 function askDestinationFolder(currentFolder) {
@@ -3178,9 +3268,10 @@ function integrateCompletedManualFields(event) {
 function normalizeExtractionValues(result) {
   const source = result?.values || result?.fields || result || {};
   const updates = {};
+  const allowedFields = new Set(requiredFieldsForActiveTemplate().map(([name]) => name));
   Object.entries(source).forEach(([name, payload]) => {
     const value = typeof payload === "string" ? payload : payload?.value;
-    if (partyForm.elements[name] && String(value || "").trim()) {
+    if (allowedFields.has(name) && String(value || "").trim()) {
       updates[name] = String(value).trim();
     }
   });
@@ -3228,6 +3319,23 @@ async function addFilesToRole(side, fileList) {
 
   sourceTextsBySide[side] = [...current, ...entries];
   const role = getRoles().find((item) => item.side === side);
+  const values = getPartyData();
+  const partyFolderName = safeFolderName(values[role?.part] || role?.label || "Parte");
+  const supportFolder = ensureFolderPath(`Documentos de las partes/${partyFolderName}`, "Documentos de las partes");
+  supportDocuments.push(
+    ...entries.map((entry) => ({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      folder: supportFolder,
+      roleLabel: role?.label || "Parte",
+      party: values[role?.part] || role?.label || "Parte",
+      folio: previewMatterFolio(),
+      name: entry.name,
+      size: entry.size,
+      type: entry.type,
+      date: new Date().toLocaleString("es-MX")
+    }))
+  );
+  saveSupportDocuments();
   const backend = productionBackend();
   if (backend) {
     backend
@@ -3240,13 +3348,15 @@ async function addFilesToRole(side, fileList) {
   }
 
   renderRoleDrops();
+  renderFolders();
+  renderSavedContracts();
   renderMatterPanel();
   addMatterEvent(`Documentos soporte cargados para ${role?.label || "parte"}`);
   saveActiveDraft("Documentos soporte cargados");
   if (entries.some((file) => documentNeedsAiExtraction(file)) && isLocalStaticPreview()) {
-    showToast("Documentos agregados. Excel, PDF, Word e imágenes se extraen con IA desde lexcontratos.com.");
+    showToast(`Documentos agregados en ${supportFolder}. Excel, PDF, Word e imágenes se extraen con IA desde lexcontratos.com.`);
   } else {
-    showToast(`${entries.length} documento${entries.length === 1 ? "" : "s"} agregado${entries.length === 1 ? "" : "s"} en la parte correcta.`);
+    showToast(`${entries.length} documento${entries.length === 1 ? "" : "s"} agregado${entries.length === 1 ? "" : "s"} en ${supportFolder}.`);
   }
 }
 
@@ -3324,16 +3434,12 @@ document.addEventListener("click", () => {
   if (archiveDrawer.classList.contains("open")) archiveDrawer.classList.remove("open");
   if (assistantPane.classList.contains("open")) assistantPane.classList.remove("open");
 });
-document.querySelector("#toggle-fields").addEventListener("click", (event) => {
-  event.stopPropagation();
-  assistantPane.classList.toggle("open");
-});
 document.querySelector("#close-fields").addEventListener("click", () => assistantPane.classList.remove("open"));
 assistantPane.addEventListener("click", (event) => event.stopPropagation());
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
 
 document.querySelector("#fill-contract").addEventListener("click", () => {
-  integrateCompletedManualFields();
+  assistantPane.classList.add("open");
 });
 
 document.querySelector("#export-word").addEventListener("click", exportWordDocument);
@@ -3386,7 +3492,7 @@ quickFolderButton.addEventListener("click", async () => {
     confirmLabel: "Usar esta carpeta"
   });
   if (!destination) return;
-  activeFolder = ensureFolderPath(destination);
+  activeFolder = ensureFolderPath(destination.folder);
   renderFolders();
   renderSavedContracts();
   renderVersions();
@@ -3559,28 +3665,32 @@ signerList.addEventListener("click", (event) => {
 
 signatureForm.addEventListener("submit", submitSignaturePacket);
 
-document.querySelector("#save-contract").addEventListener("click", async () => {
-  if (!isWorkingCopy) {
-    showToast("Primero duplica la plantilla base para crear un contrato.");
-    return;
-  }
+async function saveContractToArchive({ saveAs = false } = {}) {
+  if (!ensureEditableWorkspace("guardar contrato")) return;
+  const defaultName = cleanWorkingTitle(templates[activeTemplate]?.title || editorTitle.textContent) || "Contrato";
   const destination = await openSaveLocationDialog({
-    title: "Guardar contrato en expediente",
+    title: saveAs ? "Guardar contrato como" : "Guardar contrato en expediente",
     initialFolder: activeFolder || "Clientes",
-    confirmLabel: "Guardar contrato aquí"
+    confirmLabel: saveAs ? "Guardar como" : "Guardar contrato aquí",
+    defaultName,
+    requireName: true
   });
   if (!destination) {
     showToast("Guardado cancelado. El contrato sigue como borrador.");
     return;
   }
-  activeFolder = ensureFolderPath(destination, activeFolder.split("/")[0] || "Clientes");
+  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || "Clientes");
   renderFolders();
   renderFolderSelector();
+  if (destination.fileName) {
+    templates[activeTemplate].title = destination.fileName;
+    editorTitle.textContent = destination.fileName;
+  }
   const filled = fillPlaceholders(editor.value);
   editor.value = filled;
   const folio = ensureMatterFolio();
-  addMatterEvent("Contrato creado");
-  const title = `${cleanWorkingTitle(templates[activeTemplate].title)} · ${new Date().toLocaleDateString("es-MX")}`;
+  addMatterEvent(saveAs ? "Contrato guardado como copia" : "Contrato guardado");
+  const title = `${cleanWorkingTitle(destination.fileName || templates[activeTemplate].title)} · ${new Date().toLocaleDateString("es-MX")}`;
   const contract = {
     id: Date.now().toString(),
     title: `${folio} · ${title}`,
@@ -3597,9 +3707,12 @@ document.querySelector("#save-contract").addEventListener("click", async () => {
   renderSavedContracts();
   renderVersions();
   autoSaveVersion("manual");
-  saveActiveDraft("Contrato creado");
-  showToast(`Contrato creado en la carpeta ${activeFolder}.`);
-});
+  saveActiveDraft(saveAs ? "Contrato guardado como" : "Contrato guardado");
+  showToast(`${saveAs ? "Contrato guardado como copia" : "Contrato guardado"} en ${activeFolder}.`);
+}
+
+document.querySelector("#save-contract").addEventListener("click", () => saveContractToArchive());
+document.querySelector("#save-as-contract")?.addEventListener("click", () => saveContractToArchive({ saveAs: true }));
 
 document.querySelector("#save-version").addEventListener("click", () => {
   saveAsPersonalBaseTemplate();
@@ -3626,7 +3739,7 @@ document.querySelector("#extract-data").addEventListener("click", async () => {
   let detected = {};
   let aiWasTried = false;
   const aiOnlyDocuments = uploadedDocumentsNeedingAi();
-  showToast("Extrayendo datos de cada parte. Revisa antes de completar el contrato.");
+  showToast("Extrayendo e integrando datos de cada parte...");
   for (const role of getRoles()) {
     try {
       const aiDetected = await extractRoleDataWithAi(role);
@@ -3649,9 +3762,11 @@ document.querySelector("#extract-data").addEventListener("click", async () => {
     addMatterEvent(`Datos extraídos e integrados: ${integrated || Object.keys(detected).length}`);
     if (!missing) assistantPane.classList.remove("open");
     if (missing && integrated) {
-      showToast(`Se integraron ${integrated} dato${integrated === 1 ? "" : "s"} al contrato. Quedan ${missing} pendiente${missing === 1 ? "" : "s"} en datos manuales.`);
+      assistantPane.classList.add("open");
+      showToast(`Se extrajeron e integraron ${integrated} dato${integrated === 1 ? "" : "s"}. Quedan ${missing} pendiente${missing === 1 ? "" : "s"} para integrar manualmente.`);
     } else if (missing) {
-      showToast(`Se extrajeron ${Object.keys(detected).length} dato${Object.keys(detected).length === 1 ? "" : "s"}, pero el machote no conserva esos campos. Quedan ${missing} pendiente${missing === 1 ? "" : "s"}.`);
+      assistantPane.classList.add("open");
+      showToast(`Se extrajeron ${Object.keys(detected).length} dato${Object.keys(detected).length === 1 ? "" : "s"}. No encontré campos equivalentes en el contrato; revisa los pendientes manualmente.`);
     } else {
       showToast("Datos extraídos e integrados al contrato. No quedan campos pendientes.");
     }
@@ -3744,6 +3859,7 @@ finderPath?.addEventListener("click", (event) => {
 saveLocationBrowser?.addEventListener("click", (event) => {
   const button = event.target.closest(".save-folder-option");
   if (!button) return;
+  saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
   saveLocationState.folder = button.dataset.saveFolder;
   renderSaveLocationBrowser();
 });
@@ -3751,6 +3867,7 @@ saveLocationBrowser?.addEventListener("click", (event) => {
 saveLocationBrowser?.addEventListener("dblclick", (event) => {
   const button = event.target.closest(".save-folder-option");
   if (!button) return;
+  saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
   saveLocationState.folder = button.dataset.saveFolder;
   renderSaveLocationBrowser();
 });
@@ -3765,7 +3882,12 @@ saveLocationNewName?.addEventListener("keydown", (event) => {
 
 saveLocationConfirm?.addEventListener("click", () => {
   const folder = ensureFolderPath(saveLocationState.folder || activeFolder || "Clientes");
-  resolveSaveLocation(folder);
+  const fileName = saveLocationFileName?.value.trim() || saveLocationState.defaultName || "";
+  if (saveLocationState.requireName && !fileName) {
+    showToast("Escribe un nombre para guardar el contrato.");
+    return;
+  }
+  resolveSaveLocation({ folder, fileName });
 });
 
 saveLocationCancel?.addEventListener("click", () => resolveSaveLocation(null));
