@@ -1603,7 +1603,7 @@ function renderTemplates() {
         <p>${template.category} · ${template.fields} campos</p>
         <footer>
           <span>${template.personal ? "Documento base propio" : "Plantilla base protegida"}</span>
-          <button class="ghost-button clone-template" type="button">Duplicar plantilla</button>
+          <button class="ghost-button use-template" type="button">Usar machote</button>
         </footer>
       </article>
     `)
@@ -1670,6 +1670,31 @@ function createWorkingCopy(sourceKey, customBody, { announce = true } = {}) {
   addMatterEvent("Copia editable creada");
   saveActiveDraft("Copia editable creada");
   if (announce) showToast("Copia creada. Ahora puedes editar sin tocar la plantilla base.");
+  return true;
+}
+
+function startContractFromTemplate(sourceKey) {
+  const source = templates[sourceKey];
+  if (!source) {
+    showToast("Primero selecciona un machote.");
+    return false;
+  }
+  const destination = window.prompt(
+    "¿Dónde quieres guardar este contrato? Puedes escribir una carpeta nueva, por ejemplo: Clientes/Cliente Demo/Asunto 2026",
+    activeFolder || "Clientes"
+  );
+  if (!destination || !destination.trim()) {
+    showToast("Selección cancelada. No se creó una copia de trabajo.");
+    return false;
+  }
+  activeFolder = ensureFolderPath(destination.trim(), activeFolder.split("/")[0] || "Clientes");
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  createWorkingCopy(sourceKey, bodyForTemplate(sourceKey), { announce: false });
+  renderFolderSelector();
+  saveActiveDraft("Contrato iniciado desde machote");
+  showToast(`Copia editable creada y lista para guardarse en ${activeFolder}.`);
   return true;
 }
 
@@ -2780,14 +2805,7 @@ async function addFilesToRole(side, fileList) {
 templateGrid.addEventListener("click", (event) => {
   const card = event.target.closest(".template-card");
   if (!card) return;
-  if (event.target.closest(".clone-template")) {
-    loadTemplate(card.dataset.template);
-    createWorkingCopy(card.dataset.template);
-    if (templatePicker.open) templatePicker.close();
-    return;
-  }
-  loadTemplate(card.dataset.template);
-  if (templatePicker.open) templatePicker.close();
+  if (startContractFromTemplate(card.dataset.template) && templatePicker.open) templatePicker.close();
 });
 
 roleDropGrid.addEventListener("change", async (event) => {
