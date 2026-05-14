@@ -202,6 +202,46 @@ if (!config.url || !config.publishableKey) {
     if (error) throw error;
   }
 
+  async function deleteContract(contract, { deleteVersions = true } = {}) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user || !contract) return;
+
+    const folio = contract.matter?.folio || contract.folio || "";
+    let matterId = null;
+    if (folio) {
+      const { data: matterRow } = await supabase
+        .from("contract_matters")
+        .select("id")
+        .eq("user_id", user.id)
+        .eq("folio", folio)
+        .maybeSingle();
+      matterId = matterRow?.id || null;
+    }
+
+    if (deleteVersions && matterId) {
+      const { error: versionsError } = await supabase
+        .from("contract_versions")
+        .delete()
+        .eq("user_id", user.id)
+        .eq("matter_id", matterId);
+      if (versionsError) throw versionsError;
+    }
+
+    const { error } = await supabase.from("contracts").delete().eq("user_id", user.id).eq("id", contract.id);
+    if (error) throw error;
+  }
+
+  async function deleteVersion(version) {
+    const {
+      data: { user }
+    } = await supabase.auth.getUser();
+    if (!user || !version) return;
+    const { error } = await supabase.from("contract_versions").delete().eq("user_id", user.id).eq("id", version.id);
+    if (error) throw error;
+  }
+
   async function uploadSupportDocuments({ folio, roleLabel, files }) {
     const {
       data: { user }
@@ -265,6 +305,8 @@ if (!config.url || !config.publishableKey) {
     saveFolders,
     saveContract,
     saveVersion,
+    deleteContract,
+    deleteVersion,
     uploadSupportDocuments,
     extractPartyData
   });

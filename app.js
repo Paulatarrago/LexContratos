@@ -776,8 +776,9 @@ function loadSavedContracts() {
   }));
 }
 
-function saveSavedContracts(contractToSync = null) {
+function saveSavedContracts(contractToSync = null, { syncLatest = true } = {}) {
   localStorage.setItem(userStorageKey("saved_contracts"), JSON.stringify(savedContracts));
+  if (!syncLatest) return;
   const backend = productionBackend();
   const latest = contractToSync || savedContracts[savedContracts.length - 1];
   if (backend && latest) backend.saveContract(latest).catch((error) => reportBackendError("guardar contrato", error));
@@ -1645,7 +1646,7 @@ function bodyForTemplate(key) {
   return `${body}${commonProtectionsEs}`;
 }
 
-function createWorkingCopy(sourceKey, customBody) {
+function createWorkingCopy(sourceKey, customBody, { announce = true } = {}) {
   const source = templates[sourceKey];
   if (!source) {
     showToast("Primero selecciona un machote.");
@@ -1668,7 +1669,20 @@ function createWorkingCopy(sourceKey, customBody) {
   editor.readOnly = false;
   addMatterEvent("Copia editable creada");
   saveActiveDraft("Copia editable creada");
-  showToast("Copia creada. Ahora puedes editar sin tocar la plantilla base.");
+  if (announce) showToast("Copia creada. Ahora puedes editar sin tocar la plantilla base.");
+  return true;
+}
+
+function ensureEditableWorkspace(actionLabel = "trabajar este contrato") {
+  if (isWorkingCopy) return true;
+  if (!activeTemplate) {
+    showToast("Primero selecciona o importa un machote.");
+    return false;
+  }
+  const sourceKey = activeSourceMaster || activeTemplate;
+  createWorkingCopy(sourceKey, editor.value || bodyForTemplate(sourceKey), { announce: false });
+  showToast(`Copia editable creada para ${actionLabel}.`);
+  return true;
 }
 
 function saveAsPersonalBaseTemplate() {
@@ -1720,6 +1734,7 @@ function renderVersions() {
             <div class="saved-contract-actions">
               <button class="folder-action move-version" type="button" data-version-id="${version.id}">Mover</button>
               <button class="folder-action copy-version" type="button" data-version-id="${version.id}">Copiar</button>
+              <button class="folder-action danger delete-version" type="button" data-version-id="${version.id}">Eliminar</button>
             </div>
           </article>
         `)
@@ -1986,10 +2001,7 @@ async function refreshSignatureStatus() {
 }
 
 function prepareSignaturePacket() {
-  if (!isWorkingCopy) {
-    showToast("Primero duplica la plantilla base para preparar un contrato de firma.");
-    return;
-  }
+  if (!ensureEditableWorkspace("preparar firma")) return;
   renderSignatureRows();
   signatureDialog.showModal();
   refreshSignatureStatus();
@@ -2060,9 +2072,9 @@ async function submitSignaturePacket(event) {
   autoSaveVersion("manual");
   signatureDialog.close();
   if (sendResult) {
-    showToast("Contrato enviado a firma electrónica.");
+    showToast(sendResult.testMode ? "Prueba de firma enviada. Revisa la bandeja de entrada y spam del firmante." : "Contrato enviado a firma electrónica.");
   } else if (isLocalStaticPreview()) {
-    showToast("Paquete de firma guardado. Para enviar por Dropbox Sign, usa lexcontratos.com.");
+    showToast("Paquete guardado. Los correos de firma solo se envían desde lexcontratos.com.");
   } else {
     showToast("Paquete de firma guardado. La integración se activará cuando esté configurada.");
   }
@@ -2412,6 +2424,7 @@ function renderSavedContracts() {
             <div class="saved-contract-actions">
               <button class="folder-action move-contract" type="button" data-id="${contract.id}">Mover</button>
               <button class="folder-action copy-contract" type="button" data-id="${contract.id}">Copiar</button>
+              <button class="folder-action danger delete-contract" type="button" data-id="${contract.id}">Eliminar</button>
             </div>
           </article>
         `)
@@ -2584,6 +2597,29 @@ function copyContractToFolder(contractId) {
   showToast("Contrato copiado a la carpeta seleccionada.");
 }
 
+function deleteSavedContract(contractId) {
+  const contract = savedContracts.find((item) => item.id === contractId);
+  if (!contract) return;
+  const folio = contract.matter?.folio || contract.folio || "";
+  const relatedVersions = folio ? versions.filter((version) => version.matter?.folio === folio).length : 0;
+  const confirmed = window.confirm(
+    `¿Seguro que quieres eliminar este contrato guardado?\n\n${contract.title}\n\n${relatedVersions ? `También se eliminarán ${relatedVersions} versión(es) guardada(s) del mismo expediente.` : "Esta acción no elimina machotes base."}`
+  );
+  if (!confirmed) return;
+
+  savedContracts = savedContracts.filter((item) => item.id !== contractId);
+  if (folio) versions = versions.filter((version) => version.matter?.folio !== folio);
+  saveSavedContracts(null, { syncLatest: false });
+  saveVersions();
+  const backend = productionBackend();
+  if (backend?.deleteContract) {
+    backend.deleteContract(contract, { deleteVersions: Boolean(folio) }).catch((error) => reportBackendError("eliminar contrato", error));
+  }
+  renderSavedContracts();
+  renderVersions();
+  showToast("Contrato eliminado del archivo.");
+}
+
 function moveVersionToFolder(versionId) {
   const version = versions.find((item) => item.id === versionId);
   if (!version) return;
@@ -2616,6 +2652,19 @@ function copyVersionToFolder(versionId) {
   renderFolders();
   renderVersions();
   showToast("Versión copiada a la carpeta seleccionada.");
+}
+
+function deleteSavedVersion(versionId) {
+  const version = versions.find((item) => item.id === versionId);
+  if (!version) return;
+  const confirmed = window.confirm(`¿Seguro que quieres eliminar esta versión guardada?\n\n${version.title}`);
+  if (!confirmed) return;
+  versions = versions.filter((item) => item.id !== versionId);
+  saveVersions();
+  const backend = productionBackend();
+  if (backend?.deleteVersion) backend.deleteVersion(version).catch((error) => reportBackendError("eliminar versión", error));
+  renderVersions();
+  showToast("Versión eliminada.");
 }
 
 function inferDataFromText(text, side) {
@@ -2684,6 +2733,50 @@ async function extractRoleDataWithAi(role) {
   return normalizeExtractionValues(result);
 }
 
+async function addFilesToRole(side, fileList) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  if (!ensureEditableWorkspace("cargar documentos por parte")) return;
+
+  const current = sourceTextsBySide[side] || [];
+  const existing = new Set(current.map((file) => `${file.name}-${file.size}`));
+  const entries = [];
+  for (const file of files) {
+    const key = `${file.name}-${Math.ceil(file.size / 1024)} KB`;
+    if (existing.has(key)) continue;
+    const entry = { name: file.name, size: `${Math.ceil(file.size / 1024)} KB`, type: classifySupportDocument(file.name), text: "", file };
+    if (/\.(txt|csv|eml)$/i.test(file.name)) entry.text = await file.text();
+    entries.push(entry);
+  }
+  if (!entries.length) {
+    showToast("Esos documentos ya estaban cargados en esta parte.");
+    return;
+  }
+
+  sourceTextsBySide[side] = [...current, ...entries];
+  const role = getRoles().find((item) => item.side === side);
+  const backend = productionBackend();
+  if (backend) {
+    backend
+      .uploadSupportDocuments({
+        folio: previewMatterFolio(),
+        roleLabel: role?.label || "parte",
+        files: entries.map((entry) => entry.file).filter(Boolean)
+      })
+      .catch((error) => reportBackendError("subir documentos", error));
+  }
+
+  renderRoleDrops();
+  renderMatterPanel();
+  addMatterEvent(`Documentos soporte cargados para ${role?.label || "parte"}`);
+  saveActiveDraft("Documentos soporte cargados");
+  if (entries.some((file) => documentNeedsAiExtraction(file)) && isLocalStaticPreview()) {
+    showToast("Documentos agregados. Excel, PDF, Word e imágenes se extraen con IA desde lexcontratos.com.");
+  } else {
+    showToast(`${entries.length} documento${entries.length === 1 ? "" : "s"} agregado${entries.length === 1 ? "" : "s"} en la parte correcta.`);
+  }
+}
+
 templateGrid.addEventListener("click", (event) => {
   const card = event.target.closest(".template-card");
   if (!card) return;
@@ -2699,42 +2792,29 @@ templateGrid.addEventListener("click", (event) => {
 
 roleDropGrid.addEventListener("change", async (event) => {
   if (!event.target.classList.contains("role-file-input")) return;
-  if (!isWorkingCopy) {
-    event.target.value = "";
-    showToast("Primero duplica la plantilla base. Los documentos de partes se cargan en una copia de trabajo.");
-    return;
-  }
   const side = event.target.dataset.side;
-  const files = Array.from(event.target.files);
-  sourceTextsBySide[side] = [];
+  await addFilesToRole(side, event.target.files);
+  event.target.value = "";
+});
 
-  for (const file of files) {
-    const entry = { name: file.name, size: `${Math.ceil(file.size / 1024)} KB`, type: classifySupportDocument(file.name), text: "", file };
-    if (/\.(txt|csv|eml)$/i.test(file.name)) entry.text = await file.text();
-    sourceTextsBySide[side].push(entry);
-  }
+roleDropGrid.addEventListener("dragover", (event) => {
+  const drop = event.target.closest(".role-drop");
+  if (!drop) return;
+  event.preventDefault();
+  drop.classList.add("is-dragging");
+});
 
-  const backend = productionBackend();
-  if (backend) {
-    const role = getRoles().find((item) => item.side === side);
-    backend
-      .uploadSupportDocuments({
-        folio: previewMatterFolio(),
-        roleLabel: role?.label || "parte",
-        files
-      })
-      .catch((error) => reportBackendError("subir documentos", error));
-  }
+roleDropGrid.addEventListener("dragleave", (event) => {
+  const drop = event.target.closest(".role-drop");
+  if (drop) drop.classList.remove("is-dragging");
+});
 
-  renderRoleDrops();
-  renderMatterPanel();
-  addMatterEvent(`Documentos soporte cargados para ${getRoles().find((role) => role.side === side)?.label || "parte"}`);
-  saveActiveDraft("Documentos soporte cargados");
-  if (files.some((file) => documentNeedsAiExtraction({ name: file.name, text: "" })) && isLocalStaticPreview()) {
-    showToast("Documentos cargados. Excel, PDF, Word e imágenes se extraen con IA desde lexcontratos.com.");
-  } else {
-    showToast("Documentos cargados en la parte correcta.");
-  }
+roleDropGrid.addEventListener("drop", async (event) => {
+  const drop = event.target.closest(".role-drop");
+  if (!drop) return;
+  event.preventDefault();
+  drop.classList.remove("is-dragging");
+  await addFilesToRole(drop.dataset.side, event.dataTransfer.files);
 });
 
 document.querySelectorAll(".chip").forEach((chip) => {
@@ -2781,10 +2861,7 @@ document.querySelector("#close-fields").addEventListener("click", () => assistan
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
 
 document.querySelector("#fill-contract").addEventListener("click", () => {
-  if (!isWorkingCopy) {
-    showToast("Primero duplica la plantilla base para completar el contrato.");
-    return;
-  }
+  if (!ensureEditableWorkspace("completar el contrato")) return;
   editor.value = fillPlaceholders(editor.value);
   autoSaveVersion("manual");
   saveActiveDraft("Contrato completado");
@@ -3061,10 +3138,7 @@ document.querySelector("#new-template").addEventListener("click", () => {
 });
 
 document.querySelector("#extract-data").addEventListener("click", async () => {
-  if (!isWorkingCopy) {
-    showToast("Primero duplica la plantilla base. Después carga documentos de cada parte y revisa los datos.");
-    return;
-  }
+  if (!ensureEditableWorkspace("extraer datos")) return;
   let detected = {};
   let aiWasTried = false;
   const aiOnlyDocuments = uploadedDocumentsNeedingAi();
@@ -3172,6 +3246,11 @@ savedContractsList.addEventListener("click", (event) => {
     copyContractToFolder(copyButton.dataset.id);
     return;
   }
+  const deleteButton = event.target.closest(".delete-contract");
+  if (deleteButton) {
+    deleteSavedContract(deleteButton.dataset.id);
+    return;
+  }
   const button = event.target.closest(".open-saved-contract");
   if (!button) return;
   const contract = savedContracts.find((item) => item.id === button.dataset.id);
@@ -3222,6 +3301,11 @@ versionList.addEventListener("click", (event) => {
   const copyButton = event.target.closest(".copy-version");
   if (copyButton) {
     copyVersionToFolder(copyButton.dataset.versionId);
+    return;
+  }
+  const deleteButton = event.target.closest(".delete-version");
+  if (deleteButton) {
+    deleteSavedVersion(deleteButton.dataset.versionId);
     return;
   }
   const button = event.target.closest(".open-version");
