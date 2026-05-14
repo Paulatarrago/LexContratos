@@ -623,6 +623,7 @@ let isWorkingCopy = false;
 let activeCategory = "Todos";
 let activeLanguage = "es";
 let sourceTextsBySide = { A: [], B: [] };
+const rootFolders = ["Clientes", "Proveedores", "Personales"];
 let folders = loadFolders();
 let activeFolder = folders[0] || "Clientes";
 let savedContracts = loadSavedContracts();
@@ -752,11 +753,11 @@ function saveMasterTemplates() {
 }
 
 function loadFolders() {
-  const saved = readJson(userStorageKey("folders"), readJson("lexcontratos_folders", ["Clientes", "Proveedores"]));
+  const saved = readJson(userStorageKey("folders"), readJson("lexcontratos_folders", rootFolders));
   const normalized = saved
     .map((folder) => (folder === "General" ? "Clientes/General" : folder))
     .filter(Boolean);
-  return Array.from(new Set(["Clientes", "Proveedores", ...normalized]));
+  return Array.from(new Set([...rootFolders, ...normalized]));
 }
 
 function saveFolders() {
@@ -2248,6 +2249,32 @@ function renderSavedContracts() {
     : `<span>Aquí aparecerán los contratos creados en ${activeFolder}.</span>`;
 }
 
+function createFolderFromInput() {
+  const root = folderRoot.value || "Clientes";
+  const parts = folderName.value
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!parts.length) return;
+
+  if (parts[0]?.toLowerCase() === root.toLowerCase()) parts.shift();
+  if (!folders.includes(root)) folders.push(root);
+
+  let path = root;
+  parts.forEach((part) => {
+    path = path ? `${path}/${part}` : part;
+    if (!folders.includes(path)) folders.push(path);
+  });
+
+  activeFolder = path;
+  folderName.value = "";
+  saveFolders();
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  showToast(`Carpeta ${activeFolder} lista para archivar contratos.`);
+}
+
 function inferDataFromText(text, side) {
   const cleanText = text.replace(/\s+/g, " ");
   const updates = {};
@@ -2756,30 +2783,12 @@ folderList.addEventListener("click", (event) => {
   showToast(`Este contrato se guardará en ${activeFolder}.`);
 });
 
-document.querySelector("#create-folder").addEventListener("click", () => {
-  const root = folderRoot.value || "Clientes";
-  const parts = folderName.value
-    .split("/")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (!parts.length) return;
+document.querySelector("#create-folder")?.addEventListener("click", createFolderFromInput);
 
-  if (parts[0]?.toLowerCase() === root.toLowerCase()) parts.shift();
-  if (!folders.includes(root)) folders.push(root);
-
-  let path = root;
-  parts.forEach((part) => {
-    path = path ? `${path}/${part}` : part;
-    if (!folders.includes(path)) folders.push(path);
-  });
-
-  activeFolder = path;
-  folderName.value = "";
-  saveFolders();
-  renderFolders();
-  renderSavedContracts();
-  renderVersions();
-  showToast(`Carpeta ${activeFolder} lista para archivar contratos.`);
+folderName.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter") return;
+  event.preventDefault();
+  createFolderFromInput();
 });
 
 savedContractsList.addEventListener("click", (event) => {
