@@ -1137,6 +1137,18 @@ function productionBackend() {
   return window.lexBackend?.enabled ? window.lexBackend : null;
 }
 
+function isLocalStaticPreview() {
+  return window.location.protocol === "file:" || /^(127\.0\.0\.1|localhost)$/i.test(window.location.hostname);
+}
+
+function documentNeedsAiExtraction(entry) {
+  return /\.(xlsx?|pdf|docx?|jpe?g|png|webp|tiff?)$/i.test(entry?.name || "") && !entry?.text;
+}
+
+function uploadedDocumentsNeedingAi() {
+  return Object.values(sourceTextsBySide).flat().filter(documentNeedsAiExtraction);
+}
+
 function backendAccessLocked() {
   return Boolean(window.lexBackend?.locked);
 }
@@ -1837,6 +1849,14 @@ async function refreshSignatureStatus() {
   if (!signatureStatusLabel || !signatureSubmitButton) return;
   signatureStatusLabel.textContent = "Verificando firma electrónica...";
   signatureSubmitButton.textContent = "Enviar a firma";
+  if (isLocalStaticPreview()) {
+    signatureStatusLabel.textContent = "Dropbox Sign se prueba desde lexcontratos.com";
+    signatureSubmitButton.textContent = "Guardar paquete de firma";
+    if (signatureDialogCopy) {
+      signatureDialogCopy.textContent = "Esta vista local no ejecuta envíos de firma. Puedes capturar firmantes y guardar el paquete; para enviar una prueba por Dropbox Sign, abre la versión publicada.";
+    }
+    return;
+  }
   try {
     const response = await fetch("/api/send-signature", { method: "GET" });
     if (!response.ok) throw new Error("signature status unavailable");
@@ -1884,28 +1904,32 @@ async function submitSignaturePacket(event) {
   let status = "Pendiente de envío";
   let signatureState = "pending_configuration";
 
-  try {
-    showToast("Preparando envío a firma electrónica...");
-    const response = await fetch("/api/send-signature", {
-      method: "POST",
-      headers: { "content-type": "application/json" },
-      body: JSON.stringify({
-        title,
-        folio: previewMatterFolio(),
-        body: fillPlaceholders(editor.value),
-        signers
-      })
-    });
-    if (response.ok) {
-      sendResult = await response.json();
-      status = sendResult.testMode ? "Enviado a firma en modo prueba" : "Enviado a firma";
-      signatureState = sendResult.testMode ? "sent_test" : "sent";
-    } else if (response.status !== 503) {
-      const data = await response.json().catch(() => ({}));
-      showToast(data.error || "No se pudo enviar a firma. El paquete quedará guardado.");
+  if (isLocalStaticPreview()) {
+    showToast("Esta vista local no envía por Dropbox Sign. El paquete quedará guardado en el expediente.");
+  } else {
+    try {
+      showToast("Preparando envío a firma electrónica...");
+      const response = await fetch("/api/send-signature", {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify({
+          title,
+          folio: previewMatterFolio(),
+          body: fillPlaceholders(editor.value),
+          signers
+        })
+      });
+      if (response.ok) {
+        sendResult = await response.json();
+        status = sendResult.testMode ? "Enviado a firma en modo prueba" : "Enviado a firma";
+        signatureState = sendResult.testMode ? "sent_test" : "sent";
+      } else if (response.status !== 503) {
+        const data = await response.json().catch(() => ({}));
+        showToast(data.error || "No se pudo enviar a firma. El paquete quedará guardado.");
+      }
+    } catch (error) {
+      console.warn("LexContratos firma no disponible", error);
     }
-  } catch (error) {
-    console.warn("LexContratos firma no disponible", error);
   }
 
   const eventLabel = sendResult ? "Contrato enviado a firma electrónica" : "Contrato preparado para firma";
@@ -1930,7 +1954,13 @@ async function submitSignaturePacket(event) {
   renderSavedContracts();
   autoSaveVersion("manual");
   signatureDialog.close();
-  showToast(sendResult ? "Contrato enviado a firma electrónica." : "Paquete de firma guardado. La integración se activará cuando esté configurada.");
+  if (sendResult) {
+    showToast("Contrato enviado a firma electrónica.");
+  } else if (isLocalStaticPreview()) {
+    showToast("Paquete de firma guardado. Para enviar por Dropbox Sign, usa lexcontratos.com.");
+  } else {
+    showToast("Paquete de firma guardado. La integración se activará cuando esté configurada.");
+  }
 }
 
 function buildLocalCriticalReview(mode) {
@@ -2412,6 +2442,7 @@ function normalizeExtractionValues(result) {
 }
 
 async function extractRoleDataWithAi(role) {
+  if (isLocalStaticPreview()) return {};
   const backend = productionBackend();
   if (!backend?.extractPartyData) return {};
   const entries = sourceTextsBySide[role.side] || [];
@@ -2474,7 +2505,11 @@ roleDropGrid.addEventListener("change", async (event) => {
   renderRoleDrops();
   renderMatterPanel();
   addMatterEvent(`Documentos soporte cargados para ${getRoles().find((role) => role.side === side)?.label || "parte"}`);
-  showToast("Documentos cargados en la parte correcta.");
+  if (files.some((file) => documentNeedsAiExtraction({ name: file.name, text: "" })) && isLocalStaticPreview()) {
+    showToast("Documentos cargados. Excel, PDF, Word e imágenes se extraen con IA desde lexcontratos.com.");
+  } else {
+    showToast("Documentos cargados en la parte correcta.");
+  }
 });
 
 document.querySelectorAll(".chip").forEach((chip) => {
@@ -2802,6 +2837,7 @@ document.querySelector("#extract-data").addEventListener("click", async () => {
   }
   let detected = {};
   let aiWasTried = false;
+  const aiOnlyDocuments = uploadedDocumentsNeedingAi();
   showToast("Extrayendo datos de cada parte. Revisa antes de completar el contrato.");
   for (const role of getRoles()) {
     try {
@@ -2823,6 +2859,10 @@ document.querySelector("#extract-data").addEventListener("click", async () => {
   if (Object.keys(detected).length) {
     addMatterEvent(`Datos extraídos y validados: ${Object.keys(detected).length}`);
     showToast(missing ? `Se extrajeron ${Object.keys(detected).length} datos para revisión. Faltan ${missing}: sube otro documento o llena el campo manualmente.` : "Datos de partes completos. Ya puedes completar el contrato.");
+  } else if (aiOnlyDocuments.length && isLocalStaticPreview()) {
+    showToast("Los documentos quedaron cargados, pero esta vista local no ejecuta IA documental. Abre lexcontratos.com para extraerlos o captura los datos manualmente.");
+  } else if (aiOnlyDocuments.length && aiWasTried) {
+    showToast("No se pudo extraer información de esos archivos. Puedes intentarlo de nuevo, subir otro documento o capturar los datos manualmente.");
   } else {
     showToast(aiWasTried ? "La extracción documental no está disponible temporalmente. Puedes capturar o corregir los datos manualmente." : "Carga textos, correos o CSV por cada parte, o llena manualmente los campos faltantes.");
   }

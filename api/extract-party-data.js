@@ -54,12 +54,20 @@ function normalizeFields(value) {
 }
 
 export default async function handler(request) {
+  const env = typeof process !== "undefined" ? process.env : {};
+  const apiKey = env.OPENAI_API_KEY;
+
+  if (request.method === "GET") {
+    return jsonResponse({
+      configured: Boolean(apiKey),
+      model: apiKey ? env.OPENAI_MODEL || "gpt-4.1-mini" : null
+    });
+  }
+
   if (request.method !== "POST") {
     return jsonResponse({ error: "Metodo no permitido." }, 405);
   }
 
-  const env = typeof process !== "undefined" ? process.env : {};
-  const apiKey = env.OPENAI_API_KEY;
   if (!apiKey) {
     return jsonResponse({ error: "La extracción documental no está disponible temporalmente." }, 503);
   }
