@@ -622,6 +622,7 @@ let activeSourceMaster = null;
 let isWorkingCopy = false;
 let activeCategory = "Todos";
 let activeLanguage = "es";
+let partyDataStore = {};
 let sourceTextsBySide = { A: [], B: [] };
 const rootFolders = ["Clientes", "Proveedores", "Personales"];
 let folders = loadFolders();
@@ -801,8 +802,9 @@ function activeDraftKey() {
 }
 
 function setPartyData(values = {}) {
+  partyDataStore = { ...partyDataStore, ...values };
   partyForm.querySelectorAll("input, textarea, select").forEach((field) => {
-    if (Object.prototype.hasOwnProperty.call(values, field.name)) field.value = values[field.name] || "";
+    if (Object.prototype.hasOwnProperty.call(partyDataStore, field.name)) field.value = partyDataStore[field.name] || "";
   });
 }
 
@@ -939,6 +941,7 @@ function clearWorkspaceState() {
   activeTemplate = null;
   activeSourceMaster = null;
   isWorkingCopy = false;
+  partyDataStore = {};
   sourceTextsBySide = { A: [], B: [] };
   activeMatterFolio = null;
   matterHistoryEvents = [];
@@ -1467,12 +1470,34 @@ function renderMatterPanel() {
 }
 
 function getPartyData() {
-  return Object.fromEntries(new FormData(partyForm).entries());
+  const visibleValues = Object.fromEntries(new FormData(partyForm).entries());
+  partyDataStore = { ...partyDataStore, ...visibleValues };
+  return { ...partyDataStore };
 }
 
 function fillPlaceholders(text) {
   const values = getPartyData();
   return text.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] || `{{${key}}}`);
+}
+
+function integrateKnownDataIntoContract(reason = "Datos integrados al contrato") {
+  if (!isWorkingCopy || !editor.value.trim()) return 0;
+  const values = getPartyData();
+  const filledKeys = new Set(
+    Array.from(editor.value.matchAll(/\{\{(\w+)\}\}/g))
+      .map((match) => match[1])
+      .filter((key) => String(values[key] || "").trim())
+  );
+  if (!filledKeys.size) return 0;
+  editor.value = fillPlaceholders(editor.value);
+  renderDynamicFields();
+  renderCustomFields();
+  renderRequirements();
+  renderMatterPanel();
+  if (!missingFieldsForActiveTemplate().length) assistantPane.classList.remove("open");
+  autoSaveVersion("manual");
+  saveActiveDraft(reason);
+  return filledKeys.size;
 }
 
 function getRoles(key = activeTemplate) {
@@ -1825,6 +1850,7 @@ function loadTemplate(key) {
   activeTemplate = key;
   activeSourceMaster = templates[key]?.sourceMaster || (templates[key]?.master ? key : null);
   isWorkingCopy = !templates[key]?.master;
+  partyDataStore = {};
   const template = templates[key];
   editorTitle.textContent = template.title;
   selectedCategory.textContent = template.category;
@@ -2276,6 +2302,7 @@ function renameActiveTemplate() {
   renderCustomFields();
   renderRequirements();
   renderMatterPanel();
+  if (!missingFieldsForActiveTemplate().length) assistantPane.classList.remove("open");
   autoSaveVersion("manual");
   saveActiveDraft("Copia renombrada");
   showToast("Copia renombrada. La plantilla base original sigue intacta.");
@@ -2303,6 +2330,7 @@ function reviewEditableFieldsFromContract() {
 
 function clearGeneralData(event) {
   if (event) event.preventDefault();
+  partyDataStore = {};
   partyForm.querySelectorAll("input, textarea, select").forEach((field) => {
     field.value = "";
     field.setAttribute("value", "");
@@ -2318,34 +2346,55 @@ function clearGeneralData(event) {
   showToast("Datos de partes borrados. Puedes cargar documentos nuevos por cada parte.");
 }
 
+function manualFieldMarkup(name, label, value = "") {
+  return `
+    <div class="manual-field">
+      <span>${escapeHtml(label)}</span>
+      <div class="manual-field-row">
+        <input name="${escapeHtml(name)}" value="${escapeHtml(value)}" aria-label="${escapeHtml(label)}" />
+        <button class="folder-action apply-manual-field" type="button" data-field="${escapeHtml(name)}">Agregar</button>
+      </div>
+    </div>
+  `;
+}
+
 function renderDynamicFields() {
   const values = getPartyData();
-  dynamicFields.innerHTML = getRoles()
-    .map((role) => `
-      <div class="field-group-title">
-        <p class="eyebrow">${role.label}</p>
-        <strong>Datos de ${values[role.part] || role.label}</strong>
-      </div>
-      ${fieldsForRole(role)
-        .map(([name, label]) => `<label>${label}<input name="${name}" value="${values[name] || ""}" /></label>`)
-        .join("")}
-    `)
-    .join("");
+  const sections = getRoles()
+    .map((role) => {
+      const pending = fieldsForRole(role).filter(([name]) => !String(values[name] || "").trim());
+      if (!pending.length) return "";
+      return `
+        <div class="field-group-title">
+          <p class="eyebrow">${escapeHtml(role.label)}</p>
+          <strong>Pendiente de ${escapeHtml(values[role.part] || role.label)}</strong>
+        </div>
+        ${pending.map(([name, label]) => manualFieldMarkup(name, label, values[name] || "")).join("")}
+      `;
+    })
+    .filter(Boolean);
+  dynamicFields.innerHTML = sections.length
+    ? sections.join("")
+    : `<div class="field-group-title empty-state"><p class="eyebrow">Sin pendientes</p><strong>Los datos requeridos que siguen en el contrato ya están completos.</strong></div>`;
 }
 
 function renderCustomFields() {
   const dynamicNames = new Set(getRoles().flatMap((role) => fieldsForRole(role).map(([name]) => name)));
-  const fields = (templates[activeTemplate]?.customFields || []).filter((field) => !dynamicNames.has(field.name));
   const values = getPartyData();
+  const templateNames = fieldNamesInText(editor?.value || templates[activeTemplate]?.body || "");
+  const fields = (templates[activeTemplate]?.customFields || [])
+    .filter((field) => templateNames.has(field.name))
+    .filter((field) => !dynamicNames.has(field.name))
+    .filter((field) => !String(values[field.name] || "").trim());
   customFields.innerHTML = "";
   if (!fields.length) return;
 
   customFields.innerHTML = `
     <div class="field-group-title">
       <p class="eyebrow">Campos propios</p>
-      <strong>${templates[activeTemplate].title}</strong>
+      <strong>Pendientes de ${escapeHtml(templates[activeTemplate].title)}</strong>
     </div>
-    ${fields.map((field) => `<label>${field.label}<input name="${field.name}" value="${values[field.name] || ""}" /></label>`).join("")}
+    ${fields.map((field) => manualFieldMarkup(field.name, field.label, values[field.name] || "")).join("")}
   `;
 }
 
@@ -2717,6 +2766,7 @@ function inferDataFromText(text, side) {
 }
 
 function applyDetectedData(updates) {
+  partyDataStore = { ...partyDataStore, ...updates };
   Object.entries(updates).forEach(([name, value]) => {
     const input = partyForm.elements[name];
     if (input && value) input.value = value;
@@ -2725,6 +2775,26 @@ function applyDetectedData(updates) {
   renderRequirements();
   renderMatterPanel();
   saveActiveDraft("Datos extraídos");
+}
+
+function applyManualField(fieldName) {
+  const input = partyForm.elements[fieldName];
+  if (!input) return;
+  if (!String(input.value || "").trim()) {
+    showToast("Captura un valor antes de agregarlo al contrato.");
+    return;
+  }
+  const integrated = integrateKnownDataIntoContract("Dato manual integrado");
+  const missing = missingFieldsForActiveTemplate().length;
+  if (!integrated) {
+    showToast("Ese dato ya no tiene un campo pendiente dentro del contrato.");
+    renderDynamicFields();
+    renderCustomFields();
+    renderRequirements();
+    return;
+  }
+  showToast(missing ? `Dato agregado al contrato. Quedan ${missing} campo${missing === 1 ? "" : "s"} pendiente${missing === 1 ? "" : "s"}.` : "Datos pendientes completos. El panel se cerró automáticamente.");
+  if (!missing) assistantPane.classList.remove("open");
 }
 
 function normalizeExtractionValues(result) {
@@ -2873,14 +2943,24 @@ document.querySelector("#close-archive").addEventListener("click", () => archive
 archiveDrawer.addEventListener("click", (event) => event.stopPropagation());
 document.addEventListener("click", () => {
   if (archiveDrawer.classList.contains("open")) archiveDrawer.classList.remove("open");
+  if (assistantPane.classList.contains("open")) assistantPane.classList.remove("open");
 });
-document.querySelector("#toggle-fields").addEventListener("click", () => assistantPane.classList.toggle("open"));
+document.querySelector("#toggle-fields").addEventListener("click", (event) => {
+  event.stopPropagation();
+  assistantPane.classList.toggle("open");
+});
 document.querySelector("#close-fields").addEventListener("click", () => assistantPane.classList.remove("open"));
+assistantPane.addEventListener("click", (event) => event.stopPropagation());
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
 
 document.querySelector("#fill-contract").addEventListener("click", () => {
   if (!ensureEditableWorkspace("completar el contrato")) return;
   editor.value = fillPlaceholders(editor.value);
+  renderDynamicFields();
+  renderCustomFields();
+  renderRequirements();
+  renderMatterPanel();
+  if (!missingFieldsForActiveTemplate().length) assistantPane.classList.remove("open");
   autoSaveVersion("manual");
   saveActiveDraft("Contrato completado");
   showToast("Contrato completado con los datos de cada parte.");
@@ -3177,10 +3257,18 @@ document.querySelector("#extract-data").addEventListener("click", async () => {
     if (text.trim()) detected = { ...detected, ...inferDataFromText(text, role.side) };
   }
   applyDetectedData(detected);
+  const integrated = Object.keys(detected).length ? integrateKnownDataIntoContract("Datos extraídos integrados al contrato") : 0;
   const missing = missingFieldsForActiveTemplate().length;
   if (Object.keys(detected).length) {
-    addMatterEvent(`Datos extraídos y validados: ${Object.keys(detected).length}`);
-    showToast(missing ? `Se extrajeron ${Object.keys(detected).length} datos para revisión. Faltan ${missing}: sube otro documento o llena el campo manualmente.` : "Datos de partes completos. Ya puedes completar el contrato.");
+    addMatterEvent(`Datos extraídos e integrados: ${integrated || Object.keys(detected).length}`);
+    if (!missing) assistantPane.classList.remove("open");
+    if (missing && integrated) {
+      showToast(`Se integraron ${integrated} dato${integrated === 1 ? "" : "s"} al contrato. Quedan ${missing} pendiente${missing === 1 ? "" : "s"} en datos manuales.`);
+    } else if (missing) {
+      showToast(`Se extrajeron ${Object.keys(detected).length} dato${Object.keys(detected).length === 1 ? "" : "s"}, pero el machote no conserva esos campos. Quedan ${missing} pendiente${missing === 1 ? "" : "s"}.`);
+    } else {
+      showToast("Datos extraídos e integrados al contrato. No quedan campos pendientes.");
+    }
   } else if (aiOnlyDocuments.length && isLocalStaticPreview()) {
     showToast("Los documentos quedaron cargados, pero esta vista local no ejecuta IA documental. Abre lexcontratos.com para extraerlos o captura los datos manualmente.");
   } else if (aiOnlyDocuments.length && aiWasTried) {
@@ -3360,6 +3448,18 @@ versionList.addEventListener("click", (event) => {
   renderFolderSelector();
   saveActiveDraft("Versión abierta");
   showToast("Versión guardada abierta en el editor.");
+});
+
+partyForm.addEventListener("click", (event) => {
+  const button = event.target.closest(".apply-manual-field");
+  if (!button) return;
+  applyManualField(button.dataset.field);
+});
+
+partyForm.addEventListener("keydown", (event) => {
+  if (event.key !== "Enter" || !event.target.matches("input")) return;
+  event.preventDefault();
+  applyManualField(event.target.name);
 });
 
 partyForm.addEventListener("input", () => {

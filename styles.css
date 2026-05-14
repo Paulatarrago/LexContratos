@@ -1681,7 +1681,12 @@ button {
   font-size: 14px;
 }
 
-.party-form label {
+.field-group-title.empty-state strong {
+  color: var(--teal-dark);
+}
+
+.party-form label,
+.party-form .manual-field {
   display: grid;
   gap: 4px;
   color: var(--muted);
@@ -1701,6 +1706,19 @@ button {
 .party-form textarea {
   min-height: 62px;
   resize: vertical;
+}
+
+.manual-field-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+}
+
+.manual-field-row .folder-action {
+  color: var(--teal-dark);
+  border-color: rgba(11, 78, 162, 0.22);
+  background: #eff6ff;
 }
 
 .requirements-list {
