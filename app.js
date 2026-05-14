@@ -636,6 +636,7 @@ let matterHistoryEvents = [];
 let toastTimer;
 let autosaveTimer;
 let pendingCriticalReviewBody = "";
+let lastCriticalReviewFindings = [];
 let restoringDraft = false;
 let draftRestoredForUser = "";
 
@@ -1873,10 +1874,14 @@ function loadTemplate(key) {
 }
 
 function escapeHtml(value) {
-  return value.replace(/[&<>"']/g, (character) => {
+  return String(value).replace(/[&<>"']/g, (character) => {
     const map = { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#039;" };
     return map[character];
   });
+}
+
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
 }
 
 function syncFormatControls() {
@@ -1920,23 +1925,170 @@ function applyDefaultLegalFormat() {
   showToast("Formato legal aplicado: Times New Roman 12, margen moderado e interlineado 1.5.");
 }
 
-function formattedContractHtml(text) {
-  const paragraphs = text.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
-  return paragraphs
-    .map((paragraph, index) => {
-      const escaped = escapeHtml(paragraph).replace(/\n/g, "<br>");
-      const plain = removeAccents(paragraph).toUpperCase();
-      const isShortHeading = paragraph.length < 95 && /^[A-ZÁÉÍÓÚÑ0-9 .,:;()/"“”_-]+$/.test(paragraph);
-      const isMainTitle = index === 0;
-      const isSectionHeading = isShortHeading || /^(DECLARACIONES|CLAUSULAS|ANEXO|RECITALES|RECITALS|CLAUSES|SCHEDULE|EXHIBIT)\b/.test(plain);
-      if (isMainTitle) return `<h1>${escaped}</h1>`;
-      if (isSectionHeading) return `<h2>${escaped}</h2>`;
+function normalizeExportText(value) {
+  return removeAccents(String(value || "").trim()).toUpperCase();
+}
 
-      const clausePattern = /^((?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|SEPTIMA|OCTAVA|NOVENA|DÉCIMA|DECIMA|VIGÉSIMA|VIGESIMA|FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH|SEVENTH|EIGHTH|NINTH|TENTH)[^.<\n]{0,90}\.)/i;
-      const withBoldClause = escaped.replace(clausePattern, "<strong>$1</strong>");
-      return `<p>${withBoldClause}</p>`;
+function legalUppercase(value) {
+  return String(value || "").trim().toLocaleUpperCase("es-MX");
+}
+
+function roleHeadingAliases() {
+  const baseAliases = [
+    "EL CLIENTE",
+    "LA CLIENTE",
+    "EL PRESTADOR",
+    "LA PRESTADORA",
+    "EL PROVEEDOR",
+    "LA PROVEEDORA",
+    "EL ARRENDADOR",
+    "LA ARRENDADORA",
+    "EL ARRENDATARIO",
+    "LA ARRENDATARIA",
+    "EL COMPRADOR",
+    "LA COMPRADORA",
+    "EL VENDEDOR",
+    "LA VENDEDORA",
+    "EL MANDANTE",
+    "EL MANDATARIO",
+    "LAS PARTES",
+    "AMBAS PARTES"
+  ];
+  const dynamicAliases = getRoles().flatMap((role) => {
+    const normalized = normalizeExportText(role.label);
+    const short = normalized.split(/\s+/)[0];
+    return [`EL ${normalized}`, `LA ${normalized}`, `EL ${short}`, `LA ${short}`];
+  });
+  return [...new Set([...baseAliases, ...dynamicAliases].filter(Boolean))].sort((a, b) => b.length - a.length);
+}
+
+function formatEmailLinks(html) {
+  return html.replace(
+    /\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi,
+    (email) => `<a class="email-link" href="mailto:${email}">${email}</a>`
+  );
+}
+
+function formatInlineLegalText(html) {
+  let formatted = html.replace(/\bDenominaci[oó]n social\s*:/gi, "Parte:");
+  roleHeadingAliases().forEach((alias) => {
+    formatted = formatted.replace(new RegExp(`\\b${escapeRegExp(alias)}\\b`, "gi"), "<strong>$&</strong>");
+  });
+
+  const values = getPartyData();
+  const uppercaseFields = new Set(["parteA", "parteB", "repA", "repB", "rfcA", "rfcB"]);
+  const boldFields = new Set([...uppercaseFields, "domicilioPrestador", "domicilioCliente"]);
+  Object.entries(values)
+    .filter(([name, value]) => boldFields.has(name) && String(value || "").trim().length > 2)
+    .sort((a, b) => String(b[1]).length - String(a[1]).length)
+    .forEach(([name, value]) => {
+      const display = uppercaseFields.has(name) ? legalUppercase(value) : String(value).trim();
+      formatted = formatted.replace(
+        new RegExp(escapeRegExp(escapeHtml(value)), "gi"),
+        `<strong>${escapeHtml(display)}</strong>`
+      );
+    });
+
+  return formatEmailLinks(formatted);
+}
+
+function listItemInfo(paragraph) {
+  const match = paragraph.match(/^\s*(?:(\d+)[.)]|([a-zA-Z])[.)]|([-*•]))\s+([\s\S]+)/);
+  if (!match) return null;
+  if (match[1]) return { type: "number", body: match[4] };
+  if (match[2]) return { type: "alpha", body: match[4] };
+  return { type: "bullet", body: match[4] };
+}
+
+function listBlockFrom(paragraphs, startIndex) {
+  const first = listItemInfo(paragraphs[startIndex]);
+  if (!first) return null;
+  const items = [];
+  let endIndex = startIndex;
+  while (endIndex < paragraphs.length) {
+    const item = listItemInfo(paragraphs[endIndex]);
+    if (!item || item.type !== first.type) break;
+    items.push(item.body);
+    endIndex += 1;
+  }
+  if (items.length < 2) return null;
+
+  const tag = first.type === "bullet" ? "ul" : "ol";
+  const typeAttr = first.type === "alpha" ? ' type="a"' : "";
+  const html = items
+    .map((item) => `<li>${formatInlineLegalText(escapeHtml(item).replace(/\n/g, "<br>"))}</li>`)
+    .join("");
+  return {
+    html: `<${tag}${typeAttr} class="legal-list">${html}</${tag}>`,
+    endIndex: endIndex - 1
+  };
+}
+
+function isAnnexHeading(paragraph) {
+  return /^(ANEXO|ANNEX|SCHEDULE|EXHIBIT)\b/.test(normalizeExportText(paragraph));
+}
+
+function isRoleHeadingParagraph(paragraph) {
+  const plain = normalizeExportText(paragraph);
+  return roleHeadingAliases().some((alias) => normalizeExportText(alias) === plain);
+}
+
+function signatureBlockHtml() {
+  const values = getPartyData();
+  const blocks = getRoles()
+    .map((role) => {
+      const party = values[role.part] || role.label;
+      const representative = values[role.side === "A" ? "repA" : "repB"] || "Representante legal";
+      return `
+        <div class="signature-box">
+          <div class="signature-line"></div>
+          <p class="signature-party">POR: <strong>${escapeHtml(legalUppercase(party))}</strong></p>
+          <p><strong>${escapeHtml(legalUppercase(representative))}</strong></p>
+          <p>Representante legal</p>
+        </div>
+      `;
     })
     .join("");
+  return `<div class="signature-grid">${blocks}</div>`;
+}
+
+function isSignatureBlockStart(paragraphs, index) {
+  return isRoleHeadingParagraph(paragraphs[index]) && isRoleHeadingParagraph(paragraphs[index + 1] || "");
+}
+
+function formatContractParagraph(paragraph, index) {
+  const escaped = formatInlineLegalText(escapeHtml(paragraph).replace(/\n/g, "<br>"));
+  const plain = normalizeExportText(paragraph);
+  const isShortHeading = paragraph.length < 95 && /^[A-ZÁÉÍÓÚÑ0-9 .,:;()/"“”_-]+$/.test(paragraph);
+  const isMainTitle = index === 0;
+  const isSectionHeading = isShortHeading || /^(DECLARACIONES|CLAUSULAS|ANEXO|RECITALES|RECITALS|CLAUSES|SCHEDULE|EXHIBIT)\b/.test(plain);
+  if (isMainTitle) return `<h1>${escaped}</h1>`;
+  if (isAnnexHeading(paragraph)) return `<h2 class="annex-title">${escaped}</h2>`;
+  if (isSectionHeading) return `<h2>${escaped}</h2>`;
+
+  const clausePattern = /^((?:PRIMERA|SEGUNDA|TERCERA|CUARTA|QUINTA|SEXTA|SÉPTIMA|SEPTIMA|OCTAVA|NOVENA|DÉCIMA|DECIMA|VIGÉSIMA|VIGESIMA|FIRST|SECOND|THIRD|FOURTH|FIFTH|SIXTH|SEVENTH|EIGHTH|NINTH|TENTH)[^.<\n]{0,90}\.)/i;
+  const withBoldClause = escaped.replace(clausePattern, "<strong>$1</strong>");
+  return `<p>${withBoldClause}</p>`;
+}
+
+function formattedContractHtml(text) {
+  const paragraphs = text.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
+  const output = [];
+  for (let index = 0; index < paragraphs.length; index += 1) {
+    if (isSignatureBlockStart(paragraphs, index)) {
+      output.push(signatureBlockHtml());
+      while (index + 1 < paragraphs.length && !isAnnexHeading(paragraphs[index + 1])) index += 1;
+      continue;
+    }
+    const listBlock = listBlockFrom(paragraphs, index);
+    if (listBlock) {
+      output.push(listBlock.html);
+      index = listBlock.endIndex;
+      continue;
+    }
+    output.push(formatContractParagraph(paragraphs[index], index));
+  }
+  return output.join("");
 }
 
 function exportWordDocument() {
@@ -1952,6 +2104,10 @@ function exportWordDocument() {
       return;
     }
   }
+  if (!confirmCriticalFindingsBefore("exportar a Word")) {
+    showToast("Exportación detenida para revisar observaciones.");
+    return;
+  }
   readFormatControls();
   const documentBody = formattedContractHtml(editor.value);
   const html = `<!doctype html>
@@ -1963,7 +2119,16 @@ function exportWordDocument() {
         body { font-family: "${legalFormat.font}", serif; color: #111827; line-height: ${legalFormat.lineHeight}; margin: 0; font-size: ${legalFormat.size}pt; }
         h1 { font-size: ${Number(legalFormat.size) + 2}pt; text-align: center; font-weight: 700; margin: 0 0 24pt; text-transform: uppercase; }
         h2 { font-size: ${legalFormat.size}pt; text-align: justify; font-weight: 700; margin: 18pt 0 10pt; text-transform: uppercase; }
+        h2.annex-title { text-align: center; margin-top: 22pt; }
         p { margin: 0 0 10pt; text-align: justify; }
+        a.email-link { color: #1155cc; text-decoration: underline; }
+        ol.legal-list, ul.legal-list { margin: 0 0 10pt 24pt; padding-left: 18pt; text-align: justify; }
+        ol.legal-list li, ul.legal-list li { margin: 0 0 8pt; padding-left: 4pt; }
+        .signature-grid { display: table; width: 100%; margin-top: 30pt; page-break-inside: avoid; table-layout: fixed; }
+        .signature-box { display: table-cell; width: 50%; padding: 0 18pt; text-align: center; vertical-align: top; }
+        .signature-line { border-top: 1px solid #111827; height: 1pt; margin: 42pt 0 10pt; }
+        .signature-box p { margin: 0 0 5pt; text-align: center; }
+        .signature-party { text-transform: uppercase; }
         strong { font-weight: 700; }
       </style>
     </head>
@@ -1997,7 +2162,7 @@ function defaultSigners() {
   return getRoles().map((role, index) => ({
     name: values[role.side === "A" ? "repA" : "repB"] || "",
     email: values[role.side === "A" ? "correoPrestador" : "correoCliente"] || "",
-    role: role.label,
+    role: `Representante legal de ${role.label}`,
     order: index + 1
   }));
 }
@@ -2064,6 +2229,10 @@ async function submitSignaturePacket(event) {
   const signers = getSignatureRequestSigners();
   if (signers.some((signer) => !signer.name || !signer.email || !signer.role)) {
     showToast("Completa nombre, correo y rol de cada firmante.");
+    return;
+  }
+  if (!confirmCriticalFindingsBefore("enviar a firma")) {
+    showToast("Envío detenido para revisar observaciones.");
     return;
   }
   ensureMatterFolio();
@@ -2241,6 +2410,27 @@ function formatCriticalReview(result) {
   return lines.join("\n").trim();
 }
 
+function rememberCriticalReview(result) {
+  lastCriticalReviewFindings = Array.isArray(result?.findings) ? result.findings : [];
+}
+
+function confirmCriticalFindingsBefore(actionLabel) {
+  const findings = lastCriticalReviewFindings.filter((finding) => {
+    const severity = removeAccents(finding.severity || "").toLowerCase();
+    return severity && severity !== "baja";
+  });
+  if (!findings.length) return true;
+
+  const preview = findings
+    .slice(0, 5)
+    .map((finding, index) => `${index + 1}. ${finding.section || "Contrato"}: ${finding.observation || "Observación pendiente."}`)
+    .join("\n");
+  const extra = findings.length > 5 ? `\n${findings.length - 5} observación(es) adicional(es).` : "";
+  return window.confirm(
+    `La revisión crítica marcó ${findings.length} punto(s) relevantes:\n\n${preview}${extra}\n\nPuedes continuar si así lo decides. ¿Quieres ${actionLabel} de todos modos?`
+  );
+}
+
 async function runCriticalReview(mode) {
   if (!isWorkingCopy || !editor.value.trim()) {
     showToast("Primero carga o duplica una plantilla para revisar un contrato editable.");
@@ -2265,11 +2455,13 @@ async function runCriticalReview(mode) {
     });
     if (!response.ok) throw new Error("critical review unavailable");
     const result = await response.json();
+    rememberCriticalReview(result);
     pendingCriticalReviewBody = mode === "propose" && result.revisedBody ? result.revisedBody : "";
     criticalReviewOutput.textContent = formatCriticalReview(result);
     applyCriticalReviewButton.classList.toggle("is-hidden", !pendingCriticalReviewBody);
   } catch (error) {
     const result = buildLocalCriticalReview(mode);
+    rememberCriticalReview(result);
     criticalReviewOutput.textContent = `${formatCriticalReview(result)}\n\nLa revisión avanzada estará disponible cuando la IA documental esté activa.`;
   }
 }
@@ -2278,6 +2470,7 @@ function applyCriticalReviewSuggestion() {
   if (!pendingCriticalReviewBody) return;
   editor.value = pendingCriticalReviewBody;
   pendingCriticalReviewBody = "";
+  lastCriticalReviewFindings = [];
   applyCriticalReviewButton.classList.add("is-hidden");
   autoSaveVersion("manual");
   saveActiveDraft("Ajustes de revisión crítica integrados");
@@ -2797,6 +2990,18 @@ function applyManualField(fieldName) {
   if (!missing) assistantPane.classList.remove("open");
 }
 
+function integrateCompletedManualFields(event) {
+  if (event) event.preventDefault();
+  if (!ensureEditableWorkspace("integrar datos")) return;
+  const integrated = integrateKnownDataIntoContract("Datos completados integrados");
+  const missing = missingFieldsForActiveTemplate().length;
+  if (!integrated) {
+    showToast("No encontré datos capturados que coincidan con campos pendientes del contrato.");
+    return;
+  }
+  showToast(missing ? `Datos integrados al contrato. Quedan ${missing} campo${missing === 1 ? "" : "s"} pendiente${missing === 1 ? "" : "s"}.` : "Datos integrados. El contrato ya no tiene campos pendientes.");
+}
+
 function normalizeExtractionValues(result) {
   const source = result?.values || result?.fields || result || {};
   const updates = {};
@@ -2954,16 +3159,7 @@ assistantPane.addEventListener("click", (event) => event.stopPropagation());
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
 
 document.querySelector("#fill-contract").addEventListener("click", () => {
-  if (!ensureEditableWorkspace("completar el contrato")) return;
-  editor.value = fillPlaceholders(editor.value);
-  renderDynamicFields();
-  renderCustomFields();
-  renderRequirements();
-  renderMatterPanel();
-  if (!missingFieldsForActiveTemplate().length) assistantPane.classList.remove("open");
-  autoSaveVersion("manual");
-  saveActiveDraft("Contrato completado");
-  showToast("Contrato completado con los datos de cada parte.");
+  integrateCompletedManualFields();
 });
 
 document.querySelector("#export-word").addEventListener("click", exportWordDocument);
@@ -2980,6 +3176,9 @@ document.querySelector("#critical-review")?.addEventListener("click", () => {
 document.querySelector("#critical-observations")?.addEventListener("click", () => runCriticalReview("observations"));
 document.querySelector("#critical-suggest")?.addEventListener("click", () => runCriticalReview("propose"));
 applyCriticalReviewButton?.addEventListener("click", applyCriticalReviewSuggestion);
+criticalReviewDialog?.addEventListener("click", (event) => {
+  if (event.target === criticalReviewDialog) criticalReviewDialog.close();
+});
 
 document.querySelector("#copy-contract")?.addEventListener("click", async () => {
   await navigator.clipboard.writeText(editor.value);
@@ -2995,6 +3194,7 @@ document.querySelector("#replicate-template").addEventListener("click", () => {
 document.querySelector("#rename-template").addEventListener("click", renameActiveTemplate);
 
 document.querySelector("#clear-generales").addEventListener("click", clearGeneralData);
+document.querySelector("#integrate-manual-data")?.addEventListener("click", integrateCompletedManualFields);
 
 contractFolderSelect.addEventListener("change", () => {
   activeFolder = contractFolderSelect.value;

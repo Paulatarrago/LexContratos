@@ -1643,6 +1643,10 @@ button {
   margin-left: auto;
 }
 
+.mini-action + .mini-action {
+  margin-left: 0;
+}
+
 .party-form {
   display: grid;
   gap: 8px;

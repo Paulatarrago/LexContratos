@@ -365,8 +365,8 @@
                 <h2 id="editor-mode-title">Documento principal</h2>
               </div>
               <div class="editor-actions">
-                <button class="secondary-action" id="review-fields" type="button">1. Revisar campos pendientes</button>
-                <button class="secondary-action" id="fill-contract" type="button">2. Completar contrato</button>
+                <button class="secondary-action" id="review-fields" type="button">1. Detectar campos editables</button>
+                <button class="secondary-action" id="fill-contract" type="button">2. Integrar datos al contrato</button>
                 <button class="secondary-action" id="critical-review" type="button">3. Revisión crítica IA</button>
                 <button class="secondary-action" id="export-word" type="button">Exportar Word</button>
                 <button class="secondary-action" id="send-signature" type="button">Preparar firma</button>
@@ -441,6 +441,7 @@
               <strong>Pendientes</strong>
             </div>
             <button class="secondary-action mini-action" id="clear-generales" type="button">Borrar datos</button>
+            <button class="secondary-action mini-action" id="integrate-manual-data" type="button">Integrar completados</button>
           </summary>
           <form class="party-form" id="party-form">
             <div class="dynamic-fields" id="dynamic-fields"></div>
@@ -602,7 +603,8 @@
       <div class="critical-review-output" id="critical-review-output" aria-live="polite">
         Selecciona un modo de revisión para analizar el contrato activo.
       </div>
-      <button class="primary-action is-hidden" id="apply-critical-review" type="button">Aplicar versión sugerida</button>
+      <p class="dialog-copy">Si integras una propuesta, el texto editable se actualizará y quedará guardado como versión para que puedas revisarlo antes de exportar o firmar.</p>
+      <button class="primary-action is-hidden" id="apply-critical-review" type="button">Integrar propuesta revisada</button>
     </dialog>
 
     <div class="toast" id="toast" role="status" aria-live="polite"></div>
