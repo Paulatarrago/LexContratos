@@ -1521,6 +1521,24 @@ button {
   font-size: 13px;
 }
 
+.saved-contract-open {
+  border: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  width: 100%;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+}
+
+.saved-contract-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  padding-top: 6px;
+}
+
 .folder-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

@@ -635,6 +635,8 @@ let matterHistoryEvents = [];
 let toastTimer;
 let autosaveTimer;
 let pendingCriticalReviewBody = "";
+let restoringDraft = false;
+let draftRestoredForUser = "";
 
 const demoAccount = {
   email: "usuario.demo@lexcontratos.local",
@@ -774,10 +776,10 @@ function loadSavedContracts() {
   }));
 }
 
-function saveSavedContracts() {
+function saveSavedContracts(contractToSync = null) {
   localStorage.setItem(userStorageKey("saved_contracts"), JSON.stringify(savedContracts));
   const backend = productionBackend();
-  const latest = savedContracts[savedContracts.length - 1];
+  const latest = contractToSync || savedContracts[savedContracts.length - 1];
   if (backend && latest) backend.saveContract(latest).catch((error) => reportBackendError("guardar contrato", error));
 }
 
@@ -791,6 +793,97 @@ function loadVersions() {
 
 function saveVersions() {
   localStorage.setItem(userStorageKey("versions"), JSON.stringify(versions));
+}
+
+function activeDraftKey() {
+  return userStorageKey("active_draft");
+}
+
+function setPartyData(values = {}) {
+  partyForm.querySelectorAll("input, textarea, select").forEach((field) => {
+    if (Object.prototype.hasOwnProperty.call(values, field.name)) field.value = values[field.name] || "";
+  });
+}
+
+function serializableSourceFiles() {
+  return {
+    A: (sourceTextsBySide.A || []).map(({ name, size, type, text }) => ({ name, size, type, text: text || "" })),
+    B: (sourceTextsBySide.B || []).map(({ name, size, type, text }) => ({ name, size, type, text: text || "" }))
+  };
+}
+
+function saveActiveDraft(reason = "Borrador en curso") {
+  if (restoringDraft || !isWorkingCopy || !activeTemplate || !editor.value.trim()) return;
+  const template = templates[activeTemplate] || {};
+  const draft = {
+    id: readJson(activeDraftKey(), {})?.id || `draft-${Date.now()}`,
+    title: editorTitle.textContent,
+    folder: activeFolder,
+    template: activeTemplate,
+    sourceMaster: activeSourceMaster,
+    language: activeLanguage,
+    body: editor.value,
+    partyData: getPartyData(),
+    sourceTextsBySide: serializableSourceFiles(),
+    matter: matterSnapshot(reason, false),
+    history: matterHistoryEvents.slice(),
+    templateSnapshot: {
+      ...template,
+      body: editor.value,
+      master: false,
+      sourceMaster: activeSourceMaster || template.sourceMaster || null
+    },
+    reason,
+    updatedAt: Date.now(),
+    date: new Date().toLocaleString("es-MX")
+  };
+  localStorage.setItem(activeDraftKey(), JSON.stringify(draft));
+}
+
+function restoreActiveDraft({ silent = false } = {}) {
+  const draft = readJson(activeDraftKey(), null);
+  if (!draft?.body || !draft?.template) return false;
+  if (Date.now() - Number(draft.updatedAt || 0) > 1000 * 60 * 60 * 24 * 30) return false;
+
+  restoringDraft = true;
+  if (!templates[draft.template]) {
+    templates[draft.template] = {
+      ...(draft.templateSnapshot || {}),
+      title: draft.title || "Borrador recuperado",
+      category: draft.templateSnapshot?.category || "Borradores",
+      description: "Borrador recuperado automáticamente.",
+      body: draft.body,
+      customFields: draft.templateSnapshot?.customFields || [],
+      fields: draft.templateSnapshot?.fields || 0,
+      master: false,
+      sourceMaster: draft.sourceMaster || draft.templateSnapshot?.sourceMaster || null
+    };
+  }
+  activeFolder = ensureFolderPath(draft.folder || activeFolder);
+  loadTemplate(draft.template);
+  isWorkingCopy = true;
+  activeSourceMaster = draft.sourceMaster || templates[draft.template]?.sourceMaster || activeSourceMaster;
+  activeLanguage = draft.language || activeLanguage;
+  editorTitle.textContent = draft.title || editorTitle.textContent;
+  editor.value = draft.body;
+  editor.readOnly = false;
+  setPartyData(draft.partyData || {});
+  sourceTextsBySide = draft.sourceTextsBySide || { A: [], B: [] };
+  activeMatterFolio = draft.matter?.folio || null;
+  matterHistoryEvents = draft.history || draft.matter?.history || [];
+  autosaveStatus.textContent = `Borrador recuperado · ${draft.date || ""}`.trim();
+  autosaveStatus.classList.add("autosave-highlight");
+  renderTemplates();
+  renderFolderSelector();
+  renderFolders();
+  renderDynamicFields();
+  renderCustomFields();
+  renderRoleDrops();
+  renderRequirements();
+  renderMatterPanel();
+  restoringDraft = false;
+  if (!silent) showToast("Borrador recuperado automáticamente.");
+  return true;
 }
 
 function loadLegalFormat() {
@@ -927,6 +1020,7 @@ function switchActiveUser(user, announce = true) {
   renderSavedContracts();
   renderVersions();
   clearWorkspaceState();
+  if (draftRestoredForUser !== activeUser && restoreActiveDraft({ silent: true })) draftRestoredForUser = activeUser;
   if (announce) showToast(`Sesión cambiada a ${activeUser}. Biblioteca personal cargada.`);
 }
 
@@ -1573,6 +1667,7 @@ function createWorkingCopy(sourceKey, customBody) {
   loadTemplate(key);
   editor.readOnly = false;
   addMatterEvent("Copia editable creada");
+  saveActiveDraft("Copia editable creada");
   showToast("Copia creada. Ahora puedes editar sin tocar la plantilla base.");
 }
 
@@ -1617,10 +1712,16 @@ function renderVersions() {
   versionList.innerHTML = visible.length
     ? visible
         .map((version) => `
-          <button class="saved-contract" type="button" data-version-id="${version.id}">
-            <strong>${version.title}</strong>
-            <span>${version.matter?.folio || "Sin folio"} · ${version.language.toUpperCase()} · ${version.date}</span>
-          </button>
+          <article class="saved-contract" data-version-id="${version.id}">
+            <button class="saved-contract-open open-version" type="button" data-version-id="${version.id}">
+              <strong>${version.title}</strong>
+              <span>${version.matter?.folio || "Sin folio"} · ${(version.language || "es").toUpperCase()} · ${version.date}</span>
+            </button>
+            <div class="saved-contract-actions">
+              <button class="folder-action move-version" type="button" data-version-id="${version.id}">Mover</button>
+              <button class="folder-action copy-version" type="button" data-version-id="${version.id}">Copiar</button>
+            </div>
+          </article>
         `)
         .join("")
     : `<span>Las versiones se guardan solas mientras redactas.</span>`;
@@ -1633,6 +1734,7 @@ function autoSaveVersion(reason = "auto") {
 
   const last = versions[versions.length - 1];
   if (last && last.template === activeTemplate && last.body === body && last.folder === activeFolder && last.matter?.folio === matter.folio) {
+    saveActiveDraft(reason === "manual" ? "Versión manual" : "Autosave");
     autosaveStatus.textContent = "Guardado";
     autosaveStatus.classList.add("autosave-highlight");
     return;
@@ -1650,6 +1752,7 @@ function autoSaveVersion(reason = "auto") {
   });
   versions = versions.slice(-60);
   saveVersions();
+  saveActiveDraft(reason === "manual" ? "Versión manual" : "Autosave");
   renderVersions();
   autosaveStatus.textContent = "Guardado";
   autosaveStatus.classList.add("autosave-highlight");
@@ -1668,6 +1771,7 @@ function scheduleAutoSave() {
     autosaveStatus.classList.remove("autosave-highlight");
     return;
   }
+  saveActiveDraft("Borrador en curso");
   autosaveStatus.textContent = "Guardando...";
   autosaveStatus.classList.remove("autosave-highlight");
   autosaveTimer = setTimeout(() => autoSaveVersion(), 900);
@@ -1934,7 +2038,7 @@ async function submitSignaturePacket(event) {
 
   const eventLabel = sendResult ? "Contrato enviado a firma electrónica" : "Contrato preparado para firma";
   addMatterEvent(eventLabel);
-  savedContracts.push({
+  const contract = {
     id: Date.now().toString(),
     title: `${previewMatterFolio()} · ${status} · ${title}`,
     folder: activeFolder,
@@ -1949,8 +2053,9 @@ async function submitSignaturePacket(event) {
     signatureDetailsUrl: sendResult?.detailsUrl || "",
     signers,
     matter: matterSnapshot(status, true)
-  });
-  saveSavedContracts();
+  };
+  savedContracts.push(contract);
+  saveSavedContracts(contract);
   renderSavedContracts();
   autoSaveVersion("manual");
   signatureDialog.close();
@@ -2112,6 +2217,7 @@ function applyCriticalReviewSuggestion() {
   pendingCriticalReviewBody = "";
   applyCriticalReviewButton.classList.add("is-hidden");
   autoSaveVersion("manual");
+  saveActiveDraft("Ajustes de revisión crítica integrados");
   addMatterEvent("Ajustes sugeridos por revisión crítica integrados");
   criticalReviewDialog.close();
   showToast("Cambios sugeridos integrados. Revisa el contrato antes de exportar o firmar.");
@@ -2134,6 +2240,7 @@ function renameActiveTemplate() {
   renderRequirements();
   renderMatterPanel();
   autoSaveVersion("manual");
+  saveActiveDraft("Copia renombrada");
   showToast("Copia renombrada. La plantilla base original sigue intacta.");
 }
 
@@ -2170,6 +2277,7 @@ function clearGeneralData(event) {
   renderRequirements();
   autosaveStatus.textContent = "Datos de partes borrados";
   autosaveStatus.classList.remove("autosave-highlight");
+  saveActiveDraft("Datos de partes borrados");
   showToast("Datos de partes borrados. Puedes cargar documentos nuevos por cada parte.");
 }
 
@@ -2251,6 +2359,23 @@ function renderFolderSelector() {
   contractFolderSelect.value = activeFolder;
 }
 
+function ensureFolderPath(value, fallbackRoot = activeFolder.split("/")[0] || "Clientes") {
+  const parts = String(value || "")
+    .split("/")
+    .map((part) => part.trim())
+    .filter(Boolean);
+  if (!parts.length) return activeFolder;
+  if (!rootFolders.includes(parts[0])) parts.unshift(rootFolders.includes(fallbackRoot) ? fallbackRoot : "Clientes");
+
+  let path = "";
+  parts.forEach((part) => {
+    path = path ? `${path}/${part}` : part;
+    if (!folders.includes(path)) folders.push(path);
+  });
+  saveFolders();
+  return path;
+}
+
 function renderFolders() {
   folders.sort((a, b) => a.localeCompare(b, "es"));
   folderList.innerHTML = folders
@@ -2279,10 +2404,16 @@ function renderSavedContracts() {
         .slice()
         .reverse()
         .map((contract) => `
-          <button class="saved-contract" type="button" data-id="${contract.id}">
-            <strong>${contract.title}</strong>
-            <span>${contract.status || contract.language.toUpperCase()} · ${contract.date}</span>
-          </button>
+          <article class="saved-contract" data-id="${contract.id}">
+            <button class="saved-contract-open open-saved-contract" type="button" data-id="${contract.id}">
+              <strong>${contract.title}</strong>
+              <span>${contract.status || (contract.language || "es").toUpperCase()} · ${contract.date}</span>
+            </button>
+            <div class="saved-contract-actions">
+              <button class="folder-action move-contract" type="button" data-id="${contract.id}">Mover</button>
+              <button class="folder-action copy-contract" type="button" data-id="${contract.id}">Copiar</button>
+            </div>
+          </article>
         `)
         .join("")
     : `<span>Aquí aparecerán los contratos creados en ${activeFolder}.</span>`;
@@ -2311,6 +2442,7 @@ function createFolderFromInput() {
   renderFolders();
   renderSavedContracts();
   renderVersions();
+  saveActiveDraft("Carpeta creada");
   showToast(`Carpeta ${activeFolder} lista para archivar contratos.`);
 }
 
@@ -2362,6 +2494,7 @@ function renameFolder(folder) {
   renderFolders();
   renderSavedContracts();
   renderVersions();
+  saveActiveDraft("Carpeta renombrada");
   showToast(`Carpeta renombrada como ${newPath}.`);
 }
 
@@ -2392,7 +2525,97 @@ function deleteFolder(folder) {
   renderFolders();
   renderSavedContracts();
   renderVersions();
+  saveActiveDraft("Carpeta eliminada");
   showToast(affectedContracts || affectedVersions ? "Carpeta eliminada. Su contenido se movió a Personales." : "Carpeta eliminada.");
+}
+
+function askDestinationFolder(currentFolder) {
+  const destination = window.prompt(
+    "Carpeta destino. Puedes escribir una ruta nueva, por ejemplo: Clientes/Cliente Demo/Servicios 2026",
+    currentFolder || activeFolder
+  );
+  if (!destination || !destination.trim()) return null;
+  return ensureFolderPath(destination.trim(), (currentFolder || activeFolder).split("/")[0]);
+}
+
+function moveContractToFolder(contractId) {
+  const contract = savedContracts.find((item) => item.id === contractId);
+  if (!contract) return;
+  const destination = askDestinationFolder(contract.folder);
+  if (!destination) return;
+  const folio = contract.matter?.folio || contract.folio;
+  contract.folder = destination;
+  if (contract.matter) contract.matter.folder = destination;
+  if (folio) {
+    versions = versions.map((version) => (
+      version.matter?.folio === folio ? { ...version, folder: destination, matter: { ...version.matter, folder: destination } } : version
+    ));
+  }
+  activeFolder = destination;
+  saveSavedContracts();
+  saveVersions();
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  showToast("Contrato movido con sus versiones del expediente.");
+}
+
+function copyContractToFolder(contractId) {
+  const contract = savedContracts.find((item) => item.id === contractId);
+  if (!contract) return;
+  const destination = askDestinationFolder(contract.folder);
+  if (!destination) return;
+  const copyFolio = `${contract.matter?.folio || contract.folio || "EXP"}-COPIA`;
+  const copy = {
+    ...contract,
+    id: Date.now().toString(),
+    title: `Copia de ${contract.title}`,
+    folder: destination,
+    date: new Date().toLocaleString("es-MX"),
+    status: "Copia editable",
+    folio: copyFolio,
+    matter: contract.matter ? { ...contract.matter, folio: copyFolio, folder: destination, status: "Copia editable" } : contract.matter
+  };
+  savedContracts.push(copy);
+  activeFolder = destination;
+  saveSavedContracts(copy);
+  renderFolders();
+  renderSavedContracts();
+  showToast("Contrato copiado a la carpeta seleccionada.");
+}
+
+function moveVersionToFolder(versionId) {
+  const version = versions.find((item) => item.id === versionId);
+  if (!version) return;
+  const destination = askDestinationFolder(version.folder);
+  if (!destination) return;
+  version.folder = destination;
+  if (version.matter) version.matter.folder = destination;
+  activeFolder = destination;
+  saveVersions();
+  renderFolders();
+  renderVersions();
+  showToast("Versión movida a la carpeta seleccionada.");
+}
+
+function copyVersionToFolder(versionId) {
+  const version = versions.find((item) => item.id === versionId);
+  if (!version) return;
+  const destination = askDestinationFolder(version.folder);
+  if (!destination) return;
+  versions.push({
+    ...version,
+    id: Date.now().toString(),
+    title: `Copia de ${version.title}`,
+    folder: destination,
+    date: new Date().toLocaleString("es-MX"),
+    matter: version.matter ? { ...version.matter, folder: destination } : version.matter
+  });
+  saveVersions();
+  activeFolder = destination;
+  renderFolders();
+  renderVersions();
+  showToast("Versión copiada a la carpeta seleccionada.");
 }
 
 function inferDataFromText(text, side) {
@@ -2427,6 +2650,7 @@ function applyDetectedData(updates) {
   renderRoleDrops();
   renderRequirements();
   renderMatterPanel();
+  saveActiveDraft("Datos extraídos");
 }
 
 function normalizeExtractionValues(result) {
@@ -2505,6 +2729,7 @@ roleDropGrid.addEventListener("change", async (event) => {
   renderRoleDrops();
   renderMatterPanel();
   addMatterEvent(`Documentos soporte cargados para ${getRoles().find((role) => role.side === side)?.label || "parte"}`);
+  saveActiveDraft("Documentos soporte cargados");
   if (files.some((file) => documentNeedsAiExtraction({ name: file.name, text: "" })) && isLocalStaticPreview()) {
     showToast("Documentos cargados. Excel, PDF, Word e imágenes se extraen con IA desde lexcontratos.com.");
   } else {
@@ -2555,6 +2780,7 @@ document.querySelector("#fill-contract").addEventListener("click", () => {
   }
   editor.value = fillPlaceholders(editor.value);
   autoSaveVersion("manual");
+  saveActiveDraft("Contrato completado");
   showToast("Contrato completado con los datos de cada parte.");
 });
 
@@ -2593,6 +2819,7 @@ contractFolderSelect.addEventListener("change", () => {
   renderFolders();
   renderSavedContracts();
   renderVersions();
+  saveActiveDraft("Carpeta actualizada");
   showToast(`Este contrato se guardará en ${activeFolder}.`);
 });
 
@@ -2605,17 +2832,11 @@ quickFolderButton.addEventListener("click", () => {
     .filter(Boolean);
   if (!parts.length) return;
 
-  let path = "";
-  parts.forEach((part) => {
-    path = path ? `${path}/${part}` : part;
-    if (!folders.includes(path)) folders.push(path);
-  });
-
-  activeFolder = path;
-  saveFolders();
+  activeFolder = ensureFolderPath(parts.join("/"));
   renderFolders();
   renderSavedContracts();
   renderVersions();
+  saveActiveDraft("Carpeta creada");
   showToast(`Este contrato se guardará en ${activeFolder}.`);
 });
 
@@ -2793,7 +3014,7 @@ document.querySelector("#save-contract").addEventListener("click", () => {
   const folio = ensureMatterFolio();
   addMatterEvent("Contrato creado");
   const title = `${cleanWorkingTitle(templates[activeTemplate].title)} · ${new Date().toLocaleDateString("es-MX")}`;
-  savedContracts.push({
+  const contract = {
     id: Date.now().toString(),
     title: `${folio} · ${title}`,
     folder: activeFolder,
@@ -2803,10 +3024,12 @@ document.querySelector("#save-contract").addEventListener("click", () => {
     body: filled,
     folio,
     matter: matterSnapshot("Contrato creado", true)
-  });
-  saveSavedContracts();
+  };
+  savedContracts.push(contract);
+  saveSavedContracts(contract);
   renderSavedContracts();
   autoSaveVersion("manual");
+  saveActiveDraft("Contrato creado");
   showToast(`Contrato creado en la carpeta ${activeFolder}.`);
 });
 
@@ -2932,14 +3155,38 @@ folderName.addEventListener("keydown", (event) => {
 });
 
 savedContractsList.addEventListener("click", (event) => {
-  const button = event.target.closest(".saved-contract");
+  const moveButton = event.target.closest(".move-contract");
+  if (moveButton) {
+    moveContractToFolder(moveButton.dataset.id);
+    return;
+  }
+  const copyButton = event.target.closest(".copy-contract");
+  if (copyButton) {
+    copyContractToFolder(copyButton.dataset.id);
+    return;
+  }
+  const button = event.target.closest(".open-saved-contract");
   if (!button) return;
   const contract = savedContracts.find((item) => item.id === button.dataset.id);
   if (!contract) return;
   activeFolder = contract.folder || activeFolder;
   activeTemplate = contract.template || activeTemplate;
+  if (activeTemplate && !templates[activeTemplate]) {
+    templates[activeTemplate] = {
+      title: contract.title,
+      category: "Contratos archivados",
+      description: "Contrato abierto desde expediente.",
+      body: contract.body,
+      customFields: [],
+      fields: 0,
+      master: false
+    };
+  }
+  isWorkingCopy = true;
+  activeSourceMaster = templates[activeTemplate]?.sourceMaster || activeSourceMaster;
   editorTitle.textContent = contract.title;
   editor.value = contract.body;
+  editor.readOnly = false;
   activeLanguage = contract.language;
   if (contract.matter) {
     activeMatterFolio = contract.matter.folio;
@@ -2955,16 +3202,43 @@ savedContractsList.addEventListener("click", (event) => {
   }
   renderFolders();
   renderFolderSelector();
+  saveActiveDraft("Contrato archivado abierto");
   showToast("Contrato archivado abierto en el editor.");
 });
 
 versionList.addEventListener("click", (event) => {
-  const button = event.target.closest(".saved-contract");
+  const moveButton = event.target.closest(".move-version");
+  if (moveButton) {
+    moveVersionToFolder(moveButton.dataset.versionId);
+    return;
+  }
+  const copyButton = event.target.closest(".copy-version");
+  if (copyButton) {
+    copyVersionToFolder(copyButton.dataset.versionId);
+    return;
+  }
+  const button = event.target.closest(".open-version");
   if (!button) return;
   const version = versions.find((item) => item.id === button.dataset.versionId);
   if (!version) return;
+  activeFolder = version.folder || activeFolder;
+  activeTemplate = version.template || activeTemplate;
+  if (activeTemplate && !templates[activeTemplate]) {
+    templates[activeTemplate] = {
+      title: version.title,
+      category: "Versiones guardadas",
+      description: "Versión abierta desde expediente.",
+      body: version.body,
+      customFields: [],
+      fields: 0,
+      master: false
+    };
+  }
+  isWorkingCopy = true;
+  activeSourceMaster = templates[activeTemplate]?.sourceMaster || activeSourceMaster;
   editorTitle.textContent = version.title;
   editor.value = version.body;
+  editor.readOnly = false;
   activeLanguage = version.language;
   if (version.matter) {
     activeMatterFolio = version.matter.folio;
@@ -2973,6 +3247,9 @@ versionList.addEventListener("click", (event) => {
   }
   autosaveStatus.textContent = "Versión abierta";
   autosaveStatus.classList.add("autosave-highlight");
+  renderFolders();
+  renderFolderSelector();
+  saveActiveDraft("Versión abierta");
   showToast("Versión guardada abierta en el editor.");
 });
 
@@ -2980,9 +3257,22 @@ partyForm.addEventListener("input", () => {
   renderRoleDrops();
   renderRequirements();
   if (!activeMatterFolio) renderMatterPanel();
+  saveActiveDraft("Datos de partes actualizados");
 });
 
 editor.addEventListener("input", scheduleAutoSave);
+
+window.addEventListener("beforeunload", () => {
+  saveActiveDraft("Guardado antes de cerrar");
+  if (isWorkingCopy && editor.value.trim()) autoSaveVersion("auto");
+});
+
+document.addEventListener("visibilitychange", () => {
+  if (document.visibilityState === "hidden") {
+    saveActiveDraft("Guardado en segundo plano");
+    if (isWorkingCopy && editor.value.trim()) autoSaveVersion("auto");
+  }
+});
 
 [formatFont, formatSize, formatMargin, formatLineHeight, formatJustify].forEach((control) => {
   control.addEventListener("change", readFormatControls);
@@ -3005,4 +3295,5 @@ renderSavedContracts();
 renderVersions();
 renderTemplates();
 clearWorkspaceState();
+if (restoreActiveDraft({ silent: true })) draftRestoredForUser = activeUser;
 renderAccessState();
