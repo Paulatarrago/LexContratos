@@ -2767,8 +2767,15 @@ openTemplatePicker.addEventListener("click", () => {
   templateSearch.focus();
 });
 
-document.querySelector("#toggle-archive").addEventListener("click", () => archiveDrawer.classList.add("open"));
+document.querySelector("#toggle-archive").addEventListener("click", (event) => {
+  event.stopPropagation();
+  archiveDrawer.classList.add("open");
+});
 document.querySelector("#close-archive").addEventListener("click", () => archiveDrawer.classList.remove("open"));
+archiveDrawer.addEventListener("click", (event) => event.stopPropagation());
+document.addEventListener("click", () => {
+  if (archiveDrawer.classList.contains("open")) archiveDrawer.classList.remove("open");
+});
 document.querySelector("#toggle-fields").addEventListener("click", () => assistantPane.classList.toggle("open"));
 document.querySelector("#close-fields").addEventListener("click", () => assistantPane.classList.remove("open"));
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
