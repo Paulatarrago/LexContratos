@@ -2227,7 +2227,16 @@ function renderFolders() {
     .map((folder) => {
       const depth = Math.min(folder.split("/").length - 1, 3);
       const label = folder.split("/").pop();
-      return `<button class="folder-item folder-depth-${depth} ${folder === activeFolder ? "active" : ""}" type="button" data-folder="${folder}" title="${folder}">${label}</button>`;
+      const root = rootFolders.includes(folder);
+      return `
+        <div class="folder-row folder-depth-${depth} ${folder === activeFolder ? "active" : ""}" data-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
+          <button class="folder-item" type="button" data-folder="${escapeHtml(folder)}">${escapeHtml(label)}</button>
+          <div class="folder-actions" aria-label="Acciones de carpeta">
+            <button class="folder-action rename-folder" type="button" data-folder="${escapeHtml(folder)}" ${root ? "disabled" : ""}>Renombrar</button>
+            <button class="folder-action delete-folder" type="button" data-folder="${escapeHtml(folder)}" ${root ? "disabled" : ""}>Eliminar</button>
+          </div>
+        </div>
+      `;
     })
     .join("");
   renderFolderSelector();
@@ -2273,6 +2282,87 @@ function createFolderFromInput() {
   renderSavedContracts();
   renderVersions();
   showToast(`Carpeta ${activeFolder} lista para archivar contratos.`);
+}
+
+function pathInFolder(path, folder) {
+  return path === folder || path.startsWith(`${folder}/`);
+}
+
+function replaceFolderPath(path, oldPath, newPath) {
+  if (path === oldPath) return newPath;
+  if (path.startsWith(`${oldPath}/`)) return `${newPath}${path.slice(oldPath.length)}`;
+  return path;
+}
+
+function renameFolder(folder) {
+  if (rootFolders.includes(folder)) {
+    showToast("Las carpetas raíz se conservan fijas para mantener el archivo ordenado.");
+    return;
+  }
+
+  const parts = folder.split("/");
+  const currentName = parts.pop();
+  const parent = parts.join("/");
+  const newName = window.prompt("Nuevo nombre para esta carpeta", currentName);
+  if (!newName || !newName.trim()) return;
+
+  const cleanName = newName.trim().replace(/\//g, " ");
+  const newPath = parent ? `${parent}/${cleanName}` : cleanName;
+  if (folders.includes(newPath)) {
+    showToast("Ya existe una carpeta con ese nombre.");
+    return;
+  }
+
+  const confirmed = window.confirm(`¿Seguro que quieres renombrar "${folder}" como "${newPath}"?\n\nTambién se actualizarán sus subcarpetas, contratos y versiones guardadas.`);
+  if (!confirmed) return;
+
+  folders = folders.map((path) => replaceFolderPath(path, folder, newPath));
+  savedContracts = savedContracts.map((contract) => ({
+    ...contract,
+    folder: replaceFolderPath(contract.folder || "Clientes", folder, newPath)
+  }));
+  versions = versions.map((version) => ({
+    ...version,
+    folder: replaceFolderPath(version.folder || "Clientes", folder, newPath)
+  }));
+  activeFolder = replaceFolderPath(activeFolder, folder, newPath);
+  saveFolders();
+  saveSavedContracts();
+  saveVersions();
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  showToast(`Carpeta renombrada como ${newPath}.`);
+}
+
+function deleteFolder(folder) {
+  if (rootFolders.includes(folder)) {
+    showToast("Las carpetas raíz no se eliminan.");
+    return;
+  }
+
+  const affectedContracts = savedContracts.filter((contract) => pathInFolder(contract.folder || "", folder)).length;
+  const affectedVersions = versions.filter((version) => pathInFolder(version.folder || "", folder)).length;
+  const childFolders = folders.filter((path) => pathInFolder(path, folder)).length;
+  const confirmed = window.confirm(`¿Seguro que quieres eliminar "${folder}" y ${childFolders - 1} subcarpeta(s)?\n\nNo se borrarán contratos ni versiones: se moverán a Personales.`);
+  if (!confirmed) return;
+
+  folders = folders.filter((path) => !pathInFolder(path, folder));
+  folders = Array.from(new Set([...rootFolders, ...folders]));
+  savedContracts = savedContracts.map((contract) => (
+    pathInFolder(contract.folder || "", folder) ? { ...contract, folder: "Personales" } : contract
+  ));
+  versions = versions.map((version) => (
+    pathInFolder(version.folder || "", folder) ? { ...version, folder: "Personales" } : version
+  ));
+  activeFolder = pathInFolder(activeFolder, folder) ? "Personales" : activeFolder;
+  saveFolders();
+  saveSavedContracts();
+  saveVersions();
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  showToast(affectedContracts || affectedVersions ? "Carpeta eliminada. Su contenido se movió a Personales." : "Carpeta eliminada.");
 }
 
 function inferDataFromText(text, side) {
@@ -2774,6 +2864,16 @@ templateImport.addEventListener("change", async () => {
 });
 
 folderList.addEventListener("click", (event) => {
+  const renameButton = event.target.closest(".rename-folder");
+  if (renameButton) {
+    renameFolder(renameButton.dataset.folder);
+    return;
+  }
+  const deleteButton = event.target.closest(".delete-folder");
+  if (deleteButton) {
+    deleteFolder(deleteButton.dataset.folder);
+    return;
+  }
   const button = event.target.closest(".folder-item");
   if (!button) return;
   activeFolder = button.dataset.folder;
