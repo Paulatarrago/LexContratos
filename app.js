@@ -553,6 +553,7 @@ const defaultValues = {
 };
 
 const OTHER_SERVICE_VALUE = "__otro__";
+const MATERIALIDAD_SERVICE_VALUE = "__materialidad__";
 const serviceCatalog = [
   { folio: "A01001", name: "Servicio Integral de Administración", scheme: "Recurrente" },
   { folio: "A02002", name: "Servicio Integral de Contabilidad", scheme: "Recurrente" },
@@ -3378,13 +3379,17 @@ function syncManualDatePickerField(input) {
 function serviceContractedFieldMarkup(label, value = "") {
   const selectedService = serviceCatalog.find((service) => service.name === value);
   const isCatalogValue = Boolean(selectedService);
-  const selectedValue = isCatalogValue ? selectedService.name : OTHER_SERVICE_VALUE;
+  const modeValue = isCatalogValue ? MATERIALIDAD_SERVICE_VALUE : OTHER_SERVICE_VALUE;
+  const selectedValue = isCatalogValue ? selectedService.name : serviceCatalog[0]?.name || "";
   const customValue = isCatalogValue ? selectedService.name : value;
   return `
     <div class="manual-field service-contracted-field">
       <span>${escapeHtml(label)}</span>
-      <select data-service-select aria-label="${escapeHtml(label)}">
-        <option value="${OTHER_SERVICE_VALUE}" ${selectedValue === OTHER_SERVICE_VALUE ? "selected" : ""}>Otro</option>
+      <select data-service-mode aria-label="Origen del servicio contratado">
+        <option value="${OTHER_SERVICE_VALUE}" ${modeValue === OTHER_SERVICE_VALUE ? "selected" : ""}>Otros</option>
+        <option value="${MATERIALIDAD_SERVICE_VALUE}" ${modeValue === MATERIALIDAD_SERVICE_VALUE ? "selected" : ""}>Catálogo de servicios Materialidad</option>
+      </select>
+      <select class="service-catalog-select" data-service-catalog aria-label="Catálogo de servicios Materialidad" ${modeValue === MATERIALIDAD_SERVICE_VALUE ? "" : "hidden"}>
         ${serviceCatalog
           .map(
             (service) => `<option value="${escapeHtml(service.name)}" ${selectedValue === service.name ? "selected" : ""}>${escapeHtml(`${service.folio} · ${service.name} · ${service.scheme}`)}</option>`
@@ -3395,12 +3400,12 @@ function serviceContractedFieldMarkup(label, value = "") {
         class="service-custom-input"
         data-service-value
         name="servicioContratado"
-        type="${isCatalogValue ? "hidden" : "text"}"
+        type="${modeValue === MATERIALIDAD_SERVICE_VALUE ? "hidden" : "text"}"
         value="${escapeHtml(customValue)}"
         placeholder="Escribe el servicio contratado"
-        aria-label="Otro servicio contratado"
+        aria-label="Servicio contratado"
       />
-      <small>Selecciona un servicio del catálogo o elige “Otro” para capturarlo manualmente.</small>
+      <small>Elige “Otros” para capturar manualmente o abre el catálogo Materialidad solo cuando aplique.</small>
     </div>
   `;
 }
@@ -3416,20 +3421,25 @@ function syncServiceCatalogMetadata(service) {
   }
 }
 
-function syncServiceContractedField(select) {
-  const field = select.closest(".service-contracted-field");
+function syncServiceContractedField(control) {
+  const field = control.closest(".service-contracted-field");
+  const modeSelect = field?.querySelector("[data-service-mode]");
+  const catalogSelect = field?.querySelector("[data-service-catalog]");
   const input = field?.querySelector("[data-service-value]");
-  if (!input) return;
-  if (select.value === OTHER_SERVICE_VALUE) {
+  if (!modeSelect || !catalogSelect || !input) return;
+  if (modeSelect.value === OTHER_SERVICE_VALUE) {
+    catalogSelect.hidden = true;
     input.type = "text";
     if (serviceCatalog.some((service) => service.name === input.value)) input.value = "";
     partyDataStore.servicioContratado = input.value.trim();
-    input.focus({ preventScroll: true });
+    if (control === modeSelect) input.focus({ preventScroll: true });
     return;
   }
-  const selectedService = serviceCatalog.find((service) => service.name === select.value);
+  catalogSelect.hidden = false;
+  const selectedService = serviceCatalog.find((service) => service.name === catalogSelect.value) || serviceCatalog[0];
+  if (selectedService) catalogSelect.value = selectedService.name;
   input.type = "hidden";
-  input.value = selectedService?.name || select.value;
+  input.value = selectedService?.name || "";
   partyDataStore.servicioContratado = input.value;
   syncServiceCatalogMetadata(selectedService);
 }
@@ -5156,7 +5166,7 @@ partyForm.addEventListener("keydown", (event) => {
 
 partyForm.addEventListener("input", (event) => {
   criticalReviewDone = false;
-  if (event.target?.matches("[data-service-select]")) syncServiceContractedField(event.target);
+  if (event.target?.matches("[data-service-mode], [data-service-catalog]")) syncServiceContractedField(event.target);
   if (event.target?.matches("[data-service-value]")) partyDataStore.servicioContratado = event.target.value.trim();
   if (event.target?.matches("[data-date-text]")) syncManualDateTextField(event.target);
   if (event.target?.matches("[data-date-picker]")) syncManualDatePickerField(event.target);
@@ -5170,7 +5180,7 @@ partyForm.addEventListener("input", (event) => {
 });
 
 partyForm.addEventListener("change", (event) => {
-  if (event.target?.matches("[data-service-select]")) {
+  if (event.target?.matches("[data-service-mode], [data-service-catalog]")) {
     criticalReviewDone = false;
     syncServiceContractedField(event.target);
     renderRoleDrops();

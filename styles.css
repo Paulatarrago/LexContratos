@@ -2438,6 +2438,10 @@ button {
   min-height: 40px;
 }
 
+.service-catalog-select[hidden] {
+  display: none;
+}
+
 .service-custom-input[type="hidden"] {
   display: none;
 }

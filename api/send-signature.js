@@ -205,7 +205,7 @@ export default async function handler(request) {
   formData.append("signing_options[upload]", "1");
   formData.append("signing_options[phone]", "0");
   formData.append("signing_options[default_type]", "draw");
-  formData.append("field_options[date_format]", "DD/MM/YYYY");
+  formData.append("field_options[date_format]", "DD - MM - YYYY");
   formData.append("allow_decline", "1");
   if (env.DROPBOX_SIGN_USE_CLIENT_ID === "true" && env.DROPBOX_SIGN_CLIENT_ID) {
     formData.append("client_id", env.DROPBOX_SIGN_CLIENT_ID);
