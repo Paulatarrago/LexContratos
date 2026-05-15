@@ -2860,8 +2860,8 @@ async function submitSignaturePacket(event) {
   let status = "Pendiente de envío";
   let signatureState = "pending_configuration";
 
-  if (window.location.protocol === "file:") {
-    showToast("Esta vista local no envía por Dropbox Sign. El paquete quedará guardado en el expediente.");
+  if (isLocalStaticPreview()) {
+    showToast("Para enviar correos de firma, abre la versión publicada en lexcontratos.com. Aquí se guardará el paquete en el expediente.");
   } else {
     try {
       showToast("Preparando envío a firma electrónica...");
@@ -2879,7 +2879,7 @@ async function submitSignaturePacket(event) {
         sendResult = await response.json();
         status = sendResult.testMode ? "Enviado a firma en modo prueba" : "Enviado a firma";
         signatureState = sendResult.testMode ? "sent_test" : "sent";
-      } else if (response.status !== 503) {
+      } else {
         const data = await response.json().catch(() => ({}));
         showToast(data.error || "No se pudo enviar a firma. El paquete quedará guardado.");
         signatureFeedbackShown = true;
@@ -2918,7 +2918,7 @@ async function submitSignaturePacket(event) {
     showToast(sendResult.testMode ? "Prueba de firma enviada. Revisa la bandeja de entrada y spam del firmante." : "Contrato enviado a firma electrónica.");
   } else if (signatureFeedbackShown) {
     return;
-  } else if (window.location.protocol === "file:" || isLocalStaticPreview()) {
+  } else if (isLocalStaticPreview()) {
     showToast("Paquete guardado. Los correos de firma solo se envían desde lexcontratos.com.");
   } else {
     showToast("Paquete de firma guardado. La integración se activará cuando esté configurada.");
