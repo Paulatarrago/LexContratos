@@ -134,6 +134,21 @@ async function upsertLicense(config, payload) {
   });
 }
 
+async function deleteAuthUser(config, userId) {
+  const response = await fetch(`${config.supabaseUrl}/auth/v1/admin/users/${encodeURIComponent(userId)}`, {
+    method: "DELETE",
+    headers: {
+      apikey: config.serviceKey,
+      authorization: `Bearer ${config.serviceKey}`
+    }
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error_description || data?.error || "No se pudo eliminar el usuario.");
+  }
+  return data;
+}
+
 export default async function handler(request) {
   let config;
   try {
@@ -163,6 +178,14 @@ export default async function handler(request) {
 
     if (!userId || !email) {
       return jsonResponse({ error: "Usuario incompleto." }, 400);
+    }
+
+    if (action === "delete_user") {
+      if (userId === admin.user.id) {
+        return jsonResponse({ error: "No puedes eliminar tu propia cuenta administradora desde este panel." }, 400);
+      }
+      await deleteAuthUser(config, userId);
+      return jsonResponse({ ok: true });
     }
 
     if (action === "activate") {

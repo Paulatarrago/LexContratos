@@ -2334,6 +2334,23 @@ button {
   margin-left: 0;
 }
 
+.mini-action.danger-action {
+  color: #8f1f18;
+  border-color: #f1c4c0;
+  background: #fff5f4;
+}
+
+.mini-action.danger-action:hover {
+  color: #67130f;
+  border-color: #e49a92;
+  background: #ffe9e7;
+}
+
+.mini-action:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+}
+
 .party-form {
   display: grid;
   gap: 8px;

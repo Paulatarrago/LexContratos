@@ -1358,6 +1358,7 @@ function adminStatusText(user) {
 function renderAdminUsers(users = []) {
   const pending = users.filter((user) => !["active", "trial"].includes(user.license_status) && user.role !== "admin").length;
   const active = users.filter((user) => ["active", "trial"].includes(user.license_status) || user.role === "admin").length;
+  const currentEmail = String(currentAccount()?.email || activeUser || "").toLowerCase();
   if (adminUsersSummary) {
     adminUsersSummary.textContent = `${users.length} usuario${users.length === 1 ? "" : "s"} registrado${users.length === 1 ? "" : "s"} · ${pending} pendiente${pending === 1 ? "" : "s"} · ${active} activo${active === 1 ? "" : "s"}`;
   }
@@ -1369,6 +1370,7 @@ function renderAdminUsers(users = []) {
           const created = user.created_at ? new Date(user.created_at).toLocaleDateString("es-MX") : "Sin fecha";
           const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString("es-MX") : "Sin ingreso";
           const payload = `data-user-id="${escapeHtml(user.id)}" data-email="${escapeHtml(user.email)}" data-full-name="${escapeHtml(user.full_name || user.email)}" data-current-role="${escapeHtml(user.role || "user")}"`;
+          const isCurrentUser = currentEmail && String(user.email || "").toLowerCase() === currentEmail;
           return `
             <article class="admin-user-card">
               <div>
@@ -1385,6 +1387,7 @@ function renderAdminUsers(users = []) {
                 <button class="secondary-action mini-action" type="button" data-admin-action="activate" ${payload}>Activar licencia</button>
                 <button class="secondary-action mini-action" type="button" data-admin-action="suspend" ${payload}>Suspender</button>
                 <button class="secondary-action mini-action" type="button" data-admin-action="make_admin" ${payload}>Hacer admin</button>
+                <button class="secondary-action mini-action danger-action" type="button" data-admin-action="delete_user" ${payload} ${isCurrentUser ? "disabled title=\"No puedes eliminar tu propia cuenta desde aquí\"" : ""}>Eliminar</button>
               </div>
             </article>
           `;
@@ -1423,17 +1426,22 @@ async function runAdminUserAction(button) {
   const labels = {
     activate: "activar la licencia de",
     suspend: "suspender el acceso de",
-    make_admin: "hacer administrador a"
+    make_admin: "hacer administrador a",
+    delete_user: "eliminar a"
   };
   if (action === "suspend" && !window.confirm(`¿Seguro que quieres suspender el acceso de ${payload.email}?`)) return;
   if (action === "make_admin" && !window.confirm(`¿Seguro que quieres hacer administrador a ${payload.email}?`)) return;
+  if (action === "delete_user") {
+    const confirmation = window.prompt(`Eliminar a ${payload.email} borrará su cuenta, licencia y datos asociados.\n\nPara confirmar, escribe ELIMINAR:`);
+    if (confirmation !== "ELIMINAR") return;
+  }
 
   const backend = productionBackend();
   if (!backend?.updateAdminUser) return;
   button.disabled = true;
   try {
     await backend.updateAdminUser(payload);
-    showToast(`Listo: se actualizó el usuario ${payload.email}.`);
+    showToast(action === "delete_user" ? `Usuario eliminado: ${payload.email}.` : `Listo: se actualizó el usuario ${payload.email}.`);
     await loadAdminUsers();
   } catch (error) {
     console.warn("LexContratos no pudo actualizar usuario", error);
