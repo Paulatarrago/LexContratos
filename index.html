@@ -19,8 +19,8 @@
             </div>
           </div>
           <div class="landing-nav-actions">
-            <a href="#contacto" class="secondary-action">Solicitar activación</a>
-            <button class="primary-action" type="button" data-route-link="/login">Acceso privado</button>
+            <a href="#contacto" class="secondary-action">Solicitar acceso</a>
+            <button class="primary-action" type="button" data-route-link="/login">Entrar o registrarse</button>
           </div>
         </nav>
         <div class="auth-badge">Integración automatizada de las generales del contrato a partir de la extracción de datos desde diversos formatos: Word, PDF, Excel, JPG y correos.</div>
@@ -109,8 +109,8 @@
         </div>
 
         <div class="landing-actions" aria-label="Acciones principales">
-          <button class="primary-action" type="button" data-route-link="/login">Acceso privado</button>
-          <a href="#contacto" class="secondary-action">Solicitar activación</a>
+          <button class="primary-action" type="button" data-route-link="/login">Entrar o crear usuario</button>
+          <a href="#contacto" class="secondary-action">Solicitar acceso</a>
           <button class="ghost-button light" type="button" data-route-link="/aviso-privacidad">Aviso de privacidad</button>
           <button class="ghost-button light" type="button" data-route-link="/terminos">Términos de uso</button>
         </div>
@@ -118,14 +118,14 @@
         <section class="contact-card" id="contacto" aria-label="Contacto LexContratos">
           <div>
             <p class="eyebrow">Contacto</p>
-            <h2>Acceso privado para uso interno</h2>
-            <p>LexContratos se encuentra en una etapa privada. Solicita activación para una cuenta autorizada o escribe a contacto@lexcontratos.com.</p>
+            <h2>Solicita acceso privado</h2>
+            <p>Este formulario no crea una cuenta. Sirve para pedir acceso o resolver dudas. Si ya tienes autorización, entra a la pantalla de acceso y elige “Crear usuario” para registrar tu correo y contraseña.</p>
           </div>
           <form id="contact-form" class="contact-form">
             <label>Nombre<input id="contact-name" name="name" autocomplete="name" required /></label>
             <label>Correo<input id="contact-email" name="email" type="email" autocomplete="email" required /></label>
-            <label>Mensaje<textarea id="contact-message" name="message" rows="3" required>Quiero solicitar activación de acceso privado a LexContratos.</textarea></label>
-            <button class="primary-action" type="submit">Solicitar activación</button>
+            <label>Mensaje<textarea id="contact-message" name="message" rows="3" required>Quiero solicitar acceso privado a LexContratos.</textarea></label>
+            <button class="primary-action" type="submit">Enviar solicitud de acceso</button>
           </form>
         </section>
       </section>
@@ -182,7 +182,7 @@
         </article>
         <div class="legal-actions">
           <button class="secondary-action" type="button" data-route-link="/">Volver</button>
-          <button class="primary-action" type="button" data-route-link="/login">Acceso privado</button>
+          <button class="primary-action" type="button" data-route-link="/login">Entrar o registrarse</button>
         </div>
       </section>
 
@@ -237,7 +237,7 @@
         </article>
         <div class="legal-actions">
           <button class="secondary-action" type="button" data-route-link="/">Volver</button>
-          <button class="primary-action" type="button" data-route-link="/login">Acceso privado</button>
+          <button class="primary-action" type="button" data-route-link="/login">Entrar o registrarse</button>
         </div>
       </section>
 
@@ -250,8 +250,8 @@
               <span>Menos captura. Más criterio.</span>
             </div>
           </div>
-          <h1>Inicia sesión para trabajar contratos.</h1>
-          <p>Tu biblioteca, clientes, proveedores, contratos y versiones quedan separados por usuario y licencia.</p>
+          <h1>Entra a tu cuenta.</h1>
+          <p>Si todavía no tienes usuario, elige “Crear usuario”. Tu cuenta quedará pendiente hasta que el administrador active la licencia.</p>
           <p class="auth-config-warning" id="auth-config-warning">El acceso seguro no está disponible temporalmente. Intenta nuevamente en unos minutos.</p>
           <form id="login-form" class="auth-form">
             <label>Correo electrónico<input id="login-email" name="email" type="email" autocomplete="username" required /></label>
@@ -276,12 +276,12 @@
             </div>
           </div>
           <h1>Crea tu usuario.</h1>
-          <p class="auth-production-note">Después del registro, tu cuenta quedará pendiente de activación por el administrador.</p>
+          <p class="auth-production-note">Aquí sí registras correo y contraseña. Después aparecerás en el panel de administración para que se active tu licencia.</p>
           <form id="register-form" class="auth-form">
             <label>Nombre<input id="register-name" name="name" type="text" autocomplete="name" required /></label>
             <label>Correo<input id="register-email" name="email" type="email" autocomplete="email" required /></label>
             <label>Contraseña<input id="register-password" name="password" type="password" autocomplete="new-password" minlength="6" required /></label>
-            <button class="primary-action" type="submit">Registrar</button>
+            <button class="primary-action" type="submit">Crear usuario</button>
           </form>
           <div class="auth-links">
             <button type="button" class="show-login">Ya tengo cuenta</button>
@@ -315,9 +315,9 @@
             </div>
           </div>
           <h1>Cuenta pendiente de activación.</h1>
-          <p>Tu usuario existe, pero aún no tiene acceso activo a este espacio. Contacta al administrador para habilitar tu cuenta.</p>
+          <p>Tu usuario ya fue creado, pero aún no tiene licencia activa. No necesitas registrarte otra vez; el administrador podrá verte en el panel y habilitar tu acceso.</p>
           <div class="license-status" id="license-status"></div>
-          <button class="primary-action" id="activate-demo-license" type="button">Solicitar activación</button>
+          <button class="primary-action" id="activate-demo-license" type="button">Avisar que necesito licencia</button>
           <button class="secondary-action" id="license-logout" type="button">Cerrar sesión</button>
         </article>
       </div>

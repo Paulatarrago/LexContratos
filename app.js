@@ -4548,7 +4548,7 @@ window.addEventListener("popstate", () => {
 
 document.querySelector("#activate-demo-license")?.addEventListener("click", () => {
   if (productionBackend() || backendAccessLocked()) {
-    showToast("Tu solicitud de activación será revisada por el administrador.");
+    showToast("Tu cuenta ya está registrada. El administrador puede activar tu licencia desde el panel.");
     return;
   }
   const session = loadSession();
