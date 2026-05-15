@@ -534,6 +534,19 @@ button {
   text-align: center;
 }
 
+.manual-hint {
+  margin: -4px auto 12px;
+  max-width: 680px;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.45;
+  text-align: center;
+}
+
+.manual-hint strong {
+  color: var(--ink);
+}
+
 .manual-card-grid {
   display: grid;
   grid-template-columns: repeat(3, minmax(0, 1fr));
