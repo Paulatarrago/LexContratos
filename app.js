@@ -2461,11 +2461,63 @@ function signatureRoleTitle(role) {
   return label;
 }
 
+function cleanRepresentativeCandidate(value) {
+  const clean = String(value || "")
+    .replace(/\{\{[^}]+\}\}/g, "")
+    .replace(/\s+/g, " ")
+    .replace(/\b(?:quien|con|en su car[aá]cter|cuya personalidad|facultades|titular)\b.*$/i, "")
+    .trim();
+  if (!clean || clean.length < 5) return "";
+  if (/(S\.?\s*A|S\.?\s*DE\s*R\.?\s*L|RFC|escritura|notar[ií]a|representante legal|cliente|prestador|parte)/i.test(clean)) return "";
+  return clean;
+}
+
+function uniqueNonEmpty(items) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const clean = String(item || "").trim();
+    const key = removeAccents(clean).toLowerCase();
+    if (!clean || seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
+function representativesFromContractText() {
+  const text = normalizeSignatureNameFields(editor?.value || "");
+  const declarationMatches = Array.from(text.matchAll(/representad[ao]\s+(?:en\s+este\s+acto\s+)?por\s+([^,.;\n]{5,110})/gi)).map((match) => cleanRepresentativeCandidate(match[1]));
+  const signatureMatches = Array.from(text.matchAll(/representante\s+legal\s*:?\s*\n\s*([^\n]{5,110})/gi)).map((match) => cleanRepresentativeCandidate(match[1]));
+  return uniqueNonEmpty([...declarationMatches, ...signatureMatches]);
+}
+
+function emailsFromContractText() {
+  const matches = (editor?.value || "").match(/\b[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}\b/gi) || [];
+  return uniqueNonEmpty(matches.map((email) => email.toLowerCase()));
+}
+
+function representativeForSide(side, values = getPartyData()) {
+  const key = `rep${side}`;
+  const current = String(values[key] || partyDataStore[key] || "").trim();
+  if (current) return current;
+  const fallback = representativesFromContractText()[side === "A" ? 0 : 1] || "";
+  if (fallback) partyDataStore[key] = fallback;
+  return fallback;
+}
+
+function signatureEmailForSide(side, values = getPartyData()) {
+  const key = side === "A" ? "correoPrestador" : "correoCliente";
+  const current = String(values[key] || partyDataStore[key] || "").trim();
+  if (current) return current;
+  const fallback = emailsFromContractText()[side === "A" ? 0 : 1] || "";
+  if (fallback) partyDataStore[key] = fallback;
+  return fallback;
+}
+
 function signatureCellHtml(role) {
   if (!role) return `<td class="signature-empty">&nbsp;</td>`;
   const values = getPartyData();
   const party = values[role.part] || role.label;
-  const representative = values[role.side === "A" ? "repA" : "repB"] || "Representante legal";
+  const representative = representativeForSide(role.side, values) || "Representante legal";
   const roleTitle = signatureRoleTitle(role);
   return `
     <td>
@@ -2600,8 +2652,8 @@ function signerRowTemplate(index, values = {}) {
 function defaultSigners() {
   const values = getPartyData();
   return getRoles().map((role, index) => ({
-    name: values[role.side === "A" ? "repA" : "repB"] || "",
-    email: values[role.side === "A" ? "correoPrestador" : "correoCliente"] || "",
+    name: representativeForSide(role.side, values),
+    email: signatureEmailForSide(role.side, values),
     role: `Representante legal de ${role.label}`,
     order: index + 1
   }));
