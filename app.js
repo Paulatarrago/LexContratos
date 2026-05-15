@@ -3790,6 +3790,9 @@ document.addEventListener("click", () => {
 document.querySelector("#close-fields").addEventListener("click", () => assistantPane.classList.remove("open"));
 assistantPane.addEventListener("click", (event) => event.stopPropagation());
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
+userGuideDialog?.addEventListener("click", (event) => {
+  if (event.target === userGuideDialog) userGuideDialog.close();
+});
 
 document.querySelector("#fill-contract").addEventListener("click", (event) => {
   event.stopPropagation();
