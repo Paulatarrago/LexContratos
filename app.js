@@ -1706,7 +1706,12 @@ function renderMatterPanel() {
 
 function getPartyData() {
   const visibleValues = Object.fromEntries(new FormData(partyForm).entries());
-  partyDataStore = { ...partyDataStore, ...visibleValues };
+  const safeValues = {};
+  Object.entries(visibleValues).forEach(([name, value]) => {
+    const cleanValue = String(value || "").trim();
+    if (cleanValue || !String(partyDataStore[name] || "").trim()) safeValues[name] = value;
+  });
+  partyDataStore = { ...partyDataStore, ...safeValues };
   return { ...partyDataStore };
 }
 
@@ -2483,11 +2488,39 @@ function uniqueNonEmpty(items) {
   });
 }
 
+function signatureRepresentativeLines(text) {
+  const lines = String(text || "")
+    .split(/\n+/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+  const names = [];
+  lines.forEach((line, index) => {
+    const sameLineLabel = /representante\s+legal/i.test(line);
+    const splitLineLabel = /representante/i.test(line) && /legal/i.test(lines[index + 1] || "");
+    if (!sameLineLabel && !splitLineLabel) return;
+    const labelLine = sameLineLabel ? line : lines[index + 1] || "";
+    const afterLabel = labelLine.includes(":")
+      ? labelLine.slice(labelLine.indexOf(":") + 1)
+      : labelLine.replace(/^.*representante\s*legal\s*/i, "");
+    const sameLineCandidate = cleanRepresentativeCandidate(afterLabel);
+    if (sameLineCandidate) names.push(sameLineCandidate);
+    const firstCandidateOffset = splitLineLabel ? 2 : 1;
+    for (let offset = firstCandidateOffset; offset <= firstCandidateOffset + 3; offset += 1) {
+      const nextCandidate = cleanRepresentativeCandidate(lines[index + offset]);
+      if (nextCandidate) {
+        names.push(nextCandidate);
+        break;
+      }
+    }
+  });
+  return names;
+}
+
 function representativesFromContractText() {
   const text = normalizeSignatureNameFields(editor?.value || "");
   const declarationMatches = Array.from(text.matchAll(/representad[ao]\s+(?:en\s+este\s+acto\s+)?por\s+([^,.;\n]{5,110})/gi)).map((match) => cleanRepresentativeCandidate(match[1]));
   const signatureMatches = Array.from(text.matchAll(/representante\s+legal\s*:?\s*\n\s*([^\n]{5,110})/gi)).map((match) => cleanRepresentativeCandidate(match[1]));
-  return uniqueNonEmpty([...declarationMatches, ...signatureMatches]);
+  return uniqueNonEmpty([...declarationMatches, ...signatureMatches, ...signatureRepresentativeLines(text)]);
 }
 
 function emailsFromContractText() {
@@ -2663,6 +2696,19 @@ function renderSignatureRows(signers = defaultSigners()) {
   signerList.innerHTML = signers.map((signer, index) => signerRowTemplate(index, signer)).join("");
 }
 
+function hydrateMissingSignerRowsFromDefaults() {
+  const defaults = defaultSigners();
+  Array.from(signerList.querySelectorAll("[data-signer-row]")).forEach((row, index) => {
+    const fallback = defaults[index] || {};
+    const nameInput = row.querySelector('[name="signerName"]');
+    const emailInput = row.querySelector('[name="signerEmail"]');
+    const roleInput = row.querySelector('[name="signerRole"]');
+    if (nameInput && !nameInput.value.trim() && fallback.name) nameInput.value = fallback.name;
+    if (emailInput && !emailInput.value.trim() && fallback.email) emailInput.value = fallback.email;
+    if (roleInput && !roleInput.value.trim() && fallback.role) roleInput.value = fallback.role;
+  });
+}
+
 function getSignatureRequestSigners() {
   return Array.from(signerList.querySelectorAll("[data-signer-row]")).map((row, index) => ({
     name: row.querySelector('[name="signerName"]').value.trim(),
@@ -2718,6 +2764,7 @@ function prepareSignaturePacket() {
 async function submitSignaturePacket(event) {
   event.preventDefault();
   const title = cleanWorkingTitle(editorTitle.textContent);
+  hydrateMissingSignerRowsFromDefaults();
   const signers = getSignatureRequestSigners();
   if (signers.some((signer) => !signer.name || !signer.email || !signer.role)) {
     showToast("Completa nombre, correo y rol de cada firmante.");
