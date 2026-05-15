@@ -12,6 +12,8 @@ Esta fase deja la base productiva lista sin romper el demo local.
 - Row Level Security para separar información por usuario.
 - Storage privado para documentos en el bucket `contract-documents`.
 - Endpoint de contacto con Resend y respuesta automatica.
+- Notificación automática al administrador cuando alguien se registra.
+- Panel de administración para activar licencias, suspender usuarios y marcar administradores.
 - Endpoint seguro para extraccion documental con IA.
 - Sin Supabase configurado, la app sigue funcionando como demo local.
 
@@ -31,6 +33,7 @@ Usar `supabase/activate-first-admin.sql` y cambiar `TU_CORREO_AQUI` por el corre
 VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
 VITE_SUPABASE_PUBLISHABLE_KEY=TU_LLAVE_PUBLICA
 VITE_SUPABASE_STORAGE_BUCKET=contract-documents
+SUPABASE_SERVICE_ROLE_KEY=TU_LLAVE_PRIVADA_SERVICE_ROLE
 OPENAI_API_KEY=TU_LLAVE_PRIVADA_OPENAI
 OPENAI_MODEL=gpt-4.1-mini
 RESEND_API_KEY=TU_LLAVE_RESEND
@@ -55,6 +58,8 @@ npm run dev
 5. Output: `dist`.
 6. Conectar `lexcontratos.com` como dominio.
 
+La variable `SUPABASE_SERVICE_ROLE_KEY` solo debe vivir en Vercel o en un entorno servidor. No debe agregarse a variables `VITE_`, `index.html`, `app.js` ni `lexconfig.local.js`.
+
 ## Correos e IA
 
 - Guia de correo: `docs/email-setup.md`.
@@ -65,6 +70,6 @@ npm run dev
 - Migrar contratos existentes de localStorage a Supabase.
 - Probar extraccion real de PDF, Word, Excel e imagenes ya desplegada en Vercel con `OPENAI_API_KEY`.
 - Generar `.docx` real en backend.
-- Conectar Dropbox Sign con serverless functions.
+- Probar Dropbox Sign de punta a punta con usuarios internos.
 - Personalizar plantillas de correo en Supabase Auth.
 - Integrar pagos y licencias automáticas.

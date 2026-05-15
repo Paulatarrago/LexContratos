@@ -91,7 +91,7 @@ if (!config.url || !config.publishableKey) {
   }
 
   async function signUp(email, password, fullName) {
-    const { error } = await supabase.auth.signUp({
+    const { data, error } = await supabase.auth.signUp({
       email,
       password,
       options: {
@@ -99,6 +99,13 @@ if (!config.url || !config.publishableKey) {
       }
     });
     if (error) throw error;
+    await fetch("/api/registration-notify", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ email, name: fullName || email })
+    }).catch((notifyError) => console.warn("LexContratos registro sin notificación", notifyError));
+    if (data?.user && data?.session) await ensureProfile(data.user);
+    return data;
   }
 
   async function resetPassword(email) {
@@ -294,6 +301,41 @@ if (!config.url || !config.publishableKey) {
     return response.json();
   }
 
+  async function authHeaders() {
+    const {
+      data: { session }
+    } = await supabase.auth.getSession();
+    if (!session?.access_token) throw new Error("Sesión no disponible.");
+    return { authorization: `Bearer ${session.access_token}` };
+  }
+
+  async function listAdminUsers() {
+    const response = await fetch("/api/admin-users", {
+      headers: await authHeaders()
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "No se pudieron cargar usuarios.");
+    }
+    return response.json();
+  }
+
+  async function updateAdminUser(payload) {
+    const response = await fetch("/api/admin-users", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(await authHeaders())
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "No se pudo actualizar el usuario.");
+    }
+    return response.json();
+  }
+
   announceBackend({
     enabled: true,
     supabase,
@@ -308,6 +350,8 @@ if (!config.url || !config.publishableKey) {
     deleteContract,
     deleteVersion,
     uploadSupportDocuments,
-    extractPartyData
+    extractPartyData,
+    listAdminUsers,
+    updateAdminUser
   });
 }

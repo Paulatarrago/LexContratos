@@ -651,6 +651,10 @@ const templatePicker = document.querySelector("#template-picker");
 const openTemplatePicker = document.querySelector("#open-template-picker");
 const userGuideDialog = document.querySelector("#user-guide-dialog");
 const openUserGuide = document.querySelector("#open-user-guide");
+const openAdminUsers = document.querySelector("#open-admin-users");
+const adminUsersDialog = document.querySelector("#admin-users-dialog");
+const adminUsersSummary = document.querySelector("#admin-users-summary");
+const adminUsersList = document.querySelector("#admin-users-list");
 const reviewFieldsButton = document.querySelector("#review-fields");
 const archiveDrawer = document.querySelector("#archive-drawer");
 const assistantPane = document.querySelector("#assistant-pane");
@@ -1189,12 +1193,14 @@ function showPublicRoute(route) {
   applyRouteShell(route);
   appShell.classList.add("is-hidden");
   authShell.classList.remove("is-hidden");
+  setAdminAccessVisible(false);
 }
 
 function showLoginRoute(panel = authLogin, route = "login") {
   applyRouteShell(route);
   appShell.classList.add("is-hidden");
   authShell.classList.remove("is-hidden");
+  setAdminAccessVisible(false);
   showAuthPanel(panel);
 }
 
@@ -1252,7 +1258,9 @@ async function renderAccessState() {
       appShell.classList.remove("is-hidden");
       syncBackendAccount(access);
       switchActiveUser(access.user.email, false);
-      licensePill.textContent = access.profile?.role === "admin" ? "Administrador" : "Licencia activa";
+      const isAdmin = access.profile?.role === "admin";
+      setAdminAccessVisible(isAdmin);
+      licensePill.textContent = isAdmin ? "Administrador" : "Licencia activa";
       currentUserLabel.textContent = access.profile?.full_name || access.user.email;
       return;
     } catch (error) {
@@ -1287,6 +1295,7 @@ async function renderAccessState() {
   applyRouteShell("app");
   authShell.classList.add("is-hidden");
   appShell.classList.remove("is-hidden");
+  setAdminAccessVisible(account.role === "Administrador" && Boolean(productionBackend()));
   licensePill.textContent = account.role === "Administrador" ? "Administrador" : "Licencia activa";
   currentUserLabel.textContent = account.name || account.email;
   switchActiveUser(account.email, false);
@@ -1333,6 +1342,105 @@ function requireFieldsReviewed(actionLabel = "seguir") {
   showToast(`Primero detecta los campos editables. Es obligatorio antes de ${actionLabel}.`);
   reviewFieldsButton?.focus();
   return false;
+}
+
+function setAdminAccessVisible(isAdmin) {
+  openAdminUsers?.classList.toggle("is-hidden", !isAdmin);
+}
+
+function adminStatusText(user) {
+  if (user.role === "admin") return "Administrador";
+  if (user.account_status === "inactive") return "Suspendido";
+  if (user.license_status === "active" || user.license_status === "trial") return "Licencia activa";
+  return "Pendiente de licencia";
+}
+
+function renderAdminUsers(users = []) {
+  const pending = users.filter((user) => !["active", "trial"].includes(user.license_status) && user.role !== "admin").length;
+  const active = users.filter((user) => ["active", "trial"].includes(user.license_status) || user.role === "admin").length;
+  if (adminUsersSummary) {
+    adminUsersSummary.textContent = `${users.length} usuario${users.length === 1 ? "" : "s"} registrado${users.length === 1 ? "" : "s"} · ${pending} pendiente${pending === 1 ? "" : "s"} · ${active} activo${active === 1 ? "" : "s"}`;
+  }
+  if (!adminUsersList) return;
+  adminUsersList.innerHTML = users.length
+    ? users
+        .map((user) => {
+          const status = adminStatusText(user);
+          const created = user.created_at ? new Date(user.created_at).toLocaleDateString("es-MX") : "Sin fecha";
+          const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString("es-MX") : "Sin ingreso";
+          const payload = `data-user-id="${escapeHtml(user.id)}" data-email="${escapeHtml(user.email)}" data-full-name="${escapeHtml(user.full_name || user.email)}" data-current-role="${escapeHtml(user.role || "user")}"`;
+          return `
+            <article class="admin-user-card">
+              <div>
+                <strong>${escapeHtml(user.full_name || user.email)}</strong>
+                <span>${escapeHtml(user.email)}</span>
+              </div>
+              <div class="admin-user-meta">
+                <span class="admin-status">${escapeHtml(status)}</span>
+                <span>${escapeHtml(user.plan || "Sin plan")}</span>
+                <span>Registro: ${escapeHtml(created)}</span>
+                <span>Último acceso: ${escapeHtml(lastSignIn)}</span>
+              </div>
+              <div class="admin-user-actions">
+                <button class="secondary-action mini-action" type="button" data-admin-action="activate" ${payload}>Activar licencia</button>
+                <button class="secondary-action mini-action" type="button" data-admin-action="suspend" ${payload}>Suspender</button>
+                <button class="secondary-action mini-action" type="button" data-admin-action="make_admin" ${payload}>Hacer admin</button>
+              </div>
+            </article>
+          `;
+        })
+        .join("")
+    : `<div class="empty-state"><strong>No hay usuarios registrados todavía.</strong></div>`;
+}
+
+async function loadAdminUsers() {
+  const backend = productionBackend();
+  if (!backend?.listAdminUsers) {
+    showToast("El panel de administración requiere Supabase en producción.");
+    return;
+  }
+  if (adminUsersSummary) adminUsersSummary.textContent = "Cargando usuarios...";
+  if (adminUsersList) adminUsersList.innerHTML = "";
+  try {
+    const data = await backend.listAdminUsers();
+    renderAdminUsers(data.users || []);
+  } catch (error) {
+    console.warn("LexContratos admin usuarios no disponible", error);
+    if (adminUsersSummary) adminUsersSummary.textContent = "No se pudieron cargar usuarios.";
+    if (adminUsersList) adminUsersList.innerHTML = `<div class="empty-state"><strong>Revisa que SUPABASE_SERVICE_ROLE_KEY esté configurada en Vercel.</strong></div>`;
+  }
+}
+
+async function runAdminUserAction(button) {
+  const action = button.dataset.adminAction;
+  const payload = {
+    action,
+    userId: button.dataset.userId,
+    email: button.dataset.email,
+    fullName: button.dataset.fullName,
+    currentRole: button.dataset.currentRole
+  };
+  const labels = {
+    activate: "activar la licencia de",
+    suspend: "suspender el acceso de",
+    make_admin: "hacer administrador a"
+  };
+  if (action === "suspend" && !window.confirm(`¿Seguro que quieres suspender el acceso de ${payload.email}?`)) return;
+  if (action === "make_admin" && !window.confirm(`¿Seguro que quieres hacer administrador a ${payload.email}?`)) return;
+
+  const backend = productionBackend();
+  if (!backend?.updateAdminUser) return;
+  button.disabled = true;
+  try {
+    await backend.updateAdminUser(payload);
+    showToast(`Listo: se actualizó el usuario ${payload.email}.`);
+    await loadAdminUsers();
+  } catch (error) {
+    console.warn("LexContratos no pudo actualizar usuario", error);
+    showToast(`No se pudo ${labels[action] || "actualizar"} ${payload.email}.`);
+  } finally {
+    button.disabled = false;
+  }
 }
 
 function setWorkflowButtonState(button, state) {
@@ -4114,6 +4222,17 @@ assistantPane.addEventListener("click", (event) => event.stopPropagation());
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
 userGuideDialog?.addEventListener("click", (event) => {
   if (event.target === userGuideDialog) userGuideDialog.close();
+});
+openAdminUsers?.addEventListener("click", () => {
+  adminUsersDialog?.showModal();
+  loadAdminUsers();
+});
+adminUsersDialog?.addEventListener("click", (event) => {
+  if (event.target === adminUsersDialog) adminUsersDialog.close();
+});
+adminUsersList?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-admin-action]");
+  if (button) runAdminUserAction(button);
 });
 
 document.querySelector("#fill-contract").addEventListener("click", (event) => {

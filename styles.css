@@ -1258,6 +1258,7 @@ button {
 .contract-picker,
 .save-location-dialog,
 .signature-dialog,
+.admin-users-dialog,
 .critical-review-dialog {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -2476,6 +2477,81 @@ dialog {
   width: min(820px, calc(100vw - 28px));
 }
 
+.admin-users-dialog {
+  width: min(980px, calc(100vw - 28px));
+}
+
+.admin-users-summary {
+  margin: 10px 0;
+  padding: 10px 12px;
+  border: 1px solid #dbe6f1;
+  border-radius: 8px;
+  color: var(--ink);
+  background: #f8fbff;
+  font-weight: 780;
+}
+
+.admin-users-list {
+  display: grid;
+  gap: 10px;
+  max-height: min(62vh, 620px);
+  overflow: auto;
+}
+
+.admin-user-card {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(220px, 1.5fr) auto;
+  gap: 12px;
+  align-items: center;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: white;
+}
+
+.admin-user-card strong,
+.admin-user-card span {
+  display: block;
+}
+
+.admin-user-card strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.admin-user-card span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-user-meta {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+}
+
+.admin-user-meta span {
+  padding: 4px 7px;
+  border: 1px solid #dbe6f1;
+  border-radius: 999px;
+  background: #f8fbff;
+  font-weight: 720;
+}
+
+.admin-user-meta .admin-status {
+  color: var(--accent-ink);
+  border-color: rgba(211, 154, 67, 0.4);
+  background: var(--accent-soft);
+}
+
+.admin-user-actions {
+  display: flex;
+  gap: 6px;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
 .save-location-dialog {
   width: min(860px, calc(100vw - 28px));
   position: relative;
@@ -3211,8 +3287,17 @@ dialog::backdrop {
   .format-panel,
   .matter-panel,
   .guide-grid,
-  .signer-row {
+  .signer-row,
+  .admin-user-card {
     grid-template-columns: 1fr;
+  }
+
+  .admin-user-actions {
+    justify-content: stretch;
+  }
+
+  .admin-user-actions .secondary-action {
+    flex: 1;
   }
 
   .role-drop-grid {
