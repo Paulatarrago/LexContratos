@@ -2830,9 +2830,9 @@ function renderSaveLocationBrowser() {
       </div>
     `)
     .join("");
-  const emptyRows = !folderRows && !contractRows && !documentRows ? `<div class="save-file-empty">Esta carpeta está vacía.</div>` : "";
+  const emptyRows = !folderRows && !contractRows && !documentRows ? `<div class="save-file-empty">Esta carpeta está vacía. Puedes crear una carpeta aquí con Enter, con el botón “Crear carpeta” o con clic derecho.</div>` : "";
   saveLocationBrowser.innerHTML = `
-    <div class="save-location-shell">
+    <div class="save-location-shell" data-save-folder="${escapeHtml(selected)}">
       <aside class="save-location-roots" aria-label="Carpetas raíz">
         ${rootFolders
           .map((root) => `
@@ -2846,6 +2846,7 @@ function renderSaveLocationBrowser() {
         <div class="save-location-toolbar">
           <button class="secondary-action mini-action save-folder-option" type="button" data-save-folder="${escapeHtml(parent || selected)}" ${parent ? "" : "disabled"}>Atrás</button>
           <strong>${escapeHtml(selected)}</strong>
+          <span class="save-location-hint">Clic derecho: nueva carpeta, renombrar o eliminar</span>
         </div>
         <div class="save-file-header">
           <span>Nombre</span>
@@ -3093,13 +3094,19 @@ function hideFolderContextMenu() {
   if (!folderContextMenu) return;
   folderContextMenu.classList.add("is-hidden");
   contextMenuFolder = "";
+  folderContextMenu._onNew = null;
+  folderContextMenu._onRename = null;
+  folderContextMenu._onDelete = null;
 }
 
-function showFolderContextMenu(event, folder = activeFolder) {
+function showFolderContextMenu(event, folder = activeFolder, { onNew = null, onRename = null, onDelete = null } = {}) {
   if (!folderContextMenu) return;
   event.preventDefault();
   event.stopPropagation();
   contextMenuFolder = ensureFolderPath(folder || activeFolder || "Clientes");
+  folderContextMenu._onNew = onNew;
+  folderContextMenu._onRename = onRename;
+  folderContextMenu._onDelete = onDelete;
   const isRoot = rootFolders.includes(contextMenuFolder);
   folderContextMenu.querySelector('[data-context-action="rename"]').disabled = isRoot;
   folderContextMenu.querySelector('[data-context-action="delete"]').disabled = isRoot;
@@ -4023,16 +4030,35 @@ folderContextMenu?.addEventListener("click", (event) => {
   const action = event.target.closest("[data-context-action]")?.dataset.contextAction;
   if (!action || !contextMenuFolder) return;
   const folder = contextMenuFolder;
+  const handlers = {
+    onNew: folderContextMenu._onNew,
+    onRename: folderContextMenu._onRename,
+    onDelete: folderContextMenu._onDelete
+  };
   hideFolderContextMenu();
   if (action === "new") {
+    if (handlers.onNew) {
+      handlers.onNew(folder);
+      return;
+    }
     createFolderInsideArchive(folder);
     return;
   }
   if (action === "rename") {
+    if (handlers.onRename) {
+      handlers.onRename(folder);
+      return;
+    }
     renameFolder(folder);
     return;
   }
-  if (action === "delete") deleteFolder(folder);
+  if (action === "delete") {
+    if (handlers.onDelete) {
+      handlers.onDelete(folder);
+      return;
+    }
+    deleteFolder(folder);
+  }
 });
 
 folderList.addEventListener("dblclick", (event) => {
@@ -4070,6 +4096,25 @@ saveLocationBrowser?.addEventListener("dblclick", (event) => {
   saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
   saveLocationState.folder = button.dataset.saveFolder;
   renderSaveLocationBrowser();
+});
+
+saveLocationBrowser?.addEventListener("contextmenu", (event) => {
+  const row = event.target.closest("[data-save-folder]");
+  const folder = row?.dataset.saveFolder || saveLocationState.folder || activeFolder || "Clientes";
+  showFolderContextMenu(event, folder, {
+    onNew: (targetFolder) => {
+      saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
+      saveLocationState.folder = targetFolder;
+      const name = window.prompt(`Nombre de la nueva carpeta dentro de "${targetFolder}"`);
+      if (!name || !name.trim()) return;
+      saveLocationState.folder = ensureFolderPath(`${targetFolder}/${name.trim().replace(/\//g, " ")}`, targetFolder.split("/")[0] || "Clientes");
+      renderFolders();
+      renderSaveLocationBrowser();
+      showToast(`Carpeta lista: ${saveLocationState.folder}.`);
+    },
+    onRename: renameFolderInsideSaveLocation,
+    onDelete: deleteFolderInsideSaveLocation
+  });
 });
 
 saveLocationCreateFolder?.addEventListener("click", createFolderInsideSaveLocation);
