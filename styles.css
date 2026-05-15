@@ -1036,6 +1036,18 @@ button {
   background: #f8fbff;
 }
 
+.editor-actions #review-fields.needs-review {
+  color: #7a4d08;
+  border-color: rgba(211, 154, 67, 0.58);
+  background: #fff3df;
+}
+
+.editor-actions #review-fields.review-complete {
+  color: #155e38;
+  border-color: rgba(22, 163, 74, 0.26);
+  background: #ecfdf3;
+}
+
 .editor-actions #export-word,
 .editor-actions #send-signature {
   border-color: rgba(211, 154, 67, 0.38);

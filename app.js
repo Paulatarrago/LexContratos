@@ -601,6 +601,7 @@ const templatePicker = document.querySelector("#template-picker");
 const openTemplatePicker = document.querySelector("#open-template-picker");
 const userGuideDialog = document.querySelector("#user-guide-dialog");
 const openUserGuide = document.querySelector("#open-user-guide");
+const reviewFieldsButton = document.querySelector("#review-fields");
 const archiveDrawer = document.querySelector("#archive-drawer");
 const assistantPane = document.querySelector("#assistant-pane");
 const saveLocationDialog = document.querySelector("#save-location-dialog");
@@ -655,6 +656,7 @@ let pendingCriticalReviewBody = "";
 let lastCriticalReviewFindings = [];
 let restoringDraft = false;
 let draftRestoredForUser = "";
+let fieldsReviewed = false;
 
 const demoAccount = {
   email: "usuario.demo@lexcontratos.local",
@@ -981,6 +983,7 @@ function clearWorkspaceState() {
     renameTemplateButton.textContent = "Nombre protegido";
     renameTemplateButton.title = "Selecciona un machote y duplica la plantilla para crear una copia editable.";
   }
+  setFieldsReviewedState(false);
   renderTemplates();
   renderDynamicFields();
   renderCustomFields();
@@ -1256,6 +1259,25 @@ function showToast(message) {
   toast.textContent = message;
   toast.classList.add("visible");
   toastTimer = setTimeout(() => toast.classList.remove("visible"), 3000);
+}
+
+function setFieldsReviewedState(reviewed) {
+  fieldsReviewed = Boolean(reviewed);
+  if (!reviewFieldsButton) return;
+  reviewFieldsButton.classList.toggle("needs-review", !fieldsReviewed);
+  reviewFieldsButton.classList.toggle("review-complete", fieldsReviewed);
+  reviewFieldsButton.textContent = fieldsReviewed ? "1. Campos editables revisados" : "1. Detectar campos editables (obligatorio)";
+  reviewFieldsButton.title = fieldsReviewed
+    ? "Campos revisados. Si modificas o importas otro contrato, vuelve a detectar campos antes de integrar datos."
+    : "Paso obligatorio antes de subir, extraer o integrar datos. Detecta los campos rellenables que siguen presentes en el contrato.";
+}
+
+function requireFieldsReviewed(actionLabel = "seguir") {
+  if (fieldsReviewed) return true;
+  setFieldsReviewedState(false);
+  showToast(`Primero detecta los campos editables. Es obligatorio antes de ${actionLabel}.`);
+  reviewFieldsButton?.focus();
+  return false;
 }
 
 function productionBackend() {
@@ -1902,6 +1924,7 @@ function loadTemplate(key) {
     renameTemplateButton.textContent = isWorkingCopy ? "Renombrar copia" : "Nombre protegido";
     renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Las plantillas base se protegen; duplica para renombrar una copia.";
   }
+  setFieldsReviewedState(false);
   autosaveStatus.classList.remove("autosave-highlight");
   sourceTextsBySide = { A: [], B: [] };
   activeMatterFolio = null;
@@ -2559,6 +2582,10 @@ function reviewEditableFieldsFromContract() {
   renderDynamicFields();
   renderCustomFields();
   renderRequirements();
+  setFieldsReviewedState(true);
+  autosaveStatus.textContent = "Campos editables revisados";
+  autosaveStatus.classList.add("autosave-highlight");
+  saveActiveDraft("Campos editables revisados");
   showToast(`Campos revisados: ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"} en este machote.`);
 }
 
@@ -3342,6 +3369,7 @@ function applyDetectedData(updates) {
 function integrateCompletedManualFields(event) {
   if (event) event.preventDefault();
   if (!ensureEditableWorkspace("integrar datos")) return;
+  if (!requireFieldsReviewed("integrar datos manuales")) return;
   const integrated = integrateKnownDataIntoContract("Datos completados integrados");
   const missing = missingFieldsForActiveTemplate().length;
   if (!integrated) {
@@ -3422,6 +3450,7 @@ async function addFilesToRole(side, fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
   if (!ensureEditableWorkspace("cargar documentos por parte")) return;
+  if (!requireFieldsReviewed("subir documentos de las partes")) return;
 
   const current = sourceTextsBySide[side] || [];
   const existing = new Set(current.map((file) => `${file.name}-${file.size}`));
@@ -3573,6 +3602,7 @@ assistantPane.addEventListener("click", (event) => event.stopPropagation());
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
 
 document.querySelector("#fill-contract").addEventListener("click", () => {
+  if (!requireFieldsReviewed("integrar datos faltantes")) return;
   assistantPane.classList.add("open");
 });
 
@@ -3870,6 +3900,7 @@ document.querySelector("#new-template").addEventListener("click", () => {
 
 document.querySelector("#extract-data").addEventListener("click", async () => {
   if (!ensureEditableWorkspace("extraer datos")) return;
+  if (!requireFieldsReviewed("extraer e integrar datos")) return;
   let detected = {};
   let aiWasTried = false;
   const aiOnlyDocuments = uploadedDocumentsNeedingAi();
@@ -4195,7 +4226,10 @@ partyForm.addEventListener("input", () => {
   saveActiveDraft("Datos de partes actualizados");
 });
 
-editor.addEventListener("input", scheduleAutoSave);
+editor.addEventListener("input", () => {
+  if (isWorkingCopy) setFieldsReviewedState(false);
+  scheduleAutoSave();
+});
 
 window.addEventListener("beforeunload", () => {
   saveActiveDraft("Guardado antes de cerrar");
