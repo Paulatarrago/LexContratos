@@ -2089,6 +2089,54 @@ function syncAmountInWords({ force = false } = {}) {
   return true;
 }
 
+const spanishMonths = [
+  "enero",
+  "febrero",
+  "marzo",
+  "abril",
+  "mayo",
+  "junio",
+  "julio",
+  "agosto",
+  "septiembre",
+  "octubre",
+  "noviembre",
+  "diciembre"
+];
+
+function monthNumberFromValue(value) {
+  const clean = removeAccents(String(value || "").trim().toLowerCase());
+  const numeric = Number(clean);
+  if (Number.isInteger(numeric) && numeric >= 1 && numeric <= 12) return numeric;
+  const index = spanishMonths.findIndex((month) => removeAccents(month) === clean);
+  return index >= 0 ? index + 1 : 0;
+}
+
+function signatureDateIsoFromValues(values = getPartyData()) {
+  const day = Number(String(values.diaFirma || "").replace(/\D/g, ""));
+  const month = monthNumberFromValue(values.mesFirma);
+  const year = Number(String(values.anioFirma || "").replace(/\D/g, ""));
+  if (!day || !month || !year) return "";
+  return `${String(year).padStart(4, "0")}-${String(month).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+}
+
+function syncSignatureDateFields(value) {
+  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
+  if (!match) return false;
+  const [, year, month, day] = match;
+  const updates = {
+    diaFirma: String(Number(day)),
+    mesFirma: spanishMonths[Number(month) - 1],
+    anioFirma: year
+  };
+  partyDataStore = { ...partyDataStore, ...updates };
+  Object.entries(updates).forEach(([name, fieldValue]) => {
+    const input = partyForm.elements[name];
+    if (input) input.value = fieldValue;
+  });
+  return true;
+}
+
 function roleHeadingAliases() {
   const baseAliases = [
     "EL CLIENTE",
@@ -2869,6 +2917,19 @@ function manualFieldMarkup(name, label, value = "") {
   `;
 }
 
+function signatureDateFieldMarkup(values) {
+  return `
+    <div class="manual-field signature-date-field">
+      <span>Fecha de firma</span>
+      <input type="date" data-signature-date value="${escapeHtml(signatureDateIsoFromValues(values))}" aria-label="Fecha de firma" />
+      <input type="hidden" name="diaFirma" value="${escapeHtml(values.diaFirma || "")}" />
+      <input type="hidden" name="mesFirma" value="${escapeHtml(values.mesFirma || "")}" />
+      <input type="hidden" name="anioFirma" value="${escapeHtml(values.anioFirma || "")}" />
+      <small>Selecciona la fecha una sola vez; LexContratos llenará día, mes y año en el contrato.</small>
+    </div>
+  `;
+}
+
 function renderDynamicFields() {
   const values = getPartyData();
   const sections = getRoles()
@@ -2893,10 +2954,13 @@ function renderCustomFields() {
   const dynamicNames = new Set(getRoles().flatMap((role) => fieldsForRole(role).map(([name]) => name)));
   const values = getPartyData();
   const templateNames = fieldNamesInText(editor?.value || templates[activeTemplate]?.body || "");
+  const signatureDateNames = new Set(["diaFirma", "mesFirma", "anioFirma"]);
   const fields = (templates[activeTemplate]?.customFields || [])
     .filter((field) => templateNames.has(field.name))
     .filter((field) => !dynamicNames.has(field.name))
     .filter((field) => !String(values[field.name] || "").trim());
+  const hasSignatureDateFields = fields.some((field) => signatureDateNames.has(field.name));
+  const standaloneFields = fields.filter((field) => !signatureDateNames.has(field.name));
   customFields.innerHTML = "";
   if (!fields.length) return;
 
@@ -2905,7 +2969,8 @@ function renderCustomFields() {
       <p class="eyebrow">Campos propios</p>
       <strong>Pendientes de ${escapeHtml(templates[activeTemplate].title)}</strong>
     </div>
-    ${fields.map((field) => manualFieldMarkup(field.name, field.label, values[field.name] || "")).join("")}
+    ${hasSignatureDateFields ? signatureDateFieldMarkup(values) : ""}
+    ${standaloneFields.map((field) => manualFieldMarkup(field.name, field.label, values[field.name] || "")).join("")}
   `;
 }
 
@@ -4557,6 +4622,7 @@ partyForm.addEventListener("keydown", (event) => {
 
 partyForm.addEventListener("input", (event) => {
   if (event.target?.name === "importeNumero") syncAmountInWords({ force: true });
+  if (event.target?.matches("[data-signature-date]")) syncSignatureDateFields(event.target.value);
   renderRoleDrops();
   renderRequirements();
   if (!activeMatterFolio) renderMatterPanel();

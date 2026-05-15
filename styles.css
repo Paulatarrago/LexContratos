@@ -2337,6 +2337,13 @@ button {
   resize: vertical;
 }
 
+.manual-field small {
+  color: var(--muted);
+  font-size: 11px;
+  line-height: 1.35;
+  font-weight: 650;
+}
+
 .manual-field-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
