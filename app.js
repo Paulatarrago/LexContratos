@@ -2093,27 +2093,65 @@ function isAnnexHeading(paragraph) {
 }
 
 function isRoleHeadingParagraph(paragraph) {
-  const plain = normalizeExportText(paragraph);
+  const plain = normalizeExportText(paragraph).replace(/^POR\s+/, "");
   return roleHeadingAliases().some((alias) => normalizeExportText(alias) === plain);
 }
 
-function signatureBlockHtml() {
+function signatureRoleTitle(role) {
+  const label = normalizeExportText(role.label);
+  const explicitTitles = [
+    ["PRESTADOR", "EL PRESTADOR"],
+    ["CLIENTE", "EL CLIENTE"],
+    ["PROVEEDOR", "EL PROVEEDOR"],
+    ["ARRENDADOR", "EL ARRENDADOR"],
+    ["ARRENDATARIO", "EL ARRENDATARIO"],
+    ["COMPRADOR", "EL COMPRADOR"],
+    ["VENDEDOR", "EL VENDEDOR"],
+    ["MANDANTE", "EL MANDANTE"],
+    ["MANDATARIO", "EL MANDATARIO"],
+    ["COMITENTE", "EL COMITENTE"],
+    ["COMISIONISTA", "EL COMISIONISTA"],
+    ["MUTUANTE", "EL MUTUANTE"],
+    ["MUTUARIO", "EL MUTUARIO"],
+    ["CEDENTE", "EL CEDENTE"],
+    ["CESIONARIO", "EL CESIONARIO"],
+    ["LICENCIANTE", "EL LICENCIANTE"],
+    ["LICENCIATARIO", "EL LICENCIATARIO"],
+    ["FRANQUICIANTE", "EL FRANQUICIANTE"],
+    ["FRANQUICIATARIO", "EL FRANQUICIATARIO"],
+    ["FIDUCIARIO", "EL FIDUCIARIO"],
+    ["FIDEICOMITENTE", "EL FIDEICOMITENTE"]
+  ];
+  const match = explicitTitles.find(([needle]) => label.includes(needle));
+  if (match) return match[1];
+  if (label.startsWith("PARTE")) return `LA ${label}`;
+  return label;
+}
+
+function signatureCellHtml(role) {
+  if (!role) return `<td class="signature-empty">&nbsp;</td>`;
   const values = getPartyData();
-  const blocks = getRoles()
-    .map((role) => {
-      const party = values[role.part] || role.label;
-      const representative = values[role.side === "A" ? "repA" : "repB"] || "Representante legal";
-      return `
-        <div class="signature-box">
-          <div class="signature-line"></div>
-          <p class="signature-party">POR: <strong>${escapeHtml(legalUppercase(party))}</strong></p>
-          <p><strong>${escapeHtml(legalUppercase(representative))}</strong></p>
-          <p>Representante legal</p>
-        </div>
-      `;
-    })
-    .join("");
-  return `<div class="signature-grid">${blocks}</div>`;
+  const party = values[role.part] || role.label;
+  const representative = values[role.side === "A" ? "repA" : "repB"] || "Representante legal";
+  return `
+    <td>
+      <p class="signature-role">${escapeHtml(signatureRoleTitle(role))}</p>
+      <div class="signature-space">&nbsp;</div>
+      <div class="signature-line">&nbsp;</div>
+      <p class="signature-entity"><strong>${escapeHtml(legalUppercase(party))}</strong></p>
+      <p class="signature-label">Por conducto de su representante legal:</p>
+      <p class="signature-representative"><strong>${escapeHtml(legalUppercase(representative))}</strong></p>
+    </td>
+  `;
+}
+
+function signatureBlockHtml() {
+  const roles = getRoles();
+  const rows = [];
+  for (let index = 0; index < roles.length; index += 2) {
+    rows.push(`<tr>${signatureCellHtml(roles[index])}${signatureCellHtml(roles[index + 1])}</tr>`);
+  }
+  return `<table class="signature-table" role="presentation" border="0" cellspacing="0" cellpadding="0">${rows.join("")}</table>`;
 }
 
 function isSignatureBlockStart(paragraphs, index) {
@@ -2188,11 +2226,15 @@ function exportWordDocument() {
         a.email-link { color: #1155cc; text-decoration: underline; }
         ol.legal-list, ul.legal-list { margin: 0 0 10pt 24pt; padding-left: 18pt; text-align: justify; }
         ol.legal-list li, ul.legal-list li { margin: 0 0 8pt; padding-left: 4pt; }
-        .signature-grid { display: table; width: 100%; margin-top: 30pt; page-break-inside: avoid; table-layout: fixed; }
-        .signature-box { display: table-cell; width: 50%; padding: 0 18pt; text-align: center; vertical-align: top; }
-        .signature-line { border-top: 1px solid #111827; height: 1pt; margin: 42pt 0 10pt; }
-        .signature-box p { margin: 0 0 5pt; text-align: center; }
-        .signature-party { text-transform: uppercase; }
+        .signature-table { width: 100%; border-collapse: collapse; border: 0; table-layout: fixed; margin: 34pt 0 18pt; page-break-inside: avoid; }
+        .signature-table td { width: 50%; border: 0; padding: 0 22pt 0; text-align: center; vertical-align: top; }
+        .signature-table p { margin: 0 0 5pt; text-align: center; line-height: 1.25; }
+        .signature-role { font-weight: 700; text-transform: uppercase; min-height: 16pt; }
+        .signature-space { height: 46pt; line-height: 46pt; }
+        .signature-line { border-top: 1pt solid #111827; height: 1pt; line-height: 1pt; margin: 0 0 10pt; }
+        .signature-entity, .signature-representative { text-transform: uppercase; }
+        .signature-label { color: #111827; }
+        .signature-empty { visibility: hidden; }
         strong { font-weight: 700; }
       </style>
     </head>
