@@ -2310,6 +2310,60 @@ function monthNumberFromValue(value) {
   return index >= 0 ? index + 1 : 0;
 }
 
+function datePartsFromValue(value) {
+  const raw = String(value || "").trim();
+  if (!raw) return null;
+  let day = 0;
+  let month = 0;
+  let year = 0;
+  const isoMatch = raw.match(/^(\d{4})-(\d{1,2})-(\d{1,2})$/);
+  const slashMatch = raw.match(/^(\d{1,2})[\/.-](\d{1,2})[\/.-](\d{2,4})$/);
+  const longMatch = removeAccents(raw.toLowerCase()).match(/^(\d{1,2})\s+(?:de\s+)?([a-z]+)\s+(?:de\s+)?(\d{4})$/);
+  if (isoMatch) {
+    [, year, month, day] = isoMatch.map(Number);
+  } else if (slashMatch) {
+    [, day, month, year] = slashMatch.map(Number);
+    if (year < 100) year += 2000;
+  } else if (longMatch) {
+    day = Number(longMatch[1]);
+    month = monthNumberFromValue(longMatch[2]);
+    year = Number(longMatch[3]);
+  } else {
+    return null;
+  }
+  const daysInMonth = new Date(year, month, 0).getDate();
+  if (!year || !month || !day || month < 1 || month > 12 || day < 1 || day > daysInMonth) return null;
+  return { day, month, year };
+}
+
+function isoFromDateValue(value) {
+  const parts = datePartsFromValue(value);
+  if (!parts) return "";
+  return `${String(parts.year).padStart(4, "0")}-${String(parts.month).padStart(2, "0")}-${String(parts.day).padStart(2, "0")}`;
+}
+
+function dateTextFromIso(iso) {
+  const parts = datePartsFromValue(iso);
+  if (!parts) return "";
+  return `${String(parts.day).padStart(2, "0")}/${String(parts.month).padStart(2, "0")}/${String(parts.year).padStart(4, "0")}`;
+}
+
+function legalDateFromIso(iso) {
+  const parts = datePartsFromValue(iso);
+  if (!parts) return "";
+  return `${parts.day} de ${spanishMonths[parts.month - 1]} de ${parts.year}`;
+}
+
+function manualDateStorageValue(value) {
+  const iso = isoFromDateValue(value);
+  return iso ? legalDateFromIso(iso) : String(value || "").trim();
+}
+
+function displayDateText(value) {
+  const iso = isoFromDateValue(value);
+  return iso ? dateTextFromIso(iso) : String(value || "").trim();
+}
+
 function signatureDateIsoFromValues(values = getPartyData()) {
   const day = Number(String(values.diaFirma || "").replace(/\D/g, ""));
   const month = monthNumberFromValue(values.mesFirma);
@@ -2319,18 +2373,36 @@ function signatureDateIsoFromValues(values = getPartyData()) {
 }
 
 function syncSignatureDateFields(value) {
-  const match = String(value || "").match(/^(\d{4})-(\d{2})-(\d{2})$/);
-  if (!match) return false;
-  const [, year, month, day] = match;
+  if (!String(value || "").trim()) {
+    const updates = { diaFirma: "", mesFirma: "", anioFirma: "" };
+    partyDataStore = { ...partyDataStore, ...updates };
+    Object.keys(updates).forEach((name) => {
+      const input = partyForm.elements[name];
+      if (input) input.value = "";
+    });
+    partyForm.querySelectorAll("[data-signature-date], [data-signature-date-text]").forEach((input) => {
+      input.value = "";
+    });
+    return true;
+  }
+  const parts = datePartsFromValue(value);
+  if (!parts) return false;
   const updates = {
-    diaFirma: String(Number(day)),
-    mesFirma: spanishMonths[Number(month) - 1],
-    anioFirma: year
+    diaFirma: String(parts.day),
+    mesFirma: spanishMonths[parts.month - 1],
+    anioFirma: String(parts.year)
   };
   partyDataStore = { ...partyDataStore, ...updates };
   Object.entries(updates).forEach(([name, fieldValue]) => {
     const input = partyForm.elements[name];
     if (input) input.value = fieldValue;
+  });
+  const iso = isoFromDateValue(value);
+  partyForm.querySelectorAll("[data-signature-date]").forEach((input) => {
+    input.value = iso;
+  });
+  partyForm.querySelectorAll("[data-signature-date-text]").forEach((input) => {
+    input.value = dateTextFromIso(iso);
   });
   return true;
 }
@@ -3216,12 +3288,83 @@ function clearGeneralData(event) {
 
 function manualFieldMarkup(name, label, value = "") {
   if (name === "servicioContratado") return serviceContractedFieldMarkup(label, value);
+  if (isManualDateField(name, label)) return manualDateFieldMarkup(name, label, value);
   return `
     <div class="manual-field">
       <span>${escapeHtml(label)}</span>
       <input name="${escapeHtml(name)}" value="${escapeHtml(value)}" aria-label="${escapeHtml(label)}" />
     </div>
   `;
+}
+
+function isManualDateField(name, label = "") {
+  if (["diaFirma", "mesFirma", "anioFirma"].includes(name)) return false;
+  const text = removeAccents(`${name} ${label}`).toLowerCase();
+  return text.includes("fecha") || text.includes("date");
+}
+
+function manualDateFieldMarkup(name, label, value = "") {
+  const iso = isoFromDateValue(value);
+  const textValue = displayDateText(value);
+  const storedValue = manualDateStorageValue(value);
+  return `
+    <div class="manual-field date-field">
+      <span>${escapeHtml(label)}</span>
+      <div class="manual-field-row date-field-row">
+        <input
+          type="text"
+          data-date-text
+          data-date-target="${escapeHtml(name)}"
+          value="${escapeHtml(textValue)}"
+          placeholder="DD/MM/AAAA"
+          inputmode="numeric"
+          aria-label="${escapeHtml(label)} en formato DD/MM/AAAA"
+        />
+        <input type="date" data-date-picker data-date-target="${escapeHtml(name)}" value="${escapeHtml(iso)}" aria-label="Calendario para ${escapeHtml(label)}" />
+      </div>
+      <input type="hidden" name="${escapeHtml(name)}" value="${escapeHtml(storedValue)}" />
+      <small>Selecciona una fecha en el calendario o escríbela como DD/MM/AAAA.</small>
+    </div>
+  `;
+}
+
+function syncManualDateTextField(input) {
+  const targetName = input?.dataset?.dateTarget;
+  if (!targetName) return false;
+  const iso = isoFromDateValue(input.value);
+  const storedValue = manualDateStorageValue(input.value);
+  const hidden = partyForm.elements[targetName];
+  if (hidden) hidden.value = storedValue;
+  partyDataStore[targetName] = storedValue;
+  const field = input.closest(".date-field");
+  const picker = field?.querySelector("[data-date-picker]");
+  if (picker) picker.value = iso;
+  return Boolean(storedValue);
+}
+
+function syncManualDatePickerField(input) {
+  const targetName = input?.dataset?.dateTarget;
+  const iso = isoFromDateValue(input?.value);
+  if (!targetName) return false;
+  if (!String(input?.value || "").trim()) {
+    const field = input.closest(".date-field");
+    const textInput = field?.querySelector("[data-date-text]");
+    const hidden = partyForm.elements[targetName];
+    if (textInput) textInput.value = "";
+    if (hidden) hidden.value = "";
+    partyDataStore[targetName] = "";
+    return true;
+  }
+  if (!iso) return false;
+  const textValue = dateTextFromIso(iso);
+  const storedValue = legalDateFromIso(iso);
+  const field = input.closest(".date-field");
+  const textInput = field?.querySelector("[data-date-text]");
+  const hidden = partyForm.elements[targetName];
+  if (textInput) textInput.value = textValue;
+  if (hidden) hidden.value = storedValue;
+  partyDataStore[targetName] = storedValue;
+  return true;
 }
 
 function serviceContractedFieldMarkup(label, value = "") {
@@ -3284,14 +3427,18 @@ function syncServiceContractedField(select) {
 }
 
 function signatureDateFieldMarkup(values) {
+  const iso = signatureDateIsoFromValues(values);
   return `
     <div class="manual-field signature-date-field">
       <span>Fecha de firma</span>
-      <input type="date" data-signature-date value="${escapeHtml(signatureDateIsoFromValues(values))}" aria-label="Fecha de firma" />
+      <div class="manual-field-row date-field-row">
+        <input type="text" data-signature-date-text value="${escapeHtml(dateTextFromIso(iso))}" placeholder="DD/MM/AAAA" inputmode="numeric" aria-label="Fecha de firma en formato DD/MM/AAAA" />
+        <input type="date" data-signature-date value="${escapeHtml(iso)}" aria-label="Calendario de fecha de firma" />
+      </div>
       <input type="hidden" name="diaFirma" value="${escapeHtml(values.diaFirma || "")}" />
       <input type="hidden" name="mesFirma" value="${escapeHtml(values.mesFirma || "")}" />
       <input type="hidden" name="anioFirma" value="${escapeHtml(values.anioFirma || "")}" />
-      <small>Selecciona la fecha una sola vez; LexContratos llenará día, mes y año en el contrato.</small>
+      <small>Selecciona la fecha o escríbela como DD/MM/AAAA; LexContratos llenará día, mes y año en el contrato.</small>
     </div>
   `;
 }
@@ -5003,8 +5150,11 @@ partyForm.addEventListener("input", (event) => {
   criticalReviewDone = false;
   if (event.target?.matches("[data-service-select]")) syncServiceContractedField(event.target);
   if (event.target?.matches("[data-service-value]")) partyDataStore.servicioContratado = event.target.value.trim();
+  if (event.target?.matches("[data-date-text]")) syncManualDateTextField(event.target);
+  if (event.target?.matches("[data-date-picker]")) syncManualDatePickerField(event.target);
   if (event.target?.name === "importeNumero") syncAmountInWords({ force: true });
   if (event.target?.matches("[data-signature-date]")) syncSignatureDateFields(event.target.value);
+  if (event.target?.matches("[data-signature-date-text]")) syncSignatureDateFields(event.target.value);
   renderRoleDrops();
   renderRequirements();
   if (!activeMatterFolio) renderMatterPanel();
@@ -5020,6 +5170,8 @@ partyForm.addEventListener("change", (event) => {
     if (!activeMatterFolio) renderMatterPanel();
     saveActiveDraft("Servicio contratado actualizado");
   }
+  if (event.target?.matches("[data-date-picker]")) syncManualDatePickerField(event.target);
+  if (event.target?.matches("[data-signature-date]")) syncSignatureDateFields(event.target.value);
 });
 
 editor.addEventListener("input", () => {

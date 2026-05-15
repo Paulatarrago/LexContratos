@@ -2438,6 +2438,19 @@ button {
   background: #eff6ff;
 }
 
+.date-field-row {
+  grid-template-columns: minmax(120px, 1fr) minmax(130px, auto);
+}
+
+.date-field-row input[type="date"] {
+  min-width: 130px;
+  color: var(--muted);
+}
+
+.date-field-row input[type="text"]::placeholder {
+  color: #94a3b8;
+}
+
 .requirements-list {
   display: grid;
   gap: 6px;
