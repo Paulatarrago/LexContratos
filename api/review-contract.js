@@ -73,8 +73,12 @@ export default async function handler(request) {
                 "Tu revision debe ser directa, precisa y util, sin sustituir el criterio profesional del usuario.",
                 "Identifica datos faltantes, contradicciones, ambiguedades, riesgos de redaccion, problemas de forma, ortografia y clausulas usuales ausentes.",
                 "No inventes hechos, poderes, datos notariales, montos ni fechas.",
+                "Si se pidio proponer ajustes, NO hagas una propuesta de todo o nada como unica salida.",
+                "Devuelve cambios granulares para que el usuario pueda aceptar o descartar cada cambio.",
+                "Para cambios de reemplazo, el campo original debe copiar un fragmento exacto del contrato para poder ubicarlo y reemplazarlo.",
+                "Para inserciones nuevas, deja original vacio y pon en replacement el texto sugerido.",
                 "Responde exclusivamente JSON valido con la forma:",
-                '{"summary":"texto breve","findings":[{"severity":"Alta|Media|Baja","section":"seccion","observation":"observacion concreta","recommendation":"accion sugerida"}],"revisedBody":"contrato completo solo si se pidio proponer ajustes; en otro caso vacio"}'
+                '{"summary":"texto breve","findings":[{"severity":"Alta|Media|Baja","section":"seccion","observation":"observacion concreta","recommendation":"accion sugerida"}],"changes":[{"section":"seccion","type":"replace|insert|delete","original":"fragmento exacto del contrato o vacio si es insercion","replacement":"texto sugerido o vacio si se propone eliminar","reason":"por que conviene"}],"revisedBody":"contrato completo solo si no puedes separar cambios; en otro caso vacio"}'
               ].join("\n")
             }
           ]
@@ -114,6 +118,7 @@ export default async function handler(request) {
   return jsonResponse({
     summary: parsed.summary || "Revisión crítica preliminar.",
     findings: Array.isArray(parsed.findings) ? parsed.findings : [],
+    changes: mode === "propose" && Array.isArray(parsed.changes) ? parsed.changes : [],
     revisedBody: mode === "propose" ? String(parsed.revisedBody || "") : ""
   });
 }

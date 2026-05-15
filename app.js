@@ -653,6 +653,7 @@ let saveLocationResolve = null;
 let saveLocationState = { folder: "Clientes", confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
 let saveContextFolder = "";
 let pendingCriticalReviewBody = "";
+let pendingCriticalChanges = [];
 let lastCriticalReviewFindings = [];
 let restoringDraft = false;
 let draftRestoredForUser = "";
@@ -2516,6 +2517,81 @@ function formatCriticalReview(result) {
   return lines.join("\n").trim();
 }
 
+function normalizeCriticalChanges(result) {
+  const source = Array.isArray(result?.changes) ? result.changes : [];
+  return source
+    .map((change, index) => {
+      const original = String(change.original || change.before || change.find || "").trim();
+      const replacement = String(change.replacement || change.after || change.suggestedText || "").trim();
+      const reason = String(change.reason || change.explanation || change.recommendation || "").trim();
+      const section = String(change.section || "Contrato").trim();
+      const type = String(change.type || (original ? "replace" : "insert")).trim();
+      if (!replacement && !original) return null;
+      return {
+        id: `change-${Date.now()}-${index}`,
+        section,
+        type,
+        original,
+        replacement,
+        reason,
+        status: "pending"
+      };
+    })
+    .filter(Boolean);
+}
+
+function renderCriticalReview(result, mode) {
+  const findings = Array.isArray(result?.findings) ? result.findings : [];
+  pendingCriticalChanges = mode === "propose" ? normalizeCriticalChanges(result) : [];
+  const findingsHtml = findings.length
+    ? findings
+        .map((finding, index) => `
+          <article class="critical-finding">
+            <strong>${index + 1}. [${escapeHtml(finding.severity || "Media")}] ${escapeHtml(finding.section || "Contrato")}</strong>
+            <p><b>Observación:</b> ${escapeHtml(finding.observation || "Revisar este punto.")}</p>
+            <p><b>Recomendación:</b> ${escapeHtml(finding.recommendation || "Validar y ajustar si corresponde.")}</p>
+          </article>
+        `)
+        .join("")
+    : `<p class="critical-review-text">No se detectaron observaciones relevantes en esta revisión.</p>`;
+  const changesHtml = pendingCriticalChanges.length
+    ? `
+      <div class="critical-change-list">
+        <h3>Cambios propuestos para aprobar o descartar</h3>
+        <p class="critical-review-text">Revisa cada sugerencia. Puedes aplicar solo las que te convenzan; las demás se descartan sin tocar el contrato.</p>
+        ${pendingCriticalChanges
+          .map((change, index) => `
+            <article class="critical-change-card" data-change-id="${escapeHtml(change.id)}">
+              <div class="critical-change-heading">
+                <strong>${index + 1}. ${escapeHtml(change.section)}</strong>
+                <span data-change-status>Pendiente</span>
+              </div>
+              ${change.reason ? `<p>${escapeHtml(change.reason)}</p>` : ""}
+              ${change.original ? `<div class="change-block old"><span>Texto actual</span><pre>${escapeHtml(change.original)}</pre></div>` : `<div class="change-block old"><span>Inserción sugerida</span><pre>Se agregará como texto nuevo al final del contrato para que lo puedas reubicar.</pre></div>`}
+              ${change.replacement ? `<div class="change-block new"><span>Texto sugerido</span><pre>${escapeHtml(change.replacement)}</pre></div>` : ""}
+              <div class="critical-change-actions">
+                <button class="primary-action mini-action" type="button" data-critical-action="apply" data-change-id="${escapeHtml(change.id)}">Aplicar este cambio</button>
+                <button class="secondary-action mini-action" type="button" data-critical-action="discard" data-change-id="${escapeHtml(change.id)}">Descartar</button>
+              </div>
+            </article>
+          `)
+          .join("")}
+      </div>
+    `
+    : "";
+  const fallbackHtml = mode === "propose" && !pendingCriticalChanges.length && result?.revisedBody
+    ? `<p class="critical-review-text">La IA devolvió una propuesta completa, pero no cambios separados. Puedes integrarla completa desde el botón inferior o revisar manualmente el texto antes de aplicarla.</p>`
+    : "";
+
+  criticalReviewOutput.innerHTML = `
+    <div class="critical-review-summary">${escapeHtml(result?.summary || "Revisión preliminar del contrato.")}</div>
+    <div class="critical-findings">${findingsHtml}</div>
+    ${changesHtml}
+    ${fallbackHtml}
+  `;
+  applyCriticalReviewButton.classList.toggle("is-hidden", Boolean(pendingCriticalChanges.length) || !pendingCriticalReviewBody);
+}
+
 function rememberCriticalReview(result) {
   lastCriticalReviewFindings = Array.isArray(result?.findings) ? result.findings : [];
 }
@@ -2563,12 +2639,14 @@ async function runCriticalReview(mode) {
     const result = await response.json();
     rememberCriticalReview(result);
     pendingCriticalReviewBody = mode === "propose" && result.revisedBody ? result.revisedBody : "";
-    criticalReviewOutput.textContent = formatCriticalReview(result);
-    applyCriticalReviewButton.classList.toggle("is-hidden", !pendingCriticalReviewBody);
+    renderCriticalReview(result, mode);
   } catch (error) {
     const result = buildLocalCriticalReview(mode);
     rememberCriticalReview(result);
-    criticalReviewOutput.textContent = `${formatCriticalReview(result)}\n\nLa revisión avanzada estará disponible cuando la IA documental esté activa.`;
+    renderCriticalReview({
+      ...result,
+      summary: `${result.summary} La revisión avanzada estará disponible cuando la IA documental esté activa.`
+    }, mode);
   }
 }
 
@@ -2583,6 +2661,48 @@ function applyCriticalReviewSuggestion() {
   addMatterEvent("Ajustes sugeridos por revisión crítica integrados");
   criticalReviewDialog.close();
   showToast("Cambios sugeridos integrados. Revisa el contrato antes de exportar o firmar.");
+}
+
+function updateCriticalChangeCard(change) {
+  const card = Array.from(criticalReviewOutput.querySelectorAll("[data-change-id]"))
+    .find((element) => element.dataset.changeId === change.id);
+  if (!card) return;
+  card.classList.toggle("is-applied", change.status === "applied");
+  card.classList.toggle("is-discarded", change.status === "discarded");
+  const status = card.querySelector("[data-change-status]");
+  if (status) status.textContent = change.status === "applied" ? "Aplicado" : change.status === "discarded" ? "Descartado" : "Pendiente";
+  card.querySelectorAll("button").forEach((button) => {
+    button.disabled = change.status !== "pending";
+  });
+}
+
+function applyCriticalChange(changeId) {
+  const change = pendingCriticalChanges.find((candidate) => candidate.id === changeId);
+  if (!change || change.status !== "pending") return;
+  const current = editor.value;
+  if (change.original) {
+    if (!current.includes(change.original)) {
+      showToast("No encontré el texto exacto en el contrato. Revisa esa sugerencia manualmente.");
+      return;
+    }
+    editor.value = current.replace(change.original, change.replacement);
+  } else {
+    editor.value = `${current.trim()}\n\n${change.replacement}`.trim();
+  }
+  change.status = "applied";
+  updateCriticalChangeCard(change);
+  autoSaveVersion("manual");
+  saveActiveDraft("Cambio puntual de revisión crítica integrado");
+  addMatterEvent("Cambio puntual de revisión crítica integrado");
+  showToast("Cambio integrado. Revisa el texto en el contrato.");
+}
+
+function discardCriticalChange(changeId) {
+  const change = pendingCriticalChanges.find((candidate) => candidate.id === changeId);
+  if (!change || change.status !== "pending") return;
+  change.status = "discarded";
+  updateCriticalChangeCard(change);
+  showToast("Sugerencia descartada. El contrato no cambió.");
 }
 
 function renameActiveTemplate() {
@@ -3693,12 +3813,20 @@ document.querySelector("#critical-review")?.addEventListener("click", () => {
   criticalReviewDialog.showModal();
   criticalReviewOutput.textContent = "Elige si quieres solo observaciones o una propuesta de ajustes para integrar después de revisar.";
   pendingCriticalReviewBody = "";
+  pendingCriticalChanges = [];
   applyCriticalReviewButton.classList.add("is-hidden");
 });
 
 document.querySelector("#critical-observations")?.addEventListener("click", () => runCriticalReview("observations"));
 document.querySelector("#critical-suggest")?.addEventListener("click", () => runCriticalReview("propose"));
 applyCriticalReviewButton?.addEventListener("click", applyCriticalReviewSuggestion);
+criticalReviewOutput?.addEventListener("click", (event) => {
+  const actionButton = event.target.closest("[data-critical-action]");
+  if (!actionButton) return;
+  const changeId = actionButton.dataset.changeId;
+  if (actionButton.dataset.criticalAction === "apply") applyCriticalChange(changeId);
+  if (actionButton.dataset.criticalAction === "discard") discardCriticalChange(changeId);
+});
 criticalReviewDialog?.addEventListener("click", (event) => {
   if (event.target === criticalReviewDialog) criticalReviewDialog.close();
 });
