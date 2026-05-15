@@ -2344,6 +2344,14 @@ button {
   font-weight: 650;
 }
 
+.service-contracted-field select {
+  min-height: 40px;
+}
+
+.service-custom-input[type="hidden"] {
+  display: none;
+}
+
 .manual-field-row {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;

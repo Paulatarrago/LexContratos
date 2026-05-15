@@ -552,6 +552,56 @@ const defaultValues = {
   areaServicio: "Impuestos"
 };
 
+const OTHER_SERVICE_VALUE = "__otro__";
+const serviceCatalog = [
+  { folio: "A01001", name: "Servicio Integral de Administración", scheme: "Recurrente" },
+  { folio: "A02002", name: "Servicio Integral de Contabilidad", scheme: "Recurrente" },
+  { folio: "A03003", name: "Servicio Integral de Control Interno y Cumplimiento de Políticas", scheme: "Recurrente" },
+  { folio: "A04004", name: "Gestión administrativa y atención a requerimientos en materia fiscal", scheme: "Bajo demanda" },
+  { folio: "A05005", name: "Asesoría fiscal", scheme: "Recurrente" },
+  { folio: "A04006", name: "Asesoría en materia de seguridad social", scheme: "Recurrente" },
+  { folio: "A05007", name: "Elaboración, revisión y adecuación de contratos", scheme: "Bajo demanda" },
+  { folio: "A06008", name: "Gestión y seguimiento de asuntos legales", scheme: "Bajo demanda" },
+  { folio: "A05009", name: "Servicio de asesoría jurídica corporativa", scheme: "Recurrente" },
+  { folio: "A06010", name: "Consultoría, supervisión y acompañamiento estratégico en recursos humanos", scheme: "Recurrente" },
+  { folio: "A06011", name: "Administración de nómina y obligaciones patronales", scheme: "Recurrente" },
+  { folio: "A06012", name: "Gestión integral de atracción, selección e incorporación de talento", scheme: "Recurrente" },
+  { folio: "A06013", name: "Administración de personal y compensaciones", scheme: "Recurrente" },
+  { folio: "A06014", name: "Servicio de formación y desarrollo organizacional", scheme: "Recurrente" },
+  { folio: "A06015", name: "Servicio de relaciones laborales y blindaje laboral", scheme: "Recurrente" },
+  { folio: "A07016", name: "Gestión bancaria", scheme: "Bajo demanda" },
+  { folio: "A07017", name: "Gestión de caja y liquidez", scheme: "Recurrente" },
+  { folio: "A07018", name: "Gestión de pagos y cobros", scheme: "Recurrente" },
+  { folio: "A07019", name: "Gestión financiera de financiamiento e inversión", scheme: "Recurrente" },
+  { folio: "A08020", name: "Coordinación técnica y administrativa para la implementación de proyectos", scheme: "Bajo demanda" },
+  { folio: "S08021", name: "Gestión y administración de equipo biomédico", scheme: "Recurrente" },
+  { folio: "S08022", name: "Capacitación técnica-operativa en el uso y manejo de equipo biomédico", scheme: "Recurrente" },
+  { folio: "S09023", name: "Servicio de administración y supervisión del sistema de gestión", scheme: "Recurrente" },
+  { folio: "S10024", name: "Gestión administrativa de flotilla vehicular", scheme: "Recurrente" },
+  { folio: "S10025", name: "Servicio de control y administración de combustible", scheme: "Recurrente" },
+  { folio: "S11026", name: "Producción de material audiovisual corporativo", scheme: "Bajo demanda" },
+  { folio: "S11027", name: "Diseño para campañas y eventos", scheme: "Bajo demanda" },
+  { folio: "S11028", name: "Diseño y actualización de imagen corporativa", scheme: "Recurrente" },
+  { folio: "S12029", name: "Planeación, coordinación y puesta en marcha de laboratorio", scheme: "Bajo demanda" },
+  { folio: "S12030", name: "Supervisión operativa y cumplimiento normativo de laboratorio", scheme: "Recurrente" },
+  { folio: "S12031", name: "Gestión y administración de equipos de laboratorio", scheme: "Recurrente" },
+  { folio: "S13032", name: "Servicio de gestión integral para la participación en licitaciones", scheme: "Recurrente" },
+  { folio: "S14033", name: "Gestión y coordinación de capacitación técnica para personal", scheme: "Bajo demanda" },
+  { folio: "S14034", name: "Gestión y supervisión de mantenimiento preventivo y correctivo", scheme: "Recurrente" },
+  { folio: "S15035", name: "Gestión de compras y abastecimiento", scheme: "Recurrente" },
+  { folio: "S16036", name: "Atención y seguimiento a verificaciones sanitarias", scheme: "Bajo demanda" },
+  { folio: "S16037", name: "Gestión y supervisión del cumplimiento normativo sanitario", scheme: "Recurrente" },
+  { folio: "S16038", name: "Supervisión normativa de servicios auxiliares de diagnóstico", scheme: "Recurrente" },
+  { folio: "S16039", name: "Supervisión y control normativo de expediente clínico y sistemas", scheme: "Recurrente" },
+  { folio: "S16040", name: "Gestión normativa en bioseguridad y manejo de RPBI", scheme: "Recurrente" },
+  { folio: "S17041", name: "Asesoría y dirección de operación médica", scheme: "Recurrente" },
+  { folio: "S18042", name: "Planeación y coordinación de arranque operativo de unidad médica", scheme: "Bajo demanda" },
+  { folio: "S18043", name: "Gestión operativa y supervisión de unidades médicas", scheme: "Recurrente" },
+  { folio: "C19044", name: "Gestión de concursos, licitaciones y propuestas económicas", scheme: "Bajo demanda" },
+  { folio: "C19045", name: "Servicio integral de dirección y supervisión de proyectos de construcción", scheme: "Recurrente" },
+  { folio: "C19046", name: "Planeación, control presupuestal y administración de costos", scheme: "Recurrente" }
+];
+
 const commonProtectionsEs = `\n\nCLÁUSULAS DE PROTECCIÓN REFORZADA\n\nPRIMERA. Cumplimiento normativo. LAS PARTES se obligan a cumplir con las leyes mexicanas aplicables, incluyendo disposiciones civiles, mercantiles, fiscales, laborales, de seguridad social, protección de datos personales, anticorrupción y prevención de operaciones con recursos de procedencia ilícita, en la medida que correspondan al objeto del contrato.\n\nSEGUNDA. Independencia de las partes. Nada en este contrato crea sociedad, asociación, joint venture, mandato distinto del expresamente pactado, representación general, subordinación laboral o relación obrero-patronal entre LAS PARTES o su personal.\n\nTERCERA. Declaraciones corporativas. Cada parte declara que su constitución, existencia, representación, poderes, autorizaciones internas y capacidad para contratar son válidas y suficientes, y se obliga a informar cualquier revocación, limitación o modificación relevante.\n\nCUARTA. Información y documentos. Cada parte responde por la veracidad, integridad, licitud y oportunidad de la información, documentos, instrucciones, accesos y materiales que proporcione.\n\nQUINTA. Confidencialidad y secreto industrial. La información técnica, comercial, financiera, fiscal, operativa, legal, estratégica, metodológica o de negocio será confidencial y solo podrá utilizarse para cumplir este contrato.\n\nSEXTA. Datos personales. Si una parte accede a datos personales de la otra, deberá tratarlos únicamente conforme a instrucciones lícitas, aplicar medidas de seguridad razonables y suscribir el anexo de tratamiento que corresponda cuando sea necesario.\n\nSÉPTIMA. Responsabilidad e indemnidad. La parte que incumpla sacará en paz y a salvo a la parte cumplida frente a reclamaciones, multas, daños, gastos, honorarios, contingencias o responsabilidades que deriven directa y comprobablemente de su incumplimiento, dolo, negligencia grave o actos de su personal, proveedores o subcontratistas.\n\nOCTAVA. Anticorrupción. Ninguna parte ofrecerá, prometerá, solicitará, recibirá o entregará beneficios indebidos para obtener una ventaja relacionada con este contrato. El incumplimiento será causa de terminación inmediata.\n\nNOVENA. Terminación y supervivencia. La terminación no libera obligaciones pendientes de pago, confidencialidad, datos personales, propiedad intelectual, indemnidad, impuestos, jurisdicción ni cualquier obligación que por su naturaleza deba sobrevivir.\n\nDÉCIMA. Ley aplicable y jurisdicción. El contrato se interpretará conforme a las leyes aplicables de los Estados Unidos Mexicanos, sin perjuicio de las formalidades o reglas locales que resulten aplicables por domicilio, inmueble, operación o materia.`;
 
 const commonProtectionsEn = `\n\nENHANCED PROTECTIVE CLAUSES\n\nFIRST. Compliance. The parties shall comply with applicable Mexican law, including civil, commercial, tax, labor, social security, personal data protection, anti-corruption and anti-money laundering provisions, to the extent applicable to the transaction.\n\nSECOND. Independent parties. Nothing in this agreement creates a partnership, joint venture, employment relationship, general agency or representation other than what is expressly agreed in writing.\n\nTHIRD. Corporate authority. Each party represents that its existence, authority, powers of attorney, internal approvals and capacity to execute this agreement are valid and sufficient, and shall notify any relevant revocation or limitation.\n\nFOURTH. Information and documents. Each party is responsible for the truthfulness, completeness, lawfulness and timely delivery of all information, documents, instructions, access credentials and materials it provides.\n\nFIFTH. Confidentiality. Technical, commercial, financial, tax, operational, legal, strategic, methodological and business information shall be treated as confidential and used solely to perform this agreement.\n\nSIXTH. Personal data. If a party accesses personal data controlled by the other party, it shall process such data only under lawful documented instructions and apply reasonable administrative, technical and physical safeguards.\n\nSEVENTH. Liability and indemnity. The breaching party shall hold the non-breaching party harmless from claims, fines, damages, costs, expenses and liabilities directly arising from its breach, willful misconduct, gross negligence or acts of its personnel, suppliers or subcontractors.\n\nEIGHTH. Anti-corruption. No party shall offer, promise, request, receive or deliver any undue benefit to obtain an advantage related to this agreement. Breach of this clause shall be cause for immediate termination.\n\nNINTH. Survival. Termination shall not release pending payment, confidentiality, personal data, intellectual property, indemnity, tax, governing law or dispute resolution obligations that by their nature should survive.\n\nTENTH. Mexican law. This agreement shall be interpreted under the applicable laws of Mexico, without prejudice to local formalities or mandatory rules that may apply due to domicile, real estate, subject matter or transaction type.`;
@@ -2916,12 +2966,72 @@ function clearGeneralData(event) {
 }
 
 function manualFieldMarkup(name, label, value = "") {
+  if (name === "servicioContratado") return serviceContractedFieldMarkup(label, value);
   return `
     <div class="manual-field">
       <span>${escapeHtml(label)}</span>
       <input name="${escapeHtml(name)}" value="${escapeHtml(value)}" aria-label="${escapeHtml(label)}" />
     </div>
   `;
+}
+
+function serviceContractedFieldMarkup(label, value = "") {
+  const selectedService = serviceCatalog.find((service) => service.name === value);
+  const isCatalogValue = Boolean(selectedService);
+  const selectedValue = isCatalogValue ? selectedService.name : OTHER_SERVICE_VALUE;
+  const customValue = isCatalogValue ? selectedService.name : value;
+  return `
+    <div class="manual-field service-contracted-field">
+      <span>${escapeHtml(label)}</span>
+      <select data-service-select aria-label="${escapeHtml(label)}">
+        <option value="${OTHER_SERVICE_VALUE}" ${selectedValue === OTHER_SERVICE_VALUE ? "selected" : ""}>Otro</option>
+        ${serviceCatalog
+          .map(
+            (service) => `<option value="${escapeHtml(service.name)}" ${selectedValue === service.name ? "selected" : ""}>${escapeHtml(`${service.folio} · ${service.name} · ${service.scheme}`)}</option>`
+          )
+          .join("")}
+      </select>
+      <input
+        class="service-custom-input"
+        data-service-value
+        name="servicioContratado"
+        type="${isCatalogValue ? "hidden" : "text"}"
+        value="${escapeHtml(customValue)}"
+        placeholder="Escribe el servicio contratado"
+        aria-label="Otro servicio contratado"
+      />
+      <small>Selecciona un servicio del catálogo o elige “Otro” para capturarlo manualmente.</small>
+    </div>
+  `;
+}
+
+function syncServiceCatalogMetadata(service) {
+  if (!service) return;
+  const folioInput = partyForm.elements.folioInterno;
+  const currentFolio = String(folioInput?.value || partyDataStore.folioInterno || "").trim();
+  const canReplaceFolio = !currentFolio || serviceCatalog.some((item) => item.folio.toLowerCase() === currentFolio.toLowerCase());
+  if (canReplaceFolio) {
+    partyDataStore.folioInterno = service.folio;
+    if (folioInput) folioInput.value = service.folio;
+  }
+}
+
+function syncServiceContractedField(select) {
+  const field = select.closest(".service-contracted-field");
+  const input = field?.querySelector("[data-service-value]");
+  if (!input) return;
+  if (select.value === OTHER_SERVICE_VALUE) {
+    input.type = "text";
+    if (serviceCatalog.some((service) => service.name === input.value)) input.value = "";
+    partyDataStore.servicioContratado = input.value.trim();
+    input.focus({ preventScroll: true });
+    return;
+  }
+  const selectedService = serviceCatalog.find((service) => service.name === select.value);
+  input.type = "hidden";
+  input.value = selectedService?.name || select.value;
+  partyDataStore.servicioContratado = input.value;
+  syncServiceCatalogMetadata(selectedService);
 }
 
 function signatureDateFieldMarkup(values) {
@@ -4628,12 +4738,24 @@ partyForm.addEventListener("keydown", (event) => {
 });
 
 partyForm.addEventListener("input", (event) => {
+  if (event.target?.matches("[data-service-select]")) syncServiceContractedField(event.target);
+  if (event.target?.matches("[data-service-value]")) partyDataStore.servicioContratado = event.target.value.trim();
   if (event.target?.name === "importeNumero") syncAmountInWords({ force: true });
   if (event.target?.matches("[data-signature-date]")) syncSignatureDateFields(event.target.value);
   renderRoleDrops();
   renderRequirements();
   if (!activeMatterFolio) renderMatterPanel();
   saveActiveDraft("Datos de partes actualizados");
+});
+
+partyForm.addEventListener("change", (event) => {
+  if (event.target?.matches("[data-service-select]")) {
+    syncServiceContractedField(event.target);
+    renderRoleDrops();
+    renderRequirements();
+    if (!activeMatterFolio) renderMatterPanel();
+    saveActiveDraft("Servicio contratado actualizado");
+  }
 });
 
 editor.addEventListener("input", () => {
