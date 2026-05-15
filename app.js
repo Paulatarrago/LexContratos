@@ -3629,9 +3629,18 @@ document.querySelector("#close-fields").addEventListener("click", () => assistan
 assistantPane.addEventListener("click", (event) => event.stopPropagation());
 openUserGuide.addEventListener("click", () => userGuideDialog.showModal());
 
-document.querySelector("#fill-contract").addEventListener("click", () => {
+document.querySelector("#fill-contract").addEventListener("click", (event) => {
+  event.stopPropagation();
   if (!requireFieldsReviewed("integrar datos faltantes")) return;
+  if (assistantPane.classList.contains("open")) {
+    assistantPane.classList.remove("open");
+    return;
+  }
+  renderDynamicFields();
+  renderCustomFields();
+  assistantPane.querySelector(".compact-fields")?.setAttribute("open", "");
   assistantPane.classList.add("open");
+  assistantPane.querySelector(".manual-field input")?.focus({ preventScroll: true });
 });
 
 document.querySelector("#export-word").addEventListener("click", exportWordDocument);
