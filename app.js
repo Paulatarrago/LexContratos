@@ -2516,14 +2516,6 @@ async function refreshSignatureStatus() {
   if (!signatureStatusLabel || !signatureSubmitButton) return;
   signatureStatusLabel.textContent = "Verificando firma electrónica...";
   signatureSubmitButton.textContent = "Enviar a firma";
-  if (isLocalStaticPreview()) {
-    signatureStatusLabel.textContent = "Dropbox Sign se prueba desde lexcontratos.com";
-    signatureSubmitButton.textContent = "Guardar paquete de firma";
-    if (signatureDialogCopy) {
-      signatureDialogCopy.textContent = "Esta vista local no ejecuta envíos de firma. Puedes capturar firmantes y guardar el paquete; para enviar una prueba por Dropbox Sign, abre la versión publicada.";
-    }
-    return;
-  }
   try {
     const response = await fetch("/api/send-signature", { method: "GET" });
     if (!response.ok) throw new Error("signature status unavailable");
@@ -2540,6 +2532,14 @@ async function refreshSignatureStatus() {
     }
   } catch (error) {
     console.warn("LexContratos estado de firma no disponible", error);
+  }
+  if (isLocalStaticPreview()) {
+    signatureStatusLabel.textContent = "Dropbox Sign se prueba desde lexcontratos.com";
+    signatureSubmitButton.textContent = "Guardar paquete de firma";
+    if (signatureDialogCopy) {
+      signatureDialogCopy.textContent = "Esta vista local no ejecuta envíos de firma si no hay servidor de prueba activo. Puedes capturar firmantes y guardar el paquete; para enviar una prueba por Dropbox Sign, abre la versión publicada.";
+    }
+    return;
   }
   signatureStatusLabel.textContent = "Firma electrónica en configuración";
   signatureSubmitButton.textContent = "Guardar paquete de firma";
@@ -2569,10 +2569,11 @@ async function submitSignaturePacket(event) {
   }
   ensureMatterFolio();
   let sendResult = null;
+  let signatureFeedbackShown = false;
   let status = "Pendiente de envío";
   let signatureState = "pending_configuration";
 
-  if (isLocalStaticPreview()) {
+  if (window.location.protocol === "file:") {
     showToast("Esta vista local no envía por Dropbox Sign. El paquete quedará guardado en el expediente.");
   } else {
     try {
@@ -2594,9 +2595,12 @@ async function submitSignaturePacket(event) {
       } else if (response.status !== 503) {
         const data = await response.json().catch(() => ({}));
         showToast(data.error || "No se pudo enviar a firma. El paquete quedará guardado.");
+        signatureFeedbackShown = true;
       }
     } catch (error) {
       console.warn("LexContratos firma no disponible", error);
+      showToast("No se pudo conectar con firma electrónica. El paquete quedará guardado.");
+      signatureFeedbackShown = true;
     }
   }
 
@@ -2625,7 +2629,9 @@ async function submitSignaturePacket(event) {
   signatureDialog.close();
   if (sendResult) {
     showToast(sendResult.testMode ? "Prueba de firma enviada. Revisa la bandeja de entrada y spam del firmante." : "Contrato enviado a firma electrónica.");
-  } else if (isLocalStaticPreview()) {
+  } else if (signatureFeedbackShown) {
+    return;
+  } else if (window.location.protocol === "file:" || isLocalStaticPreview()) {
     showToast("Paquete guardado. Los correos de firma solo se envían desde lexcontratos.com.");
   } else {
     showToast("Paquete de firma guardado. La integración se activará cuando esté configurada.");
