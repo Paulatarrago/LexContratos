@@ -1998,6 +1998,97 @@ function legalUppercase(value) {
   return String(value || "").trim().toLocaleUpperCase("es-MX");
 }
 
+function parseCurrencyAmount(value) {
+  const raw = String(value || "")
+    .replace(/\b(MXN|M\.?N\.?|PESOS?|IVA|MAS|MÁS)\b/gi, "")
+    .replace(/[^\d.,-]/g, "")
+    .trim();
+  if (!raw) return null;
+  const lastDot = raw.lastIndexOf(".");
+  const lastComma = raw.lastIndexOf(",");
+  let normalized = raw;
+  if (lastDot > -1 && lastComma > -1) {
+    const decimalSeparator = lastDot > lastComma ? "." : ",";
+    const thousandsSeparator = decimalSeparator === "." ? "," : ".";
+    normalized = raw.replace(new RegExp(`\\${thousandsSeparator}`, "g"), "").replace(decimalSeparator, ".");
+  } else if (lastComma > -1) {
+    const decimals = raw.length - lastComma - 1;
+    normalized = decimals === 2 ? raw.replace(/\./g, "").replace(",", ".") : raw.replace(/,/g, "");
+  } else {
+    const decimals = raw.length - lastDot - 1;
+    normalized = lastDot > -1 && decimals === 2 ? raw.replace(/,/g, "") : raw.replace(/[,.]/g, "");
+  }
+  const amount = Number(normalized);
+  if (!Number.isFinite(amount) || amount < 0) return null;
+  const pesos = Math.floor(amount);
+  const cents = Math.round((amount - pesos) * 100);
+  return {
+    pesos: cents === 100 ? pesos + 1 : pesos,
+    cents: cents === 100 ? 0 : cents
+  };
+}
+
+function hundredsToSpanish(number) {
+  const units = ["", "uno", "dos", "tres", "cuatro", "cinco", "seis", "siete", "ocho", "nueve"];
+  const teens = ["diez", "once", "doce", "trece", "catorce", "quince", "dieciséis", "diecisiete", "dieciocho", "diecinueve"];
+  const tens = ["", "", "veinte", "treinta", "cuarenta", "cincuenta", "sesenta", "setenta", "ochenta", "noventa"];
+  const hundreds = ["", "ciento", "doscientos", "trescientos", "cuatrocientos", "quinientos", "seiscientos", "setecientos", "ochocientos", "novecientos"];
+  if (number === 0) return "";
+  if (number === 100) return "cien";
+  if (number < 10) return units[number];
+  if (number < 20) return teens[number - 10];
+  if (number === 20) return "veinte";
+  if (number < 30) return `veinti${units[number - 20]}`;
+  if (number < 100) {
+    const unit = number % 10;
+    return unit ? `${tens[Math.floor(number / 10)]} y ${units[unit]}` : tens[number / 10];
+  }
+  const rest = number % 100;
+  return rest ? `${hundreds[Math.floor(number / 100)]} ${hundredsToSpanish(rest)}` : hundreds[number / 100];
+}
+
+function apocopateSpanishNumber(value) {
+  return value
+    .replace(/veintiuno\b/g, "veintiún")
+    .replace(/ y uno\b/g, " y un")
+    .replace(/\buno\b/g, "un");
+}
+
+function integerToSpanish(number) {
+  if (number === 0) return "cero";
+  const billions = Math.floor(number / 1000000000);
+  const millions = Math.floor((number % 1000000000) / 1000000);
+  const thousands = Math.floor((number % 1000000) / 1000);
+  const rest = number % 1000;
+  const parts = [];
+  if (billions) parts.push(billions === 1 ? "mil millones" : `${apocopateSpanishNumber(integerToSpanish(billions))} mil millones`);
+  if (millions) parts.push(millions === 1 ? "un millón" : `${apocopateSpanishNumber(integerToSpanish(millions))} millones`);
+  if (thousands) parts.push(thousands === 1 ? "mil" : `${apocopateSpanishNumber(hundredsToSpanish(thousands))} mil`);
+  if (rest) parts.push(hundredsToSpanish(rest));
+  return parts.join(" ");
+}
+
+function amountToSpanishCurrency(value) {
+  const parsed = parseCurrencyAmount(value);
+  if (!parsed) return "";
+  const pesosText = apocopateSpanishNumber(integerToSpanish(parsed.pesos));
+  const currency = parsed.pesos === 1 ? "peso" : "pesos";
+  const cents = String(parsed.cents).padStart(2, "0");
+  return `${pesosText} ${currency} ${cents}/100 M.N.`;
+}
+
+function syncAmountInWords({ force = false } = {}) {
+  const amount = partyForm.elements.importeNumero?.value || partyDataStore.importeNumero || "";
+  const amountInWords = amountToSpanishCurrency(amount);
+  if (!amountInWords) return false;
+  const input = partyForm.elements.importeLetra;
+  const current = input?.value || partyDataStore.importeLetra || "";
+  if (!force && current.trim()) return false;
+  partyDataStore.importeLetra = amountInWords;
+  if (input) input.value = amountInWords;
+  return true;
+}
+
 function roleHeadingAliases() {
   const baseAliases = [
     "EL CLIENTE",
@@ -3544,8 +3635,13 @@ function inferDataFromText(text, side) {
 }
 
 function applyDetectedData(updates) {
-  partyDataStore = { ...partyDataStore, ...updates };
-  Object.entries(updates).forEach(([name, value]) => {
+  const nextUpdates = { ...updates };
+  if (nextUpdates.importeNumero && !nextUpdates.importeLetra) {
+    const amountInWords = amountToSpanishCurrency(nextUpdates.importeNumero);
+    if (amountInWords) nextUpdates.importeLetra = amountInWords;
+  }
+  partyDataStore = { ...partyDataStore, ...nextUpdates };
+  Object.entries(nextUpdates).forEach(([name, value]) => {
     const input = partyForm.elements[name];
     if (input && value) input.value = value;
   });
@@ -4459,7 +4555,8 @@ partyForm.addEventListener("keydown", (event) => {
   integrateCompletedManualFields();
 });
 
-partyForm.addEventListener("input", () => {
+partyForm.addEventListener("input", (event) => {
+  if (event.target?.name === "importeNumero") syncAmountInWords({ force: true });
   renderRoleDrops();
   renderRequirements();
   if (!activeMatterFolio) renderMatterPanel();
