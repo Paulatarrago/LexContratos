@@ -574,6 +574,7 @@ const folderList = document.querySelector("#folder-list");
 const folderName = document.querySelector("#folder-name");
 const folderRoot = document.querySelector("#folder-root");
 const finderPath = document.querySelector("#finder-path");
+const folderContextMenu = document.querySelector("#folder-context-menu");
 const contractFolderSelect = document.querySelector("#contract-folder-select");
 const savedContractsList = document.querySelector("#saved-contracts");
 const versionList = document.querySelector("#version-list");
@@ -647,6 +648,7 @@ let matterHistoryEvents = [];
 let toastTimer;
 let autosaveTimer;
 let folderClickTimer;
+let contextMenuFolder = "";
 let saveLocationResolve = null;
 let saveLocationState = { folder: "Clientes", confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
 let pendingCriticalReviewBody = "";
@@ -2708,12 +2710,11 @@ function folderCounts(folder) {
 }
 
 function folderMetaText(folder) {
-  const { subfolders, contracts, savedVersions, documents } = folderCounts(folder);
+  const { subfolders, contracts, documents } = folderCounts(folder);
   const parts = [];
   if (subfolders) parts.push(`${subfolders} carpeta${subfolders === 1 ? "" : "s"}`);
   if (contracts) parts.push(`${contracts} contrato${contracts === 1 ? "" : "s"}`);
   if (documents) parts.push(`${documents} documento${documents === 1 ? "" : "s"}`);
-  if (savedVersions) parts.push(`${savedVersions} versión${savedVersions === 1 ? "" : "es"}`);
   return parts.join(" · ") || "Vacía";
 }
 
@@ -2885,47 +2886,50 @@ function renderFolders() {
   }
   if (!folders.includes(activeFolder)) activeFolder = "Clientes";
   renderFinderPath();
-  const columns = folderColumnParents();
+  const children = directChildFolders(activeFolder);
+  const parent = folderParent(activeFolder);
+  const rowForFolder = (folder, { parentRow = false, root = false } = {}) => {
+    const label = parentRow ? ".." : folder.split("/").pop();
+    const description = parentRow ? folder : folderMetaText(folder);
+    return `
+      <article class="finder-row ${folder === activeFolder ? "active" : ""} ${root ? "root-row" : ""}" data-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
+        <button class="folder-item finder-folder" type="button" data-folder="${escapeHtml(folder)}">
+          <span class="finder-icon" aria-hidden="true">▣</span>
+          <span class="finder-name">
+            <strong>${escapeHtml(label)}</strong>
+            <small>${escapeHtml(description)}</small>
+          </span>
+        </button>
+        <span>${parentRow ? "Carpeta superior" : "Carpeta"}</span>
+        <span>${escapeHtml(folderMetaText(folder))}</span>
+        <div class="folder-actions" aria-label="Acciones de carpeta">
+          <button class="folder-action rename-folder" type="button" data-folder="${escapeHtml(folder)}" ${rootFolders.includes(folder) || parentRow ? "disabled" : ""}>Renombrar</button>
+          <button class="folder-action danger delete-folder" type="button" data-folder="${escapeHtml(folder)}" ${rootFolders.includes(folder) || parentRow ? "disabled" : ""}>Eliminar</button>
+        </div>
+      </article>
+    `;
+  };
   folderList.innerHTML = `
-    <div class="finder-columns" role="list">
-      ${columns
-        .map((parent) => {
-          const items = directChildFolders(parent);
-          const title = parent ? parent.split("/").pop() : "Raíz";
-          return `
-            <section class="finder-column" aria-label="${escapeHtml(title)}">
-              <header>${escapeHtml(title)}</header>
-              ${
-                items.length
-                  ? items
-                      .map((folder) => {
-                        const label = folder.split("/").pop();
-                        const root = rootFolders.includes(folder);
-                        const isActive = folder === activeFolder;
-                        const isAncestor = !isActive && activeFolder.startsWith(`${folder}/`);
-                        return `
-                          <article class="finder-item ${isActive ? "active" : ""} ${isAncestor ? "ancestor" : ""}" data-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
-                            <button class="folder-item finder-folder" type="button" data-folder="${escapeHtml(folder)}">
-                              <span class="finder-icon" aria-hidden="true">▣</span>
-                              <span>
-                                <strong>${escapeHtml(label)}</strong>
-                                <small>${escapeHtml(folderMetaText(folder))}</small>
-                              </span>
-                            </button>
-                            <div class="folder-actions" aria-label="Acciones de carpeta">
-                              <button class="folder-action rename-folder" type="button" data-folder="${escapeHtml(folder)}" ${root ? "disabled" : ""}>Renombrar</button>
-                              <button class="folder-action danger delete-folder" type="button" data-folder="${escapeHtml(folder)}" ${root ? "disabled" : ""}>Eliminar</button>
-                            </div>
-                          </article>
-                        `;
-                      })
-                      .join("")
-                  : `<div class="finder-empty">Sin subcarpetas</div>`
-              }
-            </section>
-          `;
-        })
-        .join("")}
+    <div class="archive-finder" role="list" data-context-folder="${escapeHtml(activeFolder)}">
+      <div class="archive-rootbar" aria-label="Carpetas raíz">
+        ${rootFolders
+          .map((root) => `
+            <button class="folder-item archive-root ${activeFolder === root || activeFolder.startsWith(`${root}/`) ? "active" : ""}" type="button" data-folder="${escapeHtml(root)}">
+              <span class="finder-icon" aria-hidden="true">▣</span>${escapeHtml(root)}
+            </button>
+          `)
+          .join("")}
+      </div>
+      <div class="archive-list-header" aria-hidden="true">
+        <span>Nombre</span>
+        <span>Clase</span>
+        <span>Contenido</span>
+        <span>Acciones</span>
+      </div>
+      <div class="archive-list-body">
+        ${parent ? rowForFolder(parent, { parentRow: true }) : ""}
+        ${children.length ? children.map((folder) => rowForFolder(folder, { root: rootFolders.includes(folder) })).join("") : `<div class="finder-empty">Sin subcarpetas. Haz clic derecho aquí para crear una carpeta dentro de ${escapeHtml(activeFolder)}.</div>`}
+      </div>
     </div>
   `;
   renderFolderSelector();
@@ -2939,11 +2943,16 @@ function renderSavedContracts() {
         .slice()
         .reverse()
         .map((contract) => `
-          <article class="saved-contract" data-id="${contract.id}">
+          <article class="saved-contract content-row" data-id="${contract.id}">
             <button class="saved-contract-open open-saved-contract" type="button" data-id="${contract.id}">
-              <strong>${contract.title}</strong>
-              <span>${contract.status || (contract.language || "es").toUpperCase()} · ${contract.date}</span>
+              <span class="finder-icon" aria-hidden="true">□</span>
+              <span>
+                <strong>${contract.title}</strong>
+                <small>${contract.status || (contract.language || "es").toUpperCase()} · ${contract.date}</small>
+              </span>
             </button>
+            <span>Contrato</span>
+            <span>${escapeHtml(contract.date || "")}</span>
             <div class="saved-contract-actions">
               <button class="folder-action move-contract" type="button" data-id="${contract.id}">Mover</button>
               <button class="folder-action copy-contract" type="button" data-id="${contract.id}">Copiar</button>
@@ -2958,17 +2967,23 @@ function renderSavedContracts() {
         .slice()
         .reverse()
         .map((document) => `
-          <article class="saved-contract support-document">
+          <article class="saved-contract content-row support-document">
             <button class="saved-contract-open" type="button" disabled>
-              <strong>${escapeHtml(document.name)}</strong>
-              <span>${escapeHtml(document.type || "Documento soporte")} · ${escapeHtml(document.size || "")} · ${escapeHtml(document.date || "")}</span>
+              <span class="finder-icon" aria-hidden="true">□</span>
+              <span>
+                <strong>${escapeHtml(document.name)}</strong>
+                <small>${escapeHtml(document.type || "Documento soporte")} · ${escapeHtml(document.size || "")}</small>
+              </span>
             </button>
+            <span>${escapeHtml(document.type || "Documento")}</span>
+            <span>${escapeHtml(document.date || "")}</span>
+            <div></div>
           </article>
         `)
         .join("")
     : "";
   savedContractsList.innerHTML = contractHtml || documentHtml
-    ? `${contractHtml}${documentHtml}`
+    ? `<div class="content-list-header" aria-hidden="true"><span>Nombre</span><span>Clase</span><span>Fecha</span><span>Acciones</span></div>${contractHtml}${documentHtml}`
     : `<span>No hay contratos ni documentos guardados en ${activeFolder}. Selecciona un machote o carga documentos por parte.</span>`;
 }
 
@@ -2997,6 +3012,42 @@ function createFolderFromInput() {
   renderVersions();
   saveActiveDraft("Carpeta creada");
   showToast(`Carpeta ${activeFolder} lista para archivar contratos.`);
+}
+
+function createFolderInsideArchive(folder = activeFolder) {
+  const baseFolder = ensureFolderPath(folder || activeFolder || "Clientes");
+  const name = window.prompt(`Nombre de la nueva carpeta dentro de "${baseFolder}"`);
+  if (!name || !name.trim()) return;
+  const cleanName = name.trim().replace(/\//g, " ");
+  const newPath = ensureFolderPath(`${baseFolder}/${cleanName}`, baseFolder.split("/")[0] || "Clientes");
+  activeFolder = newPath;
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  renderFolderSelector();
+  saveActiveDraft("Carpeta creada");
+  showToast(`Carpeta creada: ${newPath}.`);
+}
+
+function hideFolderContextMenu() {
+  if (!folderContextMenu) return;
+  folderContextMenu.classList.add("is-hidden");
+  contextMenuFolder = "";
+}
+
+function showFolderContextMenu(event, folder = activeFolder) {
+  if (!folderContextMenu) return;
+  event.preventDefault();
+  event.stopPropagation();
+  contextMenuFolder = ensureFolderPath(folder || activeFolder || "Clientes");
+  const isRoot = rootFolders.includes(contextMenuFolder);
+  folderContextMenu.querySelector('[data-context-action="rename"]').disabled = isRoot;
+  folderContextMenu.querySelector('[data-context-action="delete"]').disabled = isRoot;
+  folderContextMenu.classList.remove("is-hidden");
+  const menuWidth = 210;
+  const menuHeight = 118;
+  folderContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - menuWidth - 10)}px`;
+  folderContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - menuHeight - 10)}px`;
 }
 
 function pathInFolder(path, folder) {
@@ -3429,8 +3480,12 @@ document.querySelector("#toggle-archive").addEventListener("click", (event) => {
   archiveDrawer.classList.add("open");
 });
 document.querySelector("#close-archive").addEventListener("click", () => archiveDrawer.classList.remove("open"));
-archiveDrawer.addEventListener("click", (event) => event.stopPropagation());
+archiveDrawer.addEventListener("click", (event) => {
+  if (!event.target.closest("#folder-context-menu")) hideFolderContextMenu();
+  event.stopPropagation();
+});
 document.addEventListener("click", () => {
+  hideFolderContextMenu();
   if (archiveDrawer.classList.contains("open")) archiveDrawer.classList.remove("open");
   if (assistantPane.classList.contains("open")) assistantPane.classList.remove("open");
 });
@@ -3711,7 +3766,7 @@ async function saveContractToArchive({ saveAs = false } = {}) {
   showToast(`${saveAs ? "Contrato guardado como copia" : "Contrato guardado"} en ${activeFolder}.`);
 }
 
-document.querySelector("#save-contract").addEventListener("click", () => saveContractToArchive());
+document.querySelector("#save-contract")?.addEventListener("click", () => saveContractToArchive());
 document.querySelector("#save-as-contract")?.addEventListener("click", () => saveContractToArchive({ saveAs: true }));
 
 document.querySelector("#save-version").addEventListener("click", () => {
@@ -3825,6 +3880,7 @@ function openArchiveFolder(folder, { announce = true } = {}) {
 }
 
 folderList.addEventListener("click", (event) => {
+  hideFolderContextMenu();
   const renameButton = event.target.closest(".rename-folder");
   if (renameButton) {
     renameFolder(renameButton.dataset.folder);
@@ -3841,6 +3897,32 @@ folderList.addEventListener("click", (event) => {
   folderClickTimer = window.setTimeout(() => {
     openArchiveFolder(button.dataset.folder, { announce: false });
   }, 220);
+});
+
+folderList.addEventListener("contextmenu", (event) => {
+  const row = event.target.closest("[data-folder]");
+  showFolderContextMenu(event, row?.dataset.folder || activeFolder);
+});
+
+savedContractsList.addEventListener("contextmenu", (event) => {
+  showFolderContextMenu(event, activeFolder);
+});
+
+folderContextMenu?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const action = event.target.closest("[data-context-action]")?.dataset.contextAction;
+  if (!action || !contextMenuFolder) return;
+  const folder = contextMenuFolder;
+  hideFolderContextMenu();
+  if (action === "new") {
+    createFolderInsideArchive(folder);
+    return;
+  }
+  if (action === "rename") {
+    renameFolder(folder);
+    return;
+  }
+  if (action === "delete") deleteFolder(folder);
 });
 
 folderList.addEventListener("dblclick", (event) => {

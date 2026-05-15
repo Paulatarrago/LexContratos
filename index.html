@@ -292,13 +292,13 @@
         <div class="drawer-heading">
           <div>
             <p class="eyebrow">Expedientes</p>
-            <h2>Archivo contractual</h2>
+            <h2>Archivo contractual <span class="info-tip" tabindex="0" data-tip="Explorador de carpetas para contratos, documentos soporte y expedientes. Puedes crear subcarpetas con Enter o clic derecho.">i</span></h2>
           </div>
           <button class="icon-button dark" id="close-archive" type="button" title="Cerrar expedientes" aria-label="Cerrar expedientes">×</button>
         </div>
 
         <section class="sidebar-panel">
-          <p class="eyebrow">Explorador</p>
+          <p class="eyebrow">Explorador <span class="info-tip" tabindex="0" data-tip="Navega como en Finder: abre carpetas, crea subcarpetas y organiza contratos por cliente, proveedor, asunto o documentos de las partes.">i</span></p>
           <div class="folder-create">
             <select id="folder-root" aria-label="Tipo de carpeta">
               <option value="Clientes">Clientes</option>
@@ -314,14 +314,17 @@
         </section>
 
         <section class="sidebar-panel">
-          <p class="eyebrow">Contenido de la carpeta</p>
+          <p class="eyebrow">Contenido de la carpeta <span class="info-tip" tabindex="0" data-tip="Aquí aparecen contratos y documentos guardados en la carpeta abierta. Da doble clic en una carpeta para entrar.">i</span></p>
           <div class="saved-contracts" id="saved-contracts" aria-live="polite"></div>
         </section>
 
-        <section class="sidebar-panel">
-          <p class="eyebrow">Versiones del expediente</p>
-          <div class="saved-contracts" id="version-list" aria-live="polite"></div>
-        </section>
+        <div class="saved-contracts is-hidden" id="version-list" aria-live="polite"></div>
+
+        <div class="folder-context-menu is-hidden" id="folder-context-menu" role="menu" aria-label="Acciones de carpeta">
+          <button type="button" data-context-action="new">Nueva carpeta aquí</button>
+          <button type="button" data-context-action="rename">Renombrar carpeta</button>
+          <button type="button" data-context-action="delete">Eliminar carpeta</button>
+        </div>
       </aside>
 
       <section class="workspace">
@@ -344,8 +347,7 @@
               <span id="template-count">13 machotes</span>
               <button class="secondary-action" id="rename-template" type="button">Renombrar copia</button>
               <button class="secondary-action" id="replicate-template" type="button">Nueva copia</button>
-              <button class="secondary-action" id="save-as-contract" type="button">Guardar como</button>
-              <button class="primary-action" id="save-contract" type="button">Guardar contrato</button>
+              <button class="primary-action" id="save-as-contract" type="button" title="Guarda una copia con nombre y carpeta, como en Finder.">Guardar como</button>
             </div>
           </article>
 
@@ -364,15 +366,15 @@
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Contrato de trabajo</p>
-                <h2 id="editor-mode-title">Documento principal</h2>
+                <h2 id="editor-mode-title">Documento principal <span class="info-tip" tabindex="0" data-tip="Área principal para leer, editar y revisar el contrato. El autoguardado protege el borrador mientras trabajas.">i</span></h2>
               </div>
               <div class="editor-actions">
-                <button class="secondary-action" id="review-fields" type="button">1. Detectar campos editables</button>
-                <button class="secondary-action" id="fill-contract" type="button">2. Integrar manualmente datos faltantes</button>
-                <button class="secondary-action" id="critical-review" type="button">3. Revisión crítica IA</button>
-                <button class="secondary-action" id="export-word" type="button">Exportar Word</button>
-                <button class="secondary-action" id="send-signature" type="button">Preparar firma</button>
-                <button class="secondary-action" id="save-version" type="button">Guardar versión limpia como plantilla base</button>
+                <button class="secondary-action" id="review-fields" type="button" title="Detecta los campos rellenables que siguen presentes en el contrato.">1. Detectar campos editables</button>
+                <button class="secondary-action" id="fill-contract" type="button" title="Abre el panel para completar únicamente los datos que sigan pendientes.">2. Integrar manualmente datos faltantes</button>
+                <button class="secondary-action" id="critical-review" type="button" title="Pide una revisión final con observaciones de claridad, riesgos y consistencia.">3. Revisión crítica IA</button>
+                <button class="secondary-action" id="export-word" type="button" title="Exporta el contrato editable a Word con formato legal.">Exportar Word</button>
+                <button class="secondary-action" id="send-signature" type="button" title="Prepara el paquete para enviar a firma electrónica cuando la integración esté activa.">Preparar firma</button>
+                <button class="secondary-action" id="save-version" type="button" title="Guarda una versión sin datos de las partes dentro de tu biblioteca de plantillas base.">Guardar versión limpia como plantilla base</button>
               </div>
             </div>
             <p class="editor-guidance">El contrato sigue siendo editable. LexContratos te ayuda con datos, campos y tareas repetitivas, pero el criterio jurídico y el contenido final permanecen bajo tu control. Cuando el contrato esté revisado, puedes exportarlo a Word o enviarlo a firma.</p>
@@ -418,7 +420,7 @@
             <div class="section-heading compact">
               <div>
                 <p class="eyebrow">Datos y documentos de cada parte</p>
-                <h2>Información de las partes</h2>
+                <h2>Información de las partes <span class="info-tip" tabindex="0" data-tip="Carga documentos por cada parte para evitar mezclar roles. Lo extraído se integra al contrato y lo faltante queda para captura manual.">i</span></h2>
               </div>
               <button class="secondary-action" id="extract-data" type="button">Extraer e integrar datos</button>
             </div>
@@ -440,7 +442,7 @@
           <summary>
             <div>
               <p class="eyebrow">Campos</p>
-              <strong>Pendientes</strong>
+              <strong>Pendientes <span class="info-tip" tabindex="0" data-tip="Solo se muestran los campos que siguen en el contrato y todavía no tienen dato integrado.">i</span></strong>
             </div>
           </summary>
           <form class="party-form" id="party-form">
@@ -457,7 +459,7 @@
           <summary>
             <div>
               <p class="eyebrow">Checklist</p>
-              <strong>Datos obligatorios</strong>
+              <strong>Datos obligatorios <span class="info-tip" tabindex="0" data-tip="Lista de control para saber qué falta antes de exportar o enviar a firma.">i</span></strong>
             </div>
           </summary>
           <div class="requirements-list" id="requirements-list"></div>
