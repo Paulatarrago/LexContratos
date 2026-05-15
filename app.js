@@ -609,8 +609,7 @@ const saveLocationTitle = document.querySelector("#save-location-title");
 const saveLocationBrowser = document.querySelector("#save-location-browser");
 const saveLocationSelected = document.querySelector("#save-location-selected");
 const saveLocationFileName = document.querySelector("#save-location-file-name");
-const saveLocationNewName = document.querySelector("#save-location-new-name");
-const saveLocationCreateFolder = document.querySelector("#save-location-create-folder");
+const saveLocationContextMenu = document.querySelector("#save-location-context-menu");
 const saveLocationCancel = document.querySelector("#save-location-cancel");
 const saveLocationConfirm = document.querySelector("#save-location-confirm");
 const signatureDialog = document.querySelector("#signature-dialog");
@@ -652,6 +651,7 @@ let folderClickTimer;
 let contextMenuFolder = "";
 let saveLocationResolve = null;
 let saveLocationState = { folder: "Clientes", confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
+let saveContextFolder = "";
 let pendingCriticalReviewBody = "";
 let lastCriticalReviewFindings = [];
 let restoringDraft = false;
@@ -2830,7 +2830,7 @@ function renderSaveLocationBrowser() {
       </div>
     `)
     .join("");
-  const emptyRows = !folderRows && !contractRows && !documentRows ? `<div class="save-file-empty">Esta carpeta está vacía. Puedes crear una carpeta aquí con Enter, con el botón “Crear carpeta” o con clic derecho.</div>` : "";
+  const emptyRows = !folderRows && !contractRows && !documentRows ? `<div class="save-file-empty">Esta carpeta está vacía. Haz clic derecho aquí para crear una carpeta dentro de esta ruta.</div>` : "";
   saveLocationBrowser.innerHTML = `
     <div class="save-location-shell" data-save-folder="${escapeHtml(selected)}">
       <aside class="save-location-roots" aria-label="Carpetas raíz">
@@ -2881,18 +2881,17 @@ function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder 
       requireName
     };
     if (saveLocationTitle) saveLocationTitle.textContent = title;
-    if (saveLocationNewName) saveLocationNewName.value = "";
     renderSaveLocationBrowser();
     saveLocationDialog.showModal();
   });
 }
 
-function createFolderInsideSaveLocation() {
-  const rawName = saveLocationNewName?.value.trim();
-  if (!rawName) return;
+function createFolderInsideSaveLocationAt(folder = saveLocationState.folder || "Clientes") {
+  const baseFolder = ensureFolderPath(folder || saveLocationState.folder || "Clientes");
+  const name = window.prompt(`Nombre de la nueva carpeta dentro de "${baseFolder}"`);
+  if (!name || !name.trim()) return;
   saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
-  saveLocationState.folder = ensureFolderPath(`${saveLocationState.folder}/${rawName}`, saveLocationState.folder.split("/")[0] || "Clientes");
-  if (saveLocationNewName) saveLocationNewName.value = "";
+  saveLocationState.folder = ensureFolderPath(`${baseFolder}/${name.trim().replace(/\//g, " ")}`, baseFolder.split("/")[0] || "Clientes");
   renderFolders();
   renderSaveLocationBrowser();
   showToast(`Carpeta lista: ${saveLocationState.folder}.`);
@@ -3115,6 +3114,27 @@ function showFolderContextMenu(event, folder = activeFolder, { onNew = null, onR
   const menuHeight = 118;
   folderContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - menuWidth - 10)}px`;
   folderContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - menuHeight - 10)}px`;
+}
+
+function hideSaveLocationContextMenu() {
+  if (!saveLocationContextMenu) return;
+  saveLocationContextMenu.classList.add("is-hidden");
+  saveContextFolder = "";
+}
+
+function showSaveLocationContextMenu(event, folder = saveLocationState.folder || activeFolder || "Clientes") {
+  if (!saveLocationContextMenu) return;
+  event.preventDefault();
+  event.stopPropagation();
+  saveContextFolder = ensureFolderPath(folder || saveLocationState.folder || activeFolder || "Clientes");
+  const isRoot = rootFolders.includes(saveContextFolder);
+  saveLocationContextMenu.querySelector('[data-save-context-action="rename"]').disabled = isRoot;
+  saveLocationContextMenu.querySelector('[data-save-context-action="delete"]').disabled = isRoot;
+  saveLocationContextMenu.classList.remove("is-hidden");
+  const menuWidth = 210;
+  const menuHeight = 118;
+  saveLocationContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - menuWidth - 10)}px`;
+  saveLocationContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - menuHeight - 10)}px`;
 }
 
 function pathInFolder(path, folder) {
@@ -3601,6 +3621,7 @@ archiveDrawer.addEventListener("click", (event) => {
 });
 document.addEventListener("click", () => {
   hideFolderContextMenu();
+  hideSaveLocationContextMenu();
   if (archiveDrawer.classList.contains("open")) archiveDrawer.classList.remove("open");
   if (assistantPane.classList.contains("open")) assistantPane.classList.remove("open");
 });
@@ -4075,6 +4096,7 @@ finderPath?.addEventListener("click", (event) => {
 });
 
 saveLocationBrowser?.addEventListener("click", (event) => {
+  hideSaveLocationContextMenu();
   const actionButton = event.target.closest(".save-folder-action");
   if (actionButton) {
     event.stopPropagation();
@@ -4101,28 +4123,18 @@ saveLocationBrowser?.addEventListener("dblclick", (event) => {
 saveLocationBrowser?.addEventListener("contextmenu", (event) => {
   const row = event.target.closest("[data-save-folder]");
   const folder = row?.dataset.saveFolder || saveLocationState.folder || activeFolder || "Clientes";
-  showFolderContextMenu(event, folder, {
-    onNew: (targetFolder) => {
-      saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
-      saveLocationState.folder = targetFolder;
-      const name = window.prompt(`Nombre de la nueva carpeta dentro de "${targetFolder}"`);
-      if (!name || !name.trim()) return;
-      saveLocationState.folder = ensureFolderPath(`${targetFolder}/${name.trim().replace(/\//g, " ")}`, targetFolder.split("/")[0] || "Clientes");
-      renderFolders();
-      renderSaveLocationBrowser();
-      showToast(`Carpeta lista: ${saveLocationState.folder}.`);
-    },
-    onRename: renameFolderInsideSaveLocation,
-    onDelete: deleteFolderInsideSaveLocation
-  });
+  showSaveLocationContextMenu(event, folder);
 });
 
-saveLocationCreateFolder?.addEventListener("click", createFolderInsideSaveLocation);
-
-saveLocationNewName?.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter") return;
-  event.preventDefault();
-  createFolderInsideSaveLocation();
+saveLocationContextMenu?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  const action = event.target.closest("[data-save-context-action]")?.dataset.saveContextAction;
+  if (!action || !saveContextFolder) return;
+  const folder = saveContextFolder;
+  hideSaveLocationContextMenu();
+  if (action === "new") createFolderInsideSaveLocationAt(folder);
+  if (action === "rename") renameFolderInsideSaveLocation(folder);
+  if (action === "delete") deleteFolderInsideSaveLocation(folder);
 });
 
 saveLocationConfirm?.addEventListener("click", () => {
@@ -4138,6 +4150,7 @@ saveLocationConfirm?.addEventListener("click", () => {
 saveLocationCancel?.addEventListener("click", () => resolveSaveLocation(null));
 
 saveLocationDialog?.addEventListener("close", () => {
+  hideSaveLocationContextMenu();
   if (saveLocationResolve) resolveSaveLocation(null);
 });
 

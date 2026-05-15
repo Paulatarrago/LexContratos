@@ -570,7 +570,7 @@
         <div>
           <p class="eyebrow">Guardar en expediente</p>
           <h2 id="save-location-title">Elige dónde guardar</h2>
-          <p class="dialog-copy">Selecciona una carpeta existente o crea una nueva dentro de la carpeta abierta. Da doble clic para entrar o clic derecho para crear, renombrar o eliminar carpetas.</p>
+          <p class="dialog-copy">Selecciona una carpeta existente. Da doble clic para entrar y usa clic derecho dentro del explorador para crear, renombrar o eliminar carpetas.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar selector de carpeta">×</button>
       </form>
@@ -585,9 +585,10 @@
         </div>
       </div>
       <div class="save-location-browser" id="save-location-browser" aria-label="Explorador de carpetas para guardar"></div>
-      <div class="save-location-create">
-        <input id="save-location-new-name" type="text" placeholder="Nueva carpeta dentro de la ruta seleccionada" />
-        <button class="secondary-action" id="save-location-create-folder" type="button">Crear carpeta</button>
+      <div class="folder-context-menu save-location-context-menu is-hidden" id="save-location-context-menu" role="menu" aria-label="Acciones de carpeta para guardar">
+        <button type="button" data-save-context-action="new">Nueva carpeta aquí</button>
+        <button type="button" data-save-context-action="rename">Renombrar carpeta</button>
+        <button type="button" data-save-context-action="delete">Eliminar carpeta</button>
       </div>
       <div class="dialog-actions">
         <button class="secondary-action" id="save-location-cancel" type="button">Cancelar</button>

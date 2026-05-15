@@ -2428,6 +2428,7 @@ dialog {
 
 .save-location-dialog {
   width: min(860px, calc(100vw - 28px));
+  position: relative;
 }
 
 .save-location-current {
@@ -2601,7 +2602,6 @@ dialog {
   font-size: 13px;
 }
 
-.save-location-create,
 .dialog-actions {
   display: flex;
   gap: 8px;
@@ -2610,9 +2610,8 @@ dialog {
   margin-top: 12px;
 }
 
-.save-location-create input {
-  flex: 1;
-  min-width: 0;
+.save-location-context-menu {
+  z-index: 1000;
 }
 
 .save-folder-actions {
