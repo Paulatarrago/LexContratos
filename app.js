@@ -977,8 +977,10 @@ function clearWorkspaceState() {
   editor.readOnly = true;
   autosaveStatus.textContent = "Sin contrato seleccionado";
   autosaveStatus.classList.remove("autosave-highlight");
-  renameTemplateButton.textContent = "Nombre protegido";
-  renameTemplateButton.title = "Selecciona un machote y duplica la plantilla para crear una copia editable.";
+  if (renameTemplateButton) {
+    renameTemplateButton.textContent = "Nombre protegido";
+    renameTemplateButton.title = "Selecciona un machote y duplica la plantilla para crear una copia editable.";
+  }
   renderTemplates();
   renderDynamicFields();
   renderCustomFields();
@@ -1896,8 +1898,10 @@ function loadTemplate(key) {
   editor.value = bodyForTemplate(key);
   editor.readOnly = !isWorkingCopy;
   autosaveStatus.textContent = isWorkingCopy ? "Copia de trabajo" : "Plantilla protegida";
-  renameTemplateButton.textContent = isWorkingCopy ? "Renombrar copia" : "Nombre protegido";
-  renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Las plantillas base se protegen; duplica para renombrar una copia.";
+  if (renameTemplateButton) {
+    renameTemplateButton.textContent = isWorkingCopy ? "Renombrar copia" : "Nombre protegido";
+    renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Las plantillas base se protegen; duplica para renombrar una copia.";
+  }
   autosaveStatus.classList.remove("autosave-highlight");
   sourceTextsBySide = { A: [], B: [] };
   activeMatterFolio = null;
@@ -2642,8 +2646,10 @@ function renderRoleDrops() {
           <label>
             <input class="role-file-input" type="file" multiple accept=".csv,.txt,.eml,.pdf,.xlsx,.xls,.docx,.jpg,.jpeg,.png,.webp" data-side="${role.side}" />
             <strong>Sube documentos corporativos, constancias fiscales e identificaciones por cada parte.</strong>
-            <small>Esta caja corresponde a ${role.label}. También puedes capturar los datos manualmente.</small>
+            <small>Esta caja corresponde a ${role.label}. También puedes arrastrar una carpeta completa o capturar datos manualmente.</small>
           </label>
+          <button class="folder-upload-trigger" type="button" data-side="${role.side}">Cargar carpeta completa</button>
+          <input class="role-folder-input" type="file" multiple webkitdirectory directory data-side="${role.side}" />
           <ul class="role-file-list">${files.map((file) => `<li><span>${file.type || classifySupportDocument(file.name)} · ${file.name}</span><strong>${file.size}</strong></li>`).join("")}</ul>
         </section>
       `;
@@ -2755,12 +2761,19 @@ function renderSaveLocationBrowser() {
   const folderRows = directChildFolders(selected)
     .map((folder) => {
       const label = folder.split("/").pop();
+      const root = rootFolders.includes(folder);
       return `
-        <button class="save-file-row save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
-          <span class="save-file-name"><span class="finder-icon" aria-hidden="true">▣</span><strong>${escapeHtml(label)}</strong></span>
+        <article class="save-file-row save-folder-row" data-save-folder="${escapeHtml(folder)}">
+          <button class="save-file-name save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
+            <span class="finder-icon" aria-hidden="true">▣</span><strong>${escapeHtml(label)}</strong>
+          </button>
           <span>${escapeHtml(folderMetaText(folder))}</span>
           <span>Carpeta</span>
-        </button>
+          <div class="save-folder-actions">
+            <button class="folder-action save-folder-action" type="button" data-save-action="rename" data-save-folder="${escapeHtml(folder)}" ${root ? "disabled" : ""}>Renombrar</button>
+            <button class="folder-action danger save-folder-action" type="button" data-save-action="delete" data-save-folder="${escapeHtml(folder)}" ${root ? "disabled" : ""}>Eliminar</button>
+          </div>
+        </article>
       `;
     })
     .join("");
@@ -2773,6 +2786,7 @@ function renderSaveLocationBrowser() {
         <span class="save-file-name"><span aria-hidden="true">□</span><strong>${escapeHtml(contract.title)}</strong></span>
         <span>${escapeHtml(contract.date || "")}</span>
         <span>Contrato</span>
+        <span></span>
       </div>
     `)
     .join("");
@@ -2785,6 +2799,7 @@ function renderSaveLocationBrowser() {
         <span class="save-file-name"><span aria-hidden="true">□</span><strong>${escapeHtml(document.name)}</strong></span>
         <span>${escapeHtml(document.date || "")}</span>
         <span>${escapeHtml(document.type || "Documento")}</span>
+        <span></span>
       </div>
     `)
     .join("");
@@ -2809,6 +2824,7 @@ function renderSaveLocationBrowser() {
           <span>Nombre</span>
           <span>Fecha de modificación</span>
           <span>Clase</span>
+          <span>Acciones</span>
         </div>
         <div class="save-file-list">
           ${folderRows}${contractRows}${documentRows}${emptyRows}
@@ -2852,6 +2868,23 @@ function createFolderInsideSaveLocation() {
   renderFolders();
   renderSaveLocationBrowser();
   showToast(`Carpeta lista: ${saveLocationState.folder}.`);
+}
+
+function renameFolderInsideSaveLocation(folder) {
+  saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
+  const newPath = renameFolder(folder);
+  if (!newPath) return;
+  saveLocationState.folder = replaceFolderPath(saveLocationState.folder || activeFolder, folder, newPath);
+  renderSaveLocationBrowser();
+}
+
+function deleteFolderInsideSaveLocation(folder) {
+  saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
+  const parent = folderParent(folder) || "Clientes";
+  if (!deleteFolder(folder)) return;
+  saveLocationState.folder = pathInFolder(saveLocationState.folder || activeFolder, folder) ? parent : saveLocationState.folder;
+  if (!folders.includes(saveLocationState.folder)) saveLocationState.folder = "Clientes";
+  renderSaveLocationBrowser();
 }
 
 function ensureFolderPath(value, fallbackRoot = activeFolder.split("/")[0] || "Clientes") {
@@ -3105,6 +3138,7 @@ function renameFolder(folder) {
   renderVersions();
   saveActiveDraft("Carpeta renombrada");
   showToast(`Carpeta renombrada como ${newPath}.`);
+  return newPath;
 }
 
 function deleteFolder(folder) {
@@ -3141,6 +3175,7 @@ function deleteFolder(folder) {
   renderVersions();
   saveActiveDraft("Carpeta eliminada");
   showToast(affectedContracts || affectedVersions || affectedDocuments ? "Carpeta eliminada. Su contenido se movió a una carpeta raíz." : "Carpeta eliminada.");
+  return true;
 }
 
 function askDestinationFolder(currentFolder) {
@@ -3348,6 +3383,41 @@ async function extractRoleDataWithAi(role) {
   return normalizeExtractionValues(result);
 }
 
+async function entryFiles(entry, path = "") {
+  if (!entry) return [];
+  if (entry.isFile) {
+    return new Promise((resolve) => {
+      entry.file((file) => {
+        const relativePath = `${path}${file.name}`;
+        try {
+          Object.defineProperty(file, "relativePath", { value: relativePath, configurable: true });
+        } catch {
+          file.relativePath = relativePath;
+        }
+        resolve([file]);
+      });
+    });
+  }
+  if (!entry.isDirectory) return [];
+  const reader = entry.createReader();
+  const entries = [];
+  let batch = [];
+  do {
+    batch = await new Promise((resolve) => reader.readEntries(resolve));
+    entries.push(...batch);
+  } while (batch.length);
+  const nested = await Promise.all(entries.map((item) => entryFiles(item, `${path}${entry.name}/`)));
+  return nested.flat();
+}
+
+async function filesFromDrop(dataTransfer) {
+  const items = Array.from(dataTransfer?.items || []);
+  const entries = items.map((item) => item.webkitGetAsEntry?.()).filter(Boolean);
+  if (!entries.length) return Array.from(dataTransfer?.files || []);
+  const files = await Promise.all(entries.map((entry) => entryFiles(entry)));
+  return files.flat();
+}
+
 async function addFilesToRole(side, fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
@@ -3357,10 +3427,11 @@ async function addFilesToRole(side, fileList) {
   const existing = new Set(current.map((file) => `${file.name}-${file.size}`));
   const entries = [];
   for (const file of files) {
-    const key = `${file.name}-${Math.ceil(file.size / 1024)} KB`;
+    const displayName = file.webkitRelativePath || file.relativePath || file.name;
+    const key = `${displayName}-${Math.ceil(file.size / 1024)} KB`;
     if (existing.has(key)) continue;
-    const entry = { name: file.name, size: `${Math.ceil(file.size / 1024)} KB`, type: classifySupportDocument(file.name), text: "", file };
-    if (/\.(txt|csv|eml)$/i.test(file.name)) entry.text = await file.text();
+    const entry = { name: displayName, size: `${Math.ceil(file.size / 1024)} KB`, type: classifySupportDocument(displayName), text: "", file };
+    if (/\.(txt|csv|eml)$/i.test(displayName)) entry.text = await file.text();
     entries.push(entry);
   }
   if (!entries.length) {
@@ -3419,10 +3490,18 @@ templateGrid.addEventListener("click", async (event) => {
 });
 
 roleDropGrid.addEventListener("change", async (event) => {
-  if (!event.target.classList.contains("role-file-input")) return;
+  if (!event.target.classList.contains("role-file-input") && !event.target.classList.contains("role-folder-input")) return;
   const side = event.target.dataset.side;
   await addFilesToRole(side, event.target.files);
   event.target.value = "";
+});
+
+roleDropGrid.addEventListener("click", (event) => {
+  const folderButton = event.target.closest(".folder-upload-trigger");
+  if (!folderButton) return;
+  event.preventDefault();
+  const input = roleDropGrid.querySelector(`.role-folder-input[data-side="${folderButton.dataset.side}"]`);
+  input?.click();
 });
 
 roleDropGrid.addEventListener("dragover", (event) => {
@@ -3442,7 +3521,7 @@ roleDropGrid.addEventListener("drop", async (event) => {
   if (!drop) return;
   event.preventDefault();
   drop.classList.remove("is-dragging");
-  await addFilesToRole(drop.dataset.side, event.dataTransfer.files);
+  await addFilesToRole(drop.dataset.side, await filesFromDrop(event.dataTransfer));
 });
 
 document.querySelectorAll(".chip").forEach((chip) => {
@@ -3522,11 +3601,11 @@ document.querySelector("#copy-contract")?.addEventListener("click", async () => 
 
 document.querySelector("#review-fields").addEventListener("click", reviewEditableFieldsFromContract);
 
-document.querySelector("#replicate-template").addEventListener("click", () => {
+document.querySelector("#replicate-template")?.addEventListener("click", () => {
   createWorkingCopy(activeSourceMaster || activeTemplate, editor.value);
 });
 
-document.querySelector("#rename-template").addEventListener("click", renameActiveTemplate);
+document.querySelector("#rename-template")?.addEventListener("click", renameActiveTemplate);
 
 document.querySelector("#clear-generales").addEventListener("click", clearGeneralData);
 document.querySelector("#integrate-manual-data")?.addEventListener("click", integrateCompletedManualFields);
@@ -3939,6 +4018,14 @@ finderPath?.addEventListener("click", (event) => {
 });
 
 saveLocationBrowser?.addEventListener("click", (event) => {
+  const actionButton = event.target.closest(".save-folder-action");
+  if (actionButton) {
+    event.stopPropagation();
+    const folder = actionButton.dataset.saveFolder;
+    if (actionButton.dataset.saveAction === "rename") renameFolderInsideSaveLocation(folder);
+    if (actionButton.dataset.saveAction === "delete") deleteFolderInsideSaveLocation(folder);
+    return;
+  }
   const button = event.target.closest(".save-folder-option");
   if (!button) return;
   saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
@@ -4126,7 +4213,7 @@ document.addEventListener("visibilitychange", () => {
   control.addEventListener("change", readFormatControls);
 });
 
-document.querySelector("#apply-legal-format").addEventListener("click", applyDefaultLegalFormat);
+document.querySelector("#apply-legal-format")?.addEventListener("click", applyDefaultLegalFormat);
 
 const lastLoginEmail = localStorage.getItem("lexcontratos_last_login_email");
 if (lastLoginEmail) document.querySelector("#login-email").value = lastLoginEmail;

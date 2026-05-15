@@ -1307,6 +1307,11 @@ button {
   min-height: 34px;
 }
 
+.format-panel .primary-action {
+  min-height: 34px;
+  box-shadow: none;
+}
+
 #contract-editor {
   width: 100%;
   min-height: clamp(330px, 46vh, 620px);
@@ -1398,11 +1403,25 @@ button {
   line-height: 1.35;
 }
 
-.role-drop input[type="file"] {
+.role-drop .role-file-input {
   position: absolute;
   inset: 0;
   opacity: 0;
   cursor: pointer;
+}
+
+.role-folder-input {
+  display: none;
+}
+
+.folder-upload-trigger {
+  min-height: 30px;
+  border: 1px solid rgba(41, 75, 121, 0.18);
+  border-radius: 7px;
+  color: var(--blue);
+  background: #ffffff;
+  font-size: 12px;
+  font-weight: 820;
 }
 
 .role-file-list {
@@ -2350,7 +2369,7 @@ dialog {
 .save-file-header,
 .save-file-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 160px 120px;
+  grid-template-columns: minmax(220px, 1fr) 160px 120px 144px;
   gap: 8px;
   align-items: center;
   padding: 7px 10px;
@@ -2395,6 +2414,11 @@ dialog {
   display: flex;
   align-items: center;
   gap: 8px;
+  border: 0;
+  color: inherit;
+  background: transparent;
+  text-align: left;
+  font-weight: 780;
 }
 
 .save-file-name strong {
@@ -2421,6 +2445,12 @@ dialog {
 .save-location-create input {
   flex: 1;
   min-width: 0;
+}
+
+.save-folder-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 5px;
 }
 
 .critical-review-actions {
