@@ -268,18 +268,7 @@
           </div>
 
         <div class="topbar-actions">
-          <button class="secondary-action" id="toggle-archive" type="button">Expedientes</button>
-          <button class="primary-action" id="open-template-picker" type="button">Seleccionar machote</button>
-          <label class="secondary-action file-action" for="template-import">
-            Importar machote propio
-            <input id="template-import" type="file" accept=".txt,.csv,.eml,.docx,.pdf" />
-          </label>
-          <button class="secondary-action" id="new-template" type="button">Nuevo machote</button>
           <button class="secondary-action" id="open-user-guide" type="button">Manual de Uso</button>
-          <div class="segmented-control language-toggle" role="tablist" aria-label="Idioma del contrato">
-            <button class="active" type="button" data-language="es">ES</button>
-            <button type="button" data-language="en">EN</button>
-          </div>
           <div class="user-session" aria-label="Sesión de usuario">
             <span id="license-pill">Licencia activa</span>
             <strong id="current-user-label">Despacho</strong>
@@ -334,13 +323,6 @@
               <p class="eyebrow" id="selected-category">Inicio</p>
               <h2 id="editor-title">Selecciona o importa un machote</h2>
               <p id="selected-description">El contrato aparecerá aquí cuando elijas una plantilla base o importes un machote propio.</p>
-              <div class="save-destination">
-                <label>
-                  Guardar en
-                  <select id="contract-folder-select" aria-label="Carpeta donde se guardará este contrato"></select>
-                </label>
-                <button class="secondary-action" id="quick-folder" type="button">Elegir carpeta</button>
-              </div>
             </div>
             <div class="summary-actions">
               <span id="autosave-status">Sin cambios</span>
@@ -360,6 +342,19 @@
           </section>
 
           <section class="editor-pane document-focus">
+            <div class="workspace-action-strip" aria-label="Acciones principales de contrato">
+              <button class="secondary-action" id="toggle-archive" type="button">Expedientes</button>
+              <button class="primary-action" id="open-template-picker" type="button">Seleccionar machote</button>
+              <label class="secondary-action file-action" for="template-import">
+                Importar machote propio
+                <input id="template-import" type="file" accept=".txt,.csv,.eml,.docx,.pdf" />
+              </label>
+              <button class="secondary-action" id="new-template" type="button">Nuevo machote</button>
+              <div class="segmented-control language-toggle" role="tablist" aria-label="Idioma del contrato">
+                <button class="active" type="button" data-language="es">ES</button>
+                <button type="button" data-language="en">EN</button>
+              </div>
+            </div>
             <div class="section-heading">
               <div>
                 <p class="eyebrow">Contrato de trabajo</p>

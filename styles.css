@@ -619,6 +619,113 @@ button {
   padding: 24px;
 }
 
+.route-home .auth-shell {
+  background: #fbfaf7;
+}
+
+.route-home .auth-hero,
+.route-home .legal-shell {
+  color: var(--ink);
+}
+
+.route-home .landing-nav {
+  border-color: #e7dfd2;
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 14px 36px rgba(16, 24, 32, 0.08);
+}
+
+.route-home .landing-brand strong {
+  color: var(--ink);
+}
+
+.route-home .landing-brand span {
+  color: #66758a;
+}
+
+.route-home .landing-nav-actions .primary-action {
+  color: white;
+  background: var(--blue);
+  border-color: var(--blue);
+  box-shadow: none;
+}
+
+.route-home .auth-hero h1 {
+  color: var(--ink);
+}
+
+.route-home .auth-hero h1 span {
+  color: var(--accent-ink);
+  text-shadow: none;
+}
+
+.route-home .auth-lede,
+.route-home .auth-flow span,
+.route-home .auth-value-grid span,
+.route-home .auth-security p,
+.route-home .contact-card p {
+  color: #536174;
+}
+
+.route-home .source-chip-row span,
+.route-home .auth-flow span {
+  color: var(--ink);
+  background: white;
+  border-color: #e7dfd2;
+}
+
+.route-home .auth-value-grid article,
+.route-home .auth-security,
+.route-home .contact-card {
+  border-color: #e7dfd2;
+  background: white;
+  box-shadow: 0 16px 40px rgba(16, 24, 32, 0.08);
+}
+
+.route-home .auth-value-grid strong,
+.route-home .auth-security h2,
+.route-home .contact-card h2 {
+  color: var(--ink);
+}
+
+.route-home .security-proof-grid article {
+  border-color: #eadfce;
+  background: #fffaf1;
+}
+
+.route-home .security-proof-grid span {
+  color: var(--accent-ink);
+}
+
+.route-home .security-proof-grid strong {
+  color: var(--ink);
+}
+
+.route-home .visual-card {
+  color: var(--accent-ink);
+  background: var(--accent-soft);
+  box-shadow: 0 16px 34px rgba(16, 24, 32, 0.14);
+}
+
+.route-home .sign-card {
+  background: white;
+}
+
+.route-home .ghost-button.light {
+  color: var(--ink);
+  background: white;
+  border-color: #e7dfd2;
+}
+
+.route-home .contact-form label {
+  color: #536174;
+}
+
+.route-home .contact-form input,
+.route-home .contact-form textarea {
+  border-color: #d7e2ee;
+  background: white;
+}
+
 .auth-card h1 {
   margin: 20px 0 8px;
   font-size: 26px;
@@ -894,6 +1001,7 @@ button {
 }
 
 .topbar-actions,
+.workspace-action-strip,
 .editor-actions,
 .summary-actions {
   display: flex;
@@ -905,6 +1013,20 @@ button {
 
 .editor-actions {
   justify-content: flex-start;
+}
+
+.workspace-action-strip {
+  justify-content: flex-start;
+  gap: 8px;
+  margin-bottom: 8px;
+  padding: 8px;
+  border: 1px solid #e7dfd2;
+  border-radius: 8px;
+  background: #fffaf1;
+}
+
+.workspace-action-strip .primary-action {
+  box-shadow: none;
 }
 
 .editor-actions #review-fields,

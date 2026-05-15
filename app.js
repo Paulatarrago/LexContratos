@@ -3610,7 +3610,7 @@ document.querySelector("#rename-template")?.addEventListener("click", renameActi
 document.querySelector("#clear-generales").addEventListener("click", clearGeneralData);
 document.querySelector("#integrate-manual-data")?.addEventListener("click", integrateCompletedManualFields);
 
-contractFolderSelect.addEventListener("change", () => {
+contractFolderSelect?.addEventListener("change", () => {
   activeFolder = contractFolderSelect.value;
   renderFolders();
   renderSavedContracts();
@@ -3619,7 +3619,7 @@ contractFolderSelect.addEventListener("change", () => {
   showToast(`Este contrato se guardará en ${activeFolder}.`);
 });
 
-quickFolderButton.addEventListener("click", async () => {
+quickFolderButton?.addEventListener("click", async () => {
   const destination = await openSaveLocationDialog({
     title: "Elegir carpeta de trabajo",
     initialFolder: activeFolder || "Clientes",
