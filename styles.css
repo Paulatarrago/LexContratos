@@ -1092,6 +1092,36 @@ button {
   background: var(--accent-soft);
 }
 
+.editor-actions .workflow-step {
+  transition: background 0.18s ease, border-color 0.18s ease, box-shadow 0.18s ease, color 0.18s ease;
+}
+
+.editor-actions .workflow-step.step-current {
+  color: white;
+  border-color: var(--blue);
+  background: var(--blue);
+  box-shadow: 0 0 0 3px rgba(42, 169, 224, 0.18);
+}
+
+.editor-actions .workflow-step.step-done {
+  color: #155e38;
+  border-color: rgba(22, 163, 74, 0.32);
+  background: #ecfdf3;
+}
+
+.editor-actions .workflow-step.step-locked {
+  color: #7a8798;
+  border-color: #dce5ef;
+  background: #f6f8fb;
+}
+
+.editor-actions #export-word.step-ready,
+.editor-actions #send-signature.step-ready {
+  color: var(--accent-ink);
+  border-color: rgba(211, 154, 67, 0.52);
+  background: var(--accent-soft);
+}
+
 .primary-action,
 .secondary-action,
 .ghost-button,

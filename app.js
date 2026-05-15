@@ -708,6 +708,7 @@ let lastCriticalReviewFindings = [];
 let restoringDraft = false;
 let draftRestoredForUser = "";
 let fieldsReviewed = false;
+let criticalReviewDone = false;
 
 const demoAccount = {
   email: "usuario.demo@lexcontratos.local",
@@ -1034,6 +1035,7 @@ function clearWorkspaceState() {
     renameTemplateButton.textContent = "Nombre protegido";
     renameTemplateButton.title = "Selecciona un machote y duplica la plantilla para crear una copia editable.";
   }
+  criticalReviewDone = false;
   setFieldsReviewedState(false);
   renderTemplates();
   renderDynamicFields();
@@ -1314,6 +1316,7 @@ function showToast(message) {
 
 function setFieldsReviewedState(reviewed) {
   fieldsReviewed = Boolean(reviewed);
+  if (!fieldsReviewed) criticalReviewDone = false;
   if (!reviewFieldsButton) return;
   reviewFieldsButton.classList.toggle("needs-review", !fieldsReviewed);
   reviewFieldsButton.classList.toggle("review-complete", fieldsReviewed);
@@ -1321,6 +1324,7 @@ function setFieldsReviewedState(reviewed) {
   reviewFieldsButton.title = fieldsReviewed
     ? "Campos revisados. Si modificas o importas otro contrato, vuelve a detectar campos antes de integrar datos."
     : "Paso obligatorio antes de subir, extraer o integrar datos. Detecta los campos rellenables que siguen presentes en el contrato.";
+  updateWorkflowStepState();
 }
 
 function requireFieldsReviewed(actionLabel = "seguir") {
@@ -1329,6 +1333,29 @@ function requireFieldsReviewed(actionLabel = "seguir") {
   showToast(`Primero detecta los campos editables. Es obligatorio antes de ${actionLabel}.`);
   reviewFieldsButton?.focus();
   return false;
+}
+
+function setWorkflowButtonState(button, state) {
+  if (!button) return;
+  ["step-current", "step-done", "step-locked", "step-ready"].forEach((className) => button.classList.remove(className));
+  if (state) button.classList.add(state);
+  if (state === "step-current") button.setAttribute("aria-current", "step");
+  else button.removeAttribute("aria-current");
+}
+
+function updateWorkflowStepState() {
+  const fillButton = document.querySelector("#fill-contract");
+  const criticalButton = document.querySelector("#critical-review");
+  const exportButton = document.querySelector("#export-word");
+  const signatureButton = document.querySelector("#send-signature");
+  const missingCount = fieldsReviewed ? missingFieldsForActiveTemplate().length : 0;
+  const dataComplete = fieldsReviewed && missingCount === 0;
+
+  setWorkflowButtonState(reviewFieldsButton, fieldsReviewed ? "step-done" : "step-current");
+  setWorkflowButtonState(fillButton, !fieldsReviewed ? "step-locked" : dataComplete ? "step-done" : "step-current");
+  setWorkflowButtonState(criticalButton, !dataComplete ? "step-locked" : criticalReviewDone ? "step-done" : "step-current");
+  setWorkflowButtonState(exportButton, criticalReviewDone ? "step-ready" : "");
+  setWorkflowButtonState(signatureButton, criticalReviewDone ? "step-ready" : "");
 }
 
 function productionBackend() {
@@ -1589,6 +1616,7 @@ function fillPlaceholders(text) {
 
 function integrateKnownDataIntoContract(reason = "Datos integrados al contrato") {
   if (!isWorkingCopy || !editor.value.trim()) return 0;
+  criticalReviewDone = false;
   const values = getPartyData();
   const filledKeys = new Set(
     Array.from(editor.value.matchAll(/\{\{(\w+)\}\}/g))
@@ -2834,11 +2862,15 @@ async function runCriticalReview(mode) {
     if (!response.ok) throw new Error("critical review unavailable");
     const result = await response.json();
     rememberCriticalReview(result);
+    criticalReviewDone = true;
+    updateWorkflowStepState();
     pendingCriticalReviewBody = mode === "propose" && result.revisedBody ? result.revisedBody : "";
     renderCriticalReview(result, mode);
   } catch (error) {
     const result = buildLocalCriticalReview(mode);
     rememberCriticalReview(result);
+    criticalReviewDone = true;
+    updateWorkflowStepState();
     renderCriticalReview({
       ...result,
       summary: `${result.summary} La revisión avanzada estará disponible cuando la IA documental esté activa.`
@@ -2851,11 +2883,13 @@ function applyCriticalReviewSuggestion() {
   editor.value = pendingCriticalReviewBody;
   pendingCriticalReviewBody = "";
   lastCriticalReviewFindings = [];
+  criticalReviewDone = true;
   applyCriticalReviewButton.classList.add("is-hidden");
   autoSaveVersion("manual");
   saveActiveDraft("Ajustes de revisión crítica integrados");
   addMatterEvent("Ajustes sugeridos por revisión crítica integrados");
   criticalReviewDialog.close();
+  updateWorkflowStepState();
   showToast("Cambios sugeridos integrados. Revisa el contrato antes de exportar o firmar.");
 }
 
@@ -2890,6 +2924,7 @@ function applyCriticalChange(changeId) {
   autoSaveVersion("manual");
   saveActiveDraft("Cambio puntual de revisión crítica integrado");
   addMatterEvent("Cambio puntual de revisión crítica integrado");
+  updateWorkflowStepState();
   showToast("Cambio integrado. Revisa el texto en el contrato.");
 }
 
@@ -3130,6 +3165,7 @@ function renderRequirements() {
       </div>`;
     })
     .join("");
+  updateWorkflowStepState();
 }
 
 function renderFolderSelector() {
@@ -3817,6 +3853,7 @@ function inferDataFromText(text, side) {
 }
 
 function applyDetectedData(updates) {
+  criticalReviewDone = false;
   const nextUpdates = { ...updates };
   if (nextUpdates.importeNumero && !nextUpdates.importeLetra) {
     const amountInWords = amountToSpanishCurrency(nextUpdates.importeNumero);
@@ -4738,6 +4775,7 @@ partyForm.addEventListener("keydown", (event) => {
 });
 
 partyForm.addEventListener("input", (event) => {
+  criticalReviewDone = false;
   if (event.target?.matches("[data-service-select]")) syncServiceContractedField(event.target);
   if (event.target?.matches("[data-service-value]")) partyDataStore.servicioContratado = event.target.value.trim();
   if (event.target?.name === "importeNumero") syncAmountInWords({ force: true });
@@ -4750,6 +4788,7 @@ partyForm.addEventListener("input", (event) => {
 
 partyForm.addEventListener("change", (event) => {
   if (event.target?.matches("[data-service-select]")) {
+    criticalReviewDone = false;
     syncServiceContractedField(event.target);
     renderRoleDrops();
     renderRequirements();
@@ -4759,7 +4798,10 @@ partyForm.addEventListener("change", (event) => {
 });
 
 editor.addEventListener("input", () => {
-  if (isWorkingCopy) setFieldsReviewedState(false);
+  if (isWorkingCopy) {
+    criticalReviewDone = false;
+    setFieldsReviewedState(false);
+  }
   scheduleAutoSave();
 });
 
