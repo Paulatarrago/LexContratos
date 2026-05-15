@@ -2221,7 +2221,7 @@ function exportWordDocument() {
         body { font-family: "${legalFormat.font}", serif; color: #111827; line-height: ${legalFormat.lineHeight}; margin: 0; font-size: ${legalFormat.size}pt; }
         h1 { font-size: ${Number(legalFormat.size) + 2}pt; text-align: center; font-weight: 700; margin: 0 0 24pt; text-transform: uppercase; }
         h2 { font-size: ${legalFormat.size}pt; text-align: justify; font-weight: 700; margin: 18pt 0 10pt; text-transform: uppercase; }
-        h2.annex-title { text-align: center; margin-top: 22pt; }
+        h2.annex-title { text-align: center; margin-top: 0; page-break-before: always; break-before: page; }
         p { margin: 0 0 10pt; text-align: justify; }
         a.email-link { color: #1155cc; text-decoration: underline; }
         ol.legal-list, ul.legal-list { margin: 0 0 10pt 24pt; padding-left: 18pt; text-align: justify; }
