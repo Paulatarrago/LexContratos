@@ -58,10 +58,11 @@
           <div class="manual-card-grid">
             <article><span>1</span><strong>Elige o sube machote</strong><p>Usa una plantilla base o importa tu formato.</p></article>
             <article><span>2</span><strong>Crea una copia editable</strong><p>Trabaja sin alterar la plantilla original.</p></article>
-            <article><span>3</span><strong>Carga documentos de cada parte</strong><p>Actas, poderes, constancias, identificaciones oficiales, correos, Word, PDF, Excel o JPG.</p></article>
-            <article><span>4</span><strong>Valida y completa generales</strong><p>Revisa los datos extraídos y corrige o captura manualmente lo que falte.</p></article>
-            <article><span>5</span><strong>Edita tus cláusulas</strong><p>Ajusta el clausulado directamente desde la app, sin perder la versión editable.</p></article>
-            <article><span>6</span><strong>Exporta o envía a firma</strong><p>Genera Word con formato listo para impresión o prepara la firma de las partes, sin salir de la interfaz.</p></article>
+            <article class="required-step"><span>3</span><strong>Detecta campos editables</strong><p>Este paso es obligatorio antes de cargar documentos, extraer datos o completar el contrato.</p></article>
+            <article><span>4</span><strong>Carga documentos de cada parte</strong><p>Actas, poderes, constancias, identificaciones oficiales, correos, Word, PDF, Excel o JPG.</p></article>
+            <article><span>5</span><strong>Valida y completa generales</strong><p>Revisa los datos extraídos y corrige o captura manualmente lo que falte.</p></article>
+            <article><span>6</span><strong>Edita tus cláusulas</strong><p>Ajusta el clausulado directamente desde la app, sin perder la versión editable.</p></article>
+            <article><span>7</span><strong>Exporta o envía a firma</strong><p>Genera Word con formato listo para impresión o prepara la firma de las partes, sin salir de la interfaz.</p></article>
           </div>
         </section>
 
@@ -478,74 +479,105 @@
       <form method="dialog" class="dialog-close-row">
         <div>
           <p class="eyebrow">Manual de uso</p>
-          <h2>Guía rápida para trabajar contratos</h2>
-          <p class="dialog-copy">LexContratos es un asistente eficaz para extraer datos validables, prellenar generales y reducir captura repetitiva. Tú conservas el control de datos, clausulado, expediente y versión final.</p>
+          <h2>Guía de prueba para trabajar contratos</h2>
+          <p class="dialog-copy">Usa esta guía como material de consulta durante las pruebas. El paso “Detectar campos editables” es obligatorio antes de cargar documentos, extraer información, integrar datos o completar el contrato.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar manual">×</button>
       </form>
 
       <section class="user-guide">
+        <div class="guide-note guide-alert">
+          <strong>Regla importante:</strong> si seleccionas otro machote, importas un contrato, editas campos entre llaves o borras partes del contrato, vuelve a presionar “Detectar campos editables”. Esto evita que LexContratos busque datos que ya no existen o deje pendientes que sí deben llenarse.
+        </div>
         <div class="guide-steps">
           <article>
             <span>1</span>
             <div>
-              <strong>Elige tu punto de partida</strong>
-              <p>Selecciona un machote precargado o importa tu propio contrato como plantilla.</p>
+              <strong>Selecciona o importa el machote</strong>
+              <p>Empieza desde “Seleccionar machote” para usar una plantilla precargada, o desde “Importar machote propio” si quieres traer un contrato tuyo. La plantilla base no debe trabajarse como versión final: úsala como punto de partida.</p>
             </div>
           </article>
           <article>
             <span>2</span>
             <div>
-              <strong>Trabaja siempre sobre una copia</strong>
-              <p>Duplica la plantilla para editar sin alterar la versión base.</p>
+              <strong>Guarda una copia de trabajo</strong>
+              <p>Usa “Guardar como” para decidir desde el inicio en qué carpeta o expediente quedará el contrato. Puedes crear carpetas y subcarpetas con clic derecho dentro del explorador de guardado.</p>
             </div>
           </article>
           <article>
             <span>3</span>
             <div>
-              <strong>Organiza el expediente</strong>
-              <p>Elige dónde guardar el contrato por cliente, proveedor, asunto o carpeta interna.</p>
+              <strong>Detecta campos editables obligatoriamente</strong>
+              <p>Antes de subir documentos o integrar datos, presiona “1. Detectar campos editables”. LexContratos revisa el contrato abierto, identifica qué campos siguen presentes y limpia la lista de datos que realmente debe buscar o pedir.</p>
             </div>
           </article>
           <article>
             <span>4</span>
             <div>
-              <strong>Carga documentos de cada parte</strong>
-              <p>Arrastra actas, poderes, constancias fiscales, identificaciones oficiales, correos, Word, PDF, Excel o imágenes en la caja correspondiente.</p>
+              <strong>Carga documentos en la caja correcta</strong>
+              <p>Sube archivos por rol: prestador, cliente, proveedor, arrendador, comprador o la parte que corresponda al contrato. Puedes arrastrar documentos o carpetas completas con actas, poderes, constancias fiscales, identificaciones oficiales, correos, Word, PDF, Excel o imágenes.</p>
             </div>
           </article>
           <article>
             <span>5</span>
             <div>
-              <strong>Extrae, revisa y corrige</strong>
-              <p>Usa “Extraer e integrar datos” para llenar automáticamente lo encontrado; valida y completa manualmente lo que falte.</p>
+              <strong>Extrae e integra datos</strong>
+              <p>Presiona “Extraer e integrar datos”. En producción, LexContratos intenta leer los documentos de cada parte, extraer generales y colocarlos en los campos equivalentes del contrato. Si estás en vista local, algunas extracciones documentales pueden no ejecutarse.</p>
             </div>
           </article>
           <article>
             <span>6</span>
             <div>
-              <strong>Finaliza con criterio profesional</strong>
-              <p>Edita el clausulado, revisa campos pendientes y exporta a Word o prepara el envío a firma.</p>
+              <strong>Completa los pendientes manualmente</strong>
+              <p>Abre “2. Integrar manualmente datos faltantes”. Solo deben aparecer los campos que siguen pendientes. Llena todos los datos disponibles y usa “Integrar datos capturados” para insertarlos de una vez en el contrato.</p>
+            </div>
+          </article>
+          <article>
+            <span>7</span>
+            <div>
+              <strong>Revisa el clausulado</strong>
+              <p>El contrato sigue editable. Ajusta redacción, elimina cláusulas innecesarias, agrega condiciones particulares y verifica que los datos integrados correspondan a la parte correcta.</p>
+            </div>
+          </article>
+          <article>
+            <span>8</span>
+            <div>
+              <strong>Ejecuta revisión crítica IA</strong>
+              <p>Usa “Revisión crítica IA” para pedir observaciones finales o una propuesta de ajustes. La herramienta puede señalar datos faltantes, inconsistencias, ambigüedades, forma y ortografía, pero tú decides qué integrar.</p>
+            </div>
+          </article>
+          <article>
+            <span>9</span>
+            <div>
+              <strong>Exporta a Word</strong>
+              <p>Antes de exportar, LexContratos avisará si faltan datos generales o si hay observaciones críticas pendientes. Puedes continuar bajo tu criterio. El Word se genera con formato legal, firmas alineadas y anexos en página nueva.</p>
+            </div>
+          </article>
+          <article>
+            <span>10</span>
+            <div>
+              <strong>Prepara firma y archivo</strong>
+              <p>Cuando el contrato esté revisado, prepara la firma electrónica o guarda el paquete en el expediente. Conserva documentos soporte por parte, datos validados, versiones exportadas y estado de firma en el mismo espacio de trabajo.</p>
             </div>
           </article>
         </div>
 
         <div class="guide-grid">
           <article>
-            <strong>Consejo práctico</strong>
-            <p>Sube documentos corporativos, constancias fiscales e identificaciones en la caja de cada parte para evitar confusiones entre roles.</p>
+            <strong>Orden por parte</strong>
+            <p>No mezcles documentos de distintas partes en una misma caja. La separación por rol es lo que ayuda a evitar que los datos del cliente terminen en el prestador, proveedor o contraparte.</p>
           </article>
           <article>
-            <strong>Antes de exportar</strong>
-            <p>Revisa la lista de datos pendientes. Si falta información, puedes subir otro documento o capturarla manualmente.</p>
+            <strong>Campos editables</strong>
+            <p>Si cambias el texto del contrato y agregas, borras o renombras campos, vuelve a detectar campos editables antes de extraer o integrar información.</p>
           </article>
           <article>
-            <strong>Plantillas base</strong>
-            <p>Las plantillas se protegen. Para modificarlas, trabaja una copia y reemplaza la plantilla base solo cuando estés segura.</p>
+            <strong>Control profesional</strong>
+            <p>La app reduce captura repetitiva y ayuda a revisar. La decisión sobre datos, cláusulas, versión final, exportación y firma siempre queda en manos del usuario.</p>
           </article>
         </div>
 
-        <p class="guide-note">LexContratos combate el tedio operativo: llena campos repetitivos con información extraída para revisión. No sustituye la revisión jurídica ni tu decisión final.</p>
+        <p class="guide-note">Para pruebas con usuarios reales, conviene pedirles que documenten dónde se atoraron: selección de machote, guardado, carga por parte, extracción, integración manual, exportación o firma. Eso ayuda a mejorar la experiencia sin perder control jurídico.</p>
       </section>
     </dialog>
 

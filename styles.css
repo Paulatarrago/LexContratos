@@ -521,6 +521,11 @@ button {
   box-shadow: inset 0 2px 0 rgba(211, 154, 67, 0.38);
 }
 
+.manual-card-grid article.required-step {
+  border-color: rgba(211, 154, 67, 0.55);
+  background: #fffaf1;
+}
+
 .manual-card-grid span {
   width: 28px;
   height: 28px;
@@ -2784,6 +2789,15 @@ dialog::backdrop {
   border-radius: 8px;
   padding: 10px;
   background: #f8fbff;
+}
+
+.guide-note strong {
+  color: var(--ink);
+}
+
+.guide-alert {
+  border-color: rgba(211, 154, 67, 0.5);
+  background: #fffaf1;
 }
 
 .signature-form {
