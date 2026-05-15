@@ -2349,7 +2349,7 @@ function signatureRoleTitle(role) {
   ];
   const match = explicitTitles.find(([needle]) => label.includes(needle));
   if (match) return match[1];
-  if (label.startsWith("PARTE")) return `LA ${label}`;
+  if (/^PARTE\s+[A-Z]$/.test(label)) return "";
   return label;
 }
 
@@ -2358,9 +2358,10 @@ function signatureCellHtml(role) {
   const values = getPartyData();
   const party = values[role.part] || role.label;
   const representative = values[role.side === "A" ? "repA" : "repB"] || "Representante legal";
+  const roleTitle = signatureRoleTitle(role);
   return `
     <td>
-      <p class="signature-role">${escapeHtml(signatureRoleTitle(role))}</p>
+      ${roleTitle ? `<p class="signature-role">${escapeHtml(roleTitle)}</p>` : ""}
       <div class="signature-space">&nbsp;</div>
       <div class="signature-line">&nbsp;</div>
       <p class="signature-entity"><strong>${escapeHtml(legalUppercase(party))}</strong></p>
