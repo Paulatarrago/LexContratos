@@ -1525,9 +1525,16 @@ function getPartyData() {
   return { ...partyDataStore };
 }
 
+function normalizeSignatureNameFields(body) {
+  return String(body || "").replace(
+    /Nombre:\s*\{\{nombreFirma\}\}\s*\nRepresentante legal\s*\n\s*Nombre:\s*\{\{nombreFirma\}\}\s*\nRepresentante legal/gi,
+    "Nombre: {{repA}}\nRepresentante legal\n\nNombre: {{repB}}\nRepresentante legal"
+  );
+}
+
 function fillPlaceholders(text) {
   const values = getPartyData();
-  return text.replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] || `{{${key}}}`);
+  return normalizeSignatureNameFields(text).replace(/\{\{(\w+)\}\}/g, (_, key) => values[key] || `{{${key}}}`);
 }
 
 function integrateKnownDataIntoContract(reason = "Datos integrados al contrato") {
@@ -1640,12 +1647,12 @@ function fieldNameFromLabel(label) {
 }
 
 function fieldNamesInText(text) {
-  return new Set(Array.from(text.matchAll(/\{\{(\w+)\}\}/g)).map((match) => match[1]));
+  return new Set(Array.from(normalizeSignatureNameFields(text).matchAll(/\{\{(\w+)\}\}/g)).map((match) => match[1]));
 }
 
 function prepareTemplateFields(body, existingFields = []) {
   const fieldMap = new Map(existingFields.map((field) => [field.name, field]));
-  let preparedBody = body.replace(/\[([^\]]{1,100})\]/g, (match, rawLabel) => {
+  let preparedBody = normalizeSignatureNameFields(body).replace(/\[([^\]]{1,100})\]/g, (match, rawLabel) => {
     const label = rawLabel.trim();
     if (!label || label === "●") return match;
     const name = fieldNameFromLabel(label);
@@ -1715,10 +1722,10 @@ FIFTH. Documentation. Corporate, tax, operational and legal documents used to pr
 function bodyForTemplate(key) {
   const template = templates[key];
   if (!template) return "";
-  if (activeLanguage === "en") return template.bodyEn || buildEnglishTemplate(template);
+  if (activeLanguage === "en") return normalizeSignatureNameFields(template.bodyEn || buildEnglishTemplate(template));
   const body = template.body || "";
-  if (template.master || body.includes("CLÁUSULAS DE PROTECCIÓN REFORZADA") || body.includes("DÉCIMA")) return body;
-  return `${body}${commonProtectionsEs}`;
+  if (template.master || body.includes("CLÁUSULAS DE PROTECCIÓN REFORZADA") || body.includes("DÉCIMA")) return normalizeSignatureNameFields(body);
+  return normalizeSignatureNameFields(`${body}${commonProtectionsEs}`);
 }
 
 function createWorkingCopy(sourceKey, customBody, { announce = true } = {}) {
@@ -2314,7 +2321,7 @@ function formatContractParagraph(paragraph, index) {
 }
 
 function formattedContractHtml(text) {
-  const paragraphs = text.split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
+  const paragraphs = normalizeSignatureNameFields(text).split(/\n{2,}/).map((paragraph) => paragraph.trim()).filter(Boolean);
   const output = [];
   for (let index = 0; index < paragraphs.length; index += 1) {
     if (isSignatureBlockStart(paragraphs, index)) {
