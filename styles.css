@@ -401,10 +401,11 @@ button {
 }
 
 .legal-shell {
-  width: min(880px, 100%);
+  width: min(960px, 100%);
   color: white;
   display: grid;
   gap: 14px;
+  padding-bottom: 28px;
 }
 
 .route-privacy #privacy-page,
@@ -430,11 +431,39 @@ button {
   line-height: 1.55;
 }
 
+.legal-shell strong {
+  color: white;
+  font-weight: 760;
+}
+
+.legal-meta {
+  font-size: 13px;
+  color: var(--accent-soft) !important;
+  font-weight: 720;
+}
+
+.legal-intro {
+  max-width: 920px;
+  font-size: 17px;
+}
+
 .legal-shell article {
   border: 1px solid var(--accent-line);
   border-radius: 8px;
   padding: 14px;
   background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 14px 36px rgba(4, 18, 40, 0.14);
+}
+
+.legal-shell article p + p {
+  margin-top: 10px;
+}
+
+.legal-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+  align-items: center;
 }
 
 .contact-card {
