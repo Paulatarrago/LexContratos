@@ -63,7 +63,7 @@
             <article><span>4</span><strong>Carga documentos de cada parte</strong><p>Actas, poderes, constancias, identificaciones oficiales, correos, Word, PDF, Excel o JPG.</p></article>
             <article><span>5</span><strong>Valida y completa generales</strong><p>Revisa los datos extraídos y corrige o captura manualmente lo que falte.</p></article>
             <article><span>6</span><strong>Edita tus cláusulas</strong><p>Ajusta el clausulado directamente desde la app, sin perder la versión editable.</p></article>
-            <article><span>7</span><strong>Exporta o envía a firma</strong><p>Genera Word con formato listo para impresión o prepara la firma de las partes, sin salir de la interfaz.</p></article>
+            <article><span>7</span><strong>Exporta y firma por tu vía</strong><p>Genera Word con formato listo para impresión o para enviarlo por la vía de firma que decidas.</p></article>
           </div>
         </section>
 
@@ -98,7 +98,7 @@
             <div class="field-row"><b>Poder notarial</b><em>Pendiente</em></div>
           </div>
           <div class="visual-card upload-card">Word · PDF · Excel · JPG · Mail</div>
-          <div class="visual-card sign-card">Validar · Exportar · Firmar</div>
+          <div class="visual-card sign-card">Validar · Exportar · Circular</div>
         </div>
 
         <div class="auth-flow">
@@ -106,7 +106,7 @@
           <span>2. Carga documentos de cada parte</span>
           <span>3. Extrae generales</span>
           <span>4. Valida y edita</span>
-          <span>5. Archiva, exporta o firma</span>
+          <span>5. Archiva, exporta y circula</span>
         </div>
 
         <div class="landing-actions" aria-label="Acciones principales">
@@ -433,11 +433,11 @@
                 <button class="secondary-action workflow-step" id="fill-contract" type="button" title="Disponible después de detectar campos editables. Abre el panel para completar únicamente los datos pendientes.">2. Integrar manualmente datos faltantes</button>
                 <button class="secondary-action workflow-step" id="critical-review" type="button" title="Pide una revisión final con observaciones de claridad, riesgos y consistencia.">3. Revisión crítica IA</button>
                 <button class="secondary-action" id="export-word" type="button" title="Exporta el contrato editable a Word con formato legal.">Exportar Word</button>
-                <button class="secondary-action" id="send-signature" type="button" title="Prepara el paquete para enviar a firma electrónica cuando la integración esté activa.">Preparar firma</button>
+                <button class="secondary-action is-hidden" id="send-signature" type="button" title="La firma electrónica está desactivada por ahora. Exporta el Word y envíalo por la vía de firma que decidas.">Preparar firma</button>
                 <button class="secondary-action" id="save-version" type="button" title="Guarda una versión sin datos de las partes dentro de tu biblioteca de plantillas base.">Guardar versión limpia como plantilla base</button>
               </div>
             </div>
-            <p class="editor-guidance">El contrato sigue siendo editable. LexContratos te ayuda con datos, campos y tareas repetitivas, pero el criterio jurídico y el contenido final permanecen bajo tu control. Cuando el contrato esté revisado, puedes exportarlo a Word o enviarlo a firma.</p>
+            <p class="editor-guidance">El contrato sigue siendo editable. LexContratos te ayuda con datos, campos y tareas repetitivas, pero el criterio jurídico y el contenido final permanecen bajo tu control. Cuando esté revisado, expórtalo a Word y envíalo a firma por la vía externa que decidas.</p>
             <section class="format-panel" aria-label="Formato de exportación legal">
               <label>
                 Fuente
@@ -519,7 +519,7 @@
           <summary>
             <div>
               <p class="eyebrow">Checklist</p>
-              <strong>Datos obligatorios <span class="info-tip" tabindex="0" data-tip="Lista de control para saber qué falta antes de exportar o enviar a firma.">i</span></strong>
+              <strong>Datos obligatorios <span class="info-tip" tabindex="0" data-tip="Lista de control para saber qué falta antes de exportar o circular el contrato.">i</span></strong>
             </div>
           </summary>
           <div class="requirements-list" id="requirements-list"></div>
@@ -626,8 +626,8 @@
           <article>
             <span>10</span>
             <div>
-              <strong>Prepara firma y archivo</strong>
-              <p>Cuando el contrato esté revisado, prepara la firma electrónica o guarda el paquete en el expediente. Conserva documentos soporte por parte, datos validados, versiones exportadas y estado de firma en el mismo espacio de trabajo.</p>
+              <strong>Exporta, firma y archiva</strong>
+              <p>Cuando el contrato esté revisado, exporta el Word y envíalo por la vía de firma que decidas: cuenta personal, proveedor externo o firma tradicional. Conserva documentos soporte por parte, datos validados y versiones exportadas en el mismo expediente.</p>
             </div>
           </article>
         </div>
@@ -643,11 +643,11 @@
           </article>
           <article>
             <strong>Control profesional</strong>
-            <p>La app reduce captura repetitiva y ayuda a revisar. La decisión sobre datos, cláusulas, versión final, exportación y firma siempre queda en manos del usuario.</p>
+            <p>La app reduce captura repetitiva y ayuda a revisar. La decisión sobre datos, cláusulas, versión final, exportación y circulación siempre queda en manos del usuario.</p>
           </article>
         </div>
 
-        <p class="guide-note">Para pruebas con usuarios reales, conviene pedirles que documenten dónde se atoraron: selección de machote, guardado, carga por parte, extracción, integración manual, exportación o firma. Eso ayuda a mejorar la experiencia sin perder control jurídico.</p>
+        <p class="guide-note">Para pruebas con usuarios reales, conviene pedirles que documenten dónde se atoraron: selección de machote, guardado, carga por parte, extracción, integración manual o exportación. Eso ayuda a mejorar la experiencia sin perder control jurídico.</p>
       </section>
     </dialog>
 

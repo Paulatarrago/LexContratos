@@ -607,6 +607,9 @@ const commonProtectionsEs = `\n\nCLÁUSULAS DE PROTECCIÓN REFORZADA\n\nPRIMERA.
 
 const commonProtectionsEn = `\n\nENHANCED PROTECTIVE CLAUSES\n\nFIRST. Compliance. The parties shall comply with applicable Mexican law, including civil, commercial, tax, labor, social security, personal data protection, anti-corruption and anti-money laundering provisions, to the extent applicable to the transaction.\n\nSECOND. Independent parties. Nothing in this agreement creates a partnership, joint venture, employment relationship, general agency or representation other than what is expressly agreed in writing.\n\nTHIRD. Corporate authority. Each party represents that its existence, authority, powers of attorney, internal approvals and capacity to execute this agreement are valid and sufficient, and shall notify any relevant revocation or limitation.\n\nFOURTH. Information and documents. Each party is responsible for the truthfulness, completeness, lawfulness and timely delivery of all information, documents, instructions, access credentials and materials it provides.\n\nFIFTH. Confidentiality. Technical, commercial, financial, tax, operational, legal, strategic, methodological and business information shall be treated as confidential and used solely to perform this agreement.\n\nSIXTH. Personal data. If a party accesses personal data controlled by the other party, it shall process such data only under lawful documented instructions and apply reasonable administrative, technical and physical safeguards.\n\nSEVENTH. Liability and indemnity. The breaching party shall hold the non-breaching party harmless from claims, fines, damages, costs, expenses and liabilities directly arising from its breach, willful misconduct, gross negligence or acts of its personnel, suppliers or subcontractors.\n\nEIGHTH. Anti-corruption. No party shall offer, promise, request, receive or deliver any undue benefit to obtain an advantage related to this agreement. Breach of this clause shall be cause for immediate termination.\n\nNINTH. Survival. Termination shall not release pending payment, confidentiality, personal data, intellectual property, indemnity, tax, governing law or dispute resolution obligations that by their nature should survive.\n\nTENTH. Mexican law. This agreement shall be interpreted under the applicable laws of Mexico, without prejudice to local formalities or mandatory rules that may apply due to domicile, real estate, subject matter or transaction type.`;
 
+// La integración queda conservada, pero fuera de la interfaz mientras se decide el proveedor de firma.
+const SIGNATURE_FEATURE_ENABLED = false;
+
 const editor = document.querySelector("#contract-editor");
 const editorTitle = document.querySelector("#editor-title");
 const selectedCategory = document.querySelector("#selected-category");
@@ -1472,7 +1475,10 @@ function updateWorkflowStepState() {
   setWorkflowButtonState(fillButton, !fieldsReviewed ? "step-locked" : dataComplete ? "step-done" : "step-current");
   setWorkflowButtonState(criticalButton, !dataComplete ? "step-locked" : criticalReviewDone ? "step-done" : "step-current");
   setWorkflowButtonState(exportButton, criticalReviewDone ? "step-ready" : "");
-  setWorkflowButtonState(signatureButton, criticalReviewDone ? "step-ready" : "");
+  if (signatureButton) {
+    signatureButton.classList.toggle("is-hidden", !SIGNATURE_FEATURE_ENABLED);
+    setWorkflowButtonState(signatureButton, SIGNATURE_FEATURE_ENABLED && criticalReviewDone ? "step-ready" : "");
+  }
 }
 
 function productionBackend() {
@@ -2836,6 +2842,10 @@ async function refreshSignatureStatus() {
 }
 
 function prepareSignaturePacket() {
+  if (!SIGNATURE_FEATURE_ENABLED) {
+    showToast("Firma electrónica desactivada por ahora. Exporta el Word y envíalo por la vía de firma que decidas.");
+    return;
+  }
   if (!ensureEditableWorkspace("preparar firma")) return;
   renderSignatureRows();
   signatureDialog.showModal();
@@ -2944,7 +2954,7 @@ function buildLocalCriticalReview(mode) {
       severity: "Alta",
       section: "Datos de partes",
       observation: `Faltan datos por completar: ${missingFields.slice(0, 8).join(", ")}${missingFields.length > 8 ? "..." : ""}.`,
-      recommendation: "Carga documentos adicionales por cada parte o captura manualmente los campos antes de exportar o enviar a firma."
+      recommendation: "Carga documentos adicionales por cada parte o captura manualmente los campos antes de exportar o circular el contrato."
     });
   }
   if (/\{\{[^}]+\}\}|\b(PENDIENTE|POR COMPLETAR|XXX)\b/i.test(body)) {
@@ -4515,7 +4525,7 @@ document.querySelector("#fill-contract").addEventListener("click", (event) => {
 
 document.querySelector("#export-word").addEventListener("click", exportWordDocument);
 
-document.querySelector("#send-signature").addEventListener("click", prepareSignaturePacket);
+document.querySelector("#send-signature")?.addEventListener("click", prepareSignaturePacket);
 
 document.querySelector("#critical-review")?.addEventListener("click", () => {
   criticalReviewDialog.showModal();
