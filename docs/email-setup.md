@@ -42,6 +42,8 @@ Cuando una administradora entra al panel de usuarios y usa **Activar licencia** 
 
 El correo le indica que ya puede entrar a `https://lexcontratos.com/login` con el correo y contraseña que registró.
 
+Si la licencia ya estaba activa o el correo no llegó, el panel de administración permite usar **Reenviar correo de acceso** sin cambiar la licencia del usuario.
+
 Si Resend no está configurado o falla el envío, la licencia se activa de todos modos y el panel avisa que conviene notificar manualmente al usuario.
 
 ## Supabase Auth

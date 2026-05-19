@@ -253,6 +253,17 @@ export default async function handler(request) {
       return jsonResponse({ ok: true });
     }
 
+    if (action === "notify_access") {
+      let activationEmail = { sent: false };
+      try {
+        activationEmail = await notifyLicenseActivated(env, { email, fullName, isAdmin: currentRole === "admin" });
+      } catch (emailError) {
+        console.warn("LexContratos no pudo reenviar correo de acceso", emailError);
+        return jsonResponse({ ok: false, error: "El usuario conserva su acceso, pero no se pudo enviar el correo automático." }, 502);
+      }
+      return jsonResponse({ ok: true, activationEmailSent: Boolean(activationEmail.sent) });
+    }
+
     if (action === "activate") {
       await upsertProfile(config, {
         id: userId,

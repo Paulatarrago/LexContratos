@@ -1375,6 +1375,7 @@ function renderAdminUsers(users = []) {
           const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString("es-MX") : "Sin ingreso";
           const payload = `data-user-id="${escapeHtml(user.id)}" data-email="${escapeHtml(user.email)}" data-full-name="${escapeHtml(user.full_name || user.email)}" data-current-role="${escapeHtml(user.role || "user")}"`;
           const isCurrentUser = currentEmail && String(user.email || "").toLowerCase() === currentEmail;
+          const hasAccess = ["active", "trial"].includes(user.license_status) || user.role === "admin";
           return `
             <article class="admin-user-card">
               <div>
@@ -1389,6 +1390,7 @@ function renderAdminUsers(users = []) {
               </div>
               <div class="admin-user-actions">
                 <button class="secondary-action mini-action" type="button" data-admin-action="activate" ${payload}>Activar licencia</button>
+                <button class="secondary-action mini-action" type="button" data-admin-action="notify_access" ${payload} ${hasAccess ? "" : "disabled title=\"Activa primero la licencia\""}>Reenviar correo de acceso</button>
                 <button class="secondary-action mini-action" type="button" data-admin-action="suspend" ${payload}>Suspender</button>
                 <button class="secondary-action mini-action" type="button" data-admin-action="make_admin" ${payload}>Hacer admin</button>
                 <button class="secondary-action mini-action danger-action" type="button" data-admin-action="delete_user" ${payload} ${isCurrentUser ? "disabled title=\"No puedes eliminar tu propia cuenta desde aquí\"" : ""}>Eliminar</button>
@@ -1431,7 +1433,8 @@ async function runAdminUserAction(button) {
     activate: "activar la licencia de",
     suspend: "suspender el acceso de",
     make_admin: "hacer administrador a",
-    delete_user: "eliminar a"
+    delete_user: "eliminar a",
+    notify_access: "reenviar el correo de acceso a"
   };
   if (action === "suspend" && !window.confirm(`¿Seguro que quieres suspender el acceso de ${payload.email}?`)) return;
   if (action === "make_admin" && !window.confirm(`¿Seguro que quieres hacer administrador a ${payload.email}?`)) return;
@@ -1447,10 +1450,10 @@ async function runAdminUserAction(button) {
     const result = await backend.updateAdminUser(payload);
     if (action === "delete_user") {
       showToast(`Usuario eliminado: ${payload.email}.`);
-    } else if (["activate", "make_admin"].includes(action)) {
+    } else if (["activate", "make_admin", "notify_access"].includes(action)) {
       showToast(
         result.activationEmailSent
-          ? `Listo: ${payload.email} ya tiene acceso y recibió correo de activación.`
+          ? `Listo: ${payload.email} recibió el correo de acceso.`
           : `Listo: ${payload.email} ya tiene acceso. No se envió correo automático; avísale manualmente.`
       );
     } else {
