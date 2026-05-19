@@ -149,10 +149,75 @@ async function deleteAuthUser(config, userId) {
   return data;
 }
 
+function escapeHtml(value) {
+  return String(value || "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;");
+}
+
+async function sendEmail(apiKey, payload) {
+  const response = await fetch("https://api.resend.com/emails", {
+    method: "POST",
+    headers: {
+      authorization: `Bearer ${apiKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify(payload)
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) throw new Error(data?.message || data?.error?.message || "No se pudo enviar el correo.");
+  return data;
+}
+
+async function notifyLicenseActivated(env, { email, fullName, isAdmin = false }) {
+  const apiKey = env.RESEND_API_KEY;
+  if (!apiKey) return { sent: false, skipped: true, reason: "Resend no configurado." };
+
+  const from = env.RESEND_FROM || "LexContratos <no-reply@lexcontratos.com>";
+  const replyTo = env.RESEND_REPLY_TO || env.SUPPORT_EMAIL || env.CONTACT_TO || "contacto@lexcontratos.com";
+  const appUrl = (env.APP_BASE_URL || "https://lexcontratos.com").replace(/\/+$/, "");
+  const safeName = escapeHtml(fullName || email);
+  const safeAppUrl = escapeHtml(`${appUrl}/login`);
+  const roleLine = isAdmin
+    ? "Tu cuenta también quedó marcada como administradora para gestionar usuarios y licencias."
+    : "Tu licencia quedó activa para trabajar en LexContratos.";
+
+  await sendEmail(apiKey, {
+    from,
+    to: [email],
+    reply_to: replyTo,
+    subject: "Tu acceso a LexContratos ya está activo",
+    text: [
+      `Hola ${fullName || email},`,
+      "",
+      roleLine,
+      "",
+      `Ya puedes entrar a ${appUrl}/login con el correo y contraseña que registraste.`,
+      "",
+      "Si tienes algún problema para entrar, responde este correo para pedir ayuda.",
+      "",
+      "LexContratos"
+    ].join("\n"),
+    html: `
+      <p>Hola ${safeName},</p>
+      <p>${escapeHtml(roleLine)}</p>
+      <p>Ya puedes entrar con el correo y contraseña que registraste:</p>
+      <p><a href="${safeAppUrl}">${safeAppUrl}</a></p>
+      <p>Si tienes algún problema para entrar, responde este correo para pedir ayuda.</p>
+      <p>LexContratos</p>
+    `
+  });
+
+  return { sent: true };
+}
+
 export default async function handler(request) {
+  const env = typeof process !== "undefined" ? process.env : {};
   let config;
   try {
-    config = requireEnv(typeof process !== "undefined" ? process.env : {});
+    config = requireEnv(env);
   } catch (error) {
     return jsonResponse({ error: "Administración de usuarios no configurada." }, 503);
   }
@@ -203,7 +268,13 @@ export default async function handler(request) {
         plan: "internal",
         starts_at: new Date().toISOString()
       });
-      return jsonResponse({ ok: true });
+      let activationEmail = { sent: false };
+      try {
+        activationEmail = await notifyLicenseActivated(env, { email, fullName });
+      } catch (emailError) {
+        console.warn("LexContratos no pudo enviar correo de activacion", emailError);
+      }
+      return jsonResponse({ ok: true, activationEmailSent: Boolean(activationEmail.sent) });
     }
 
     if (action === "suspend") {
@@ -238,7 +309,13 @@ export default async function handler(request) {
         plan: "internal",
         starts_at: new Date().toISOString()
       });
-      return jsonResponse({ ok: true });
+      let activationEmail = { sent: false };
+      try {
+        activationEmail = await notifyLicenseActivated(env, { email, fullName, isAdmin: true });
+      } catch (emailError) {
+        console.warn("LexContratos no pudo enviar correo de activacion admin", emailError);
+      }
+      return jsonResponse({ ok: true, activationEmailSent: Boolean(activationEmail.sent) });
     }
 
     return jsonResponse({ error: "Acción no reconocida." }, 400);

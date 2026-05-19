@@ -2,6 +2,8 @@ export const config = {
   runtime: "edge"
 };
 
+import { requireActiveAccess } from "../src/server-auth.js";
+
 const MAX_CONTRACT_CHARS = 70000;
 
 function jsonResponse(body, status = 200) {
@@ -40,6 +42,9 @@ export default async function handler(request) {
   if (!apiKey) {
     return jsonResponse({ error: "La revisión crítica no está disponible temporalmente." }, 503);
   }
+
+  const access = await requireActiveAccess(request, env);
+  if (!access.ok) return access.response;
 
   const body = await request.json().catch(() => ({}));
   const title = String(body.title || "Contrato").slice(0, 200);

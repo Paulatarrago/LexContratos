@@ -34,6 +34,16 @@ La pagina inicial ya tiene formulario de contacto. En produccion enviara:
 
 En local puede mostrar que el formulario se activara en produccion porque el endpoint `/api/contact` vive en Vercel.
 
+## Aviso automatico de licencia activa
+
+Cuando una administradora entra al panel de usuarios y usa **Activar licencia** o **Hacer admin**, LexContratos intenta enviar automaticamente un correo al usuario con el asunto:
+
+`Tu acceso a LexContratos ya está activo`
+
+El correo le indica que ya puede entrar a `https://lexcontratos.com/login` con el correo y contraseña que registró.
+
+Si Resend no está configurado o falla el envío, la licencia se activa de todos modos y el panel avisa que conviene notificar manualmente al usuario.
+
 ## Supabase Auth
 
 Supabase puede enviar correos de confirmacion, recuperacion de contrasena e invitacion de usuarios. Para marca propia, configurar SMTP personalizado en Supabase usando el servicio SMTP de Resend o el proveedor elegido.

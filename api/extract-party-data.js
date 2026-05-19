@@ -2,6 +2,8 @@ export const config = {
   runtime: "edge"
 };
 
+import { requireActiveAccess } from "../src/server-auth.js";
+
 const MAX_FILES = 8;
 const MAX_FILE_BYTES = 12 * 1024 * 1024;
 
@@ -71,6 +73,9 @@ export default async function handler(request) {
   if (!apiKey) {
     return jsonResponse({ error: "La extracción documental no está disponible temporalmente." }, 503);
   }
+
+  const access = await requireActiveAccess(request, env);
+  if (!access.ok) return access.response;
 
   const formData = await request.formData();
   const roleLabel = String(formData.get("roleLabel") || "Parte contractual");

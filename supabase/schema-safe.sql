@@ -22,6 +22,33 @@ begin
 end;
 $$;
 
+create or replace function public.prevent_profile_privilege_escalation()
+returns trigger
+language plpgsql
+as $$
+begin
+  if auth.role() = 'authenticated' then
+    if tg_op = 'INSERT' then
+      if new.role is distinct from 'user'
+        or new.license_status is distinct from 'inactive'
+        or new.account_status is distinct from 'active' then
+        raise exception 'No autorizado para modificar permisos de cuenta.';
+      end if;
+    end if;
+
+    if tg_op = 'UPDATE' then
+      if new.role is distinct from old.role
+        or new.license_status is distinct from old.license_status
+        or new.account_status is distinct from old.account_status then
+        raise exception 'No autorizado para modificar permisos de cuenta.';
+      end if;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
@@ -173,6 +200,7 @@ end;
 $$;
 
 select pg_temp.create_trigger_if_missing('profiles_set_updated_at', 'public.profiles'::regclass, $sql$create trigger profiles_set_updated_at before update on public.profiles for each row execute function public.set_updated_at()$sql$);
+select pg_temp.create_trigger_if_missing('prevent_profile_privilege_escalation', 'public.profiles'::regclass, $sql$create trigger prevent_profile_privilege_escalation before insert or update on public.profiles for each row execute function public.prevent_profile_privilege_escalation()$sql$);
 select pg_temp.create_trigger_if_missing('licenses_set_updated_at', 'public.licenses'::regclass, $sql$create trigger licenses_set_updated_at before update on public.licenses for each row execute function public.set_updated_at()$sql$);
 select pg_temp.create_trigger_if_missing('folders_set_updated_at', 'public.folders'::regclass, $sql$create trigger folders_set_updated_at before update on public.folders for each row execute function public.set_updated_at()$sql$);
 select pg_temp.create_trigger_if_missing('master_templates_set_updated_at', 'public.master_templates'::regclass, $sql$create trigger master_templates_set_updated_at before update on public.master_templates for each row execute function public.set_updated_at()$sql$);
@@ -214,8 +242,7 @@ end;
 $$;
 
 select pg_temp.create_policy_if_missing('profiles_select_own', 'public', 'profiles', $sql$create policy "profiles_select_own" on public.profiles for select to authenticated using ((select auth.uid()) = id)$sql$);
-select pg_temp.create_policy_if_missing('profiles_insert_own', 'public', 'profiles', $sql$create policy "profiles_insert_own" on public.profiles for insert to authenticated with check ((select auth.uid()) = id)$sql$);
-select pg_temp.create_policy_if_missing('profiles_update_own', 'public', 'profiles', $sql$create policy "profiles_update_own" on public.profiles for update to authenticated using ((select auth.uid()) = id) with check ((select auth.uid()) = id)$sql$);
+select pg_temp.create_policy_if_missing('profiles_insert_own', 'public', 'profiles', $sql$create policy "profiles_insert_own" on public.profiles for insert to authenticated with check ((select auth.uid()) = id and role = 'user' and account_status = 'active' and license_status = 'inactive')$sql$);
 select pg_temp.create_policy_if_missing('licenses_select_own', 'public', 'licenses', $sql$create policy "licenses_select_own" on public.licenses for select to authenticated using ((select auth.uid()) = user_id)$sql$);
 select pg_temp.create_policy_if_missing('folders_crud_own', 'public', 'folders', $sql$create policy "folders_crud_own" on public.folders for all to authenticated using ((select auth.uid()) = user_id) with check ((select auth.uid()) = user_id)$sql$);
 select pg_temp.create_policy_if_missing('templates_select_own_or_shared', 'public', 'master_templates', $sql$create policy "templates_select_own_or_shared" on public.master_templates for select to authenticated using (is_shared or (select auth.uid()) = user_id)$sql$);

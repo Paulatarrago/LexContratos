@@ -1444,8 +1444,18 @@ async function runAdminUserAction(button) {
   if (!backend?.updateAdminUser) return;
   button.disabled = true;
   try {
-    await backend.updateAdminUser(payload);
-    showToast(action === "delete_user" ? `Usuario eliminado: ${payload.email}.` : `Listo: se actualizó el usuario ${payload.email}.`);
+    const result = await backend.updateAdminUser(payload);
+    if (action === "delete_user") {
+      showToast(`Usuario eliminado: ${payload.email}.`);
+    } else if (["activate", "make_admin"].includes(action)) {
+      showToast(
+        result.activationEmailSent
+          ? `Listo: ${payload.email} ya tiene acceso y recibió correo de activación.`
+          : `Listo: ${payload.email} ya tiene acceso. No se envió correo automático; avísale manualmente.`
+      );
+    } else {
+      showToast(`Listo: se actualizó el usuario ${payload.email}.`);
+    }
     await loadAdminUsers();
   } catch (error) {
     console.warn("LexContratos no pudo actualizar usuario", error);
@@ -1499,6 +1509,15 @@ function uploadedDocumentsNeedingAi() {
 
 function backendAccessLocked() {
   return Boolean(window.lexBackend?.locked);
+}
+
+async function activeApiHeaders() {
+  const backend = productionBackend();
+  if (!backend?.supabase?.auth) return {};
+  const {
+    data: { session }
+  } = await backend.supabase.auth.getSession();
+  return session?.access_token ? { authorization: `Bearer ${session.access_token}` } : {};
 }
 
 function reportBackendError(action, error) {
@@ -2878,7 +2897,10 @@ async function submitSignaturePacket(event) {
       showToast("Preparando envío a firma electrónica...");
       const response = await fetch("/api/send-signature", {
         method: "POST",
-        headers: { "content-type": "application/json" },
+        headers: {
+          "content-type": "application/json",
+          ...(await activeApiHeaders())
+        },
         body: JSON.stringify({
           title,
           folio: previewMatterFolio(),
@@ -3155,7 +3177,10 @@ async function runCriticalReview(mode) {
   try {
     const response = await fetch("/api/review-contract", {
       method: "POST",
-      headers: { "content-type": "application/json" },
+      headers: {
+        "content-type": "application/json",
+        ...(await activeApiHeaders())
+      },
       body: JSON.stringify({
         title: cleanWorkingTitle(editorTitle.textContent),
         mode,

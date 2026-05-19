@@ -15,19 +15,22 @@ Esta fase deja la base productiva lista sin romper el demo local.
 - Notificación automática al administrador cuando alguien se registra.
 - Panel de administración para activar licencias, suspender usuarios y marcar administradores.
 - Endpoint seguro para extraccion documental con IA.
+- Endpoints sensibles protegidos por sesión y licencia activa.
+- Migración de endurecimiento para evitar que un usuario cambie su propio rol, estado de cuenta o licencia.
 - Sin Supabase configurado, la app sigue funcionando como demo local.
 
 ## Pasos para activar Supabase
 
 1. Crear un proyecto en Supabase.
 2. Abrir el SQL Editor y ejecutar `supabase/schema-safe.sql`. Esta es la versión recomendada para primera instalación porque no borra políticas, triggers, tablas ni datos.
-3. Si Supabase muestra un aviso/error en la parte de Storage, crear manualmente un bucket privado llamado `contract-documents` en Storage y después ejecutar `supabase/storage-policies.sql`.
-4. Crear una cuenta desde LexContratos o desde Supabase Auth.
-5. Activar la licencia del usuario en SQL:
+3. Ejecutar `supabase/harden-security.sql` para cerrar permisos de perfiles y licencias.
+4. Si Supabase muestra un aviso/error en la parte de Storage, crear manualmente un bucket privado llamado `contract-documents` en Storage y después ejecutar `supabase/storage-policies.sql`.
+5. Crear una cuenta desde LexContratos o desde Supabase Auth.
+6. Activar la licencia del usuario en SQL:
 
 Usar `supabase/activate-first-admin.sql` y cambiar `TU_CORREO_AQUI` por el correo registrado.
 
-6. Crear un archivo `.env` local:
+7. Crear un archivo `.env` local:
 
 ```bash
 VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
@@ -42,7 +45,7 @@ RESEND_REPLY_TO=contacto@lexcontratos.com
 CONTACT_TO=contacto@lexcontratos.com
 ```
 
-7. Instalar dependencias y correr la app:
+8. Instalar dependencias y correr la app:
 
 ```bash
 npm install

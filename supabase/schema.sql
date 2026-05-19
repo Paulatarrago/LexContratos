@@ -23,6 +23,33 @@ begin
 end;
 $$;
 
+create or replace function public.prevent_profile_privilege_escalation()
+returns trigger
+language plpgsql
+as $$
+begin
+  if auth.role() = 'authenticated' then
+    if tg_op = 'INSERT' then
+      if new.role is distinct from 'user'
+        or new.license_status is distinct from 'inactive'
+        or new.account_status is distinct from 'active' then
+        raise exception 'No autorizado para modificar permisos de cuenta.';
+      end if;
+    end if;
+
+    if tg_op = 'UPDATE' then
+      if new.role is distinct from old.role
+        or new.license_status is distinct from old.license_status
+        or new.account_status is distinct from old.account_status then
+        raise exception 'No autorizado para modificar permisos de cuenta.';
+      end if;
+    end if;
+  end if;
+
+  return new;
+end;
+$$;
+
 create table if not exists public.profiles (
   id uuid primary key references auth.users(id) on delete cascade,
   email text not null,
@@ -156,6 +183,7 @@ create table if not exists public.signature_packets (
 );
 
 drop trigger if exists profiles_set_updated_at on public.profiles;
+drop trigger if exists prevent_profile_privilege_escalation on public.profiles;
 drop trigger if exists licenses_set_updated_at on public.licenses;
 drop trigger if exists folders_set_updated_at on public.folders;
 drop trigger if exists master_templates_set_updated_at on public.master_templates;
@@ -165,6 +193,7 @@ drop trigger if exists extracted_data_set_updated_at on public.extracted_data;
 drop trigger if exists signature_packets_set_updated_at on public.signature_packets;
 
 create trigger profiles_set_updated_at before update on public.profiles for each row execute function public.set_updated_at();
+create trigger prevent_profile_privilege_escalation before insert or update on public.profiles for each row execute function public.prevent_profile_privilege_escalation();
 create trigger licenses_set_updated_at before update on public.licenses for each row execute function public.set_updated_at();
 create trigger folders_set_updated_at before update on public.folders for each row execute function public.set_updated_at();
 create trigger master_templates_set_updated_at before update on public.master_templates for each row execute function public.set_updated_at();
@@ -201,8 +230,7 @@ drop policy if exists "extracted_data_crud_own" on public.extracted_data;
 drop policy if exists "signature_packets_crud_own" on public.signature_packets;
 
 create policy "profiles_select_own" on public.profiles for select to authenticated using ((select auth.uid()) = id);
-create policy "profiles_insert_own" on public.profiles for insert to authenticated with check ((select auth.uid()) = id);
-create policy "profiles_update_own" on public.profiles for update to authenticated using ((select auth.uid()) = id) with check ((select auth.uid()) = id);
+create policy "profiles_insert_own" on public.profiles for insert to authenticated with check ((select auth.uid()) = id and role = 'user' and account_status = 'active' and license_status = 'inactive');
 
 create policy "licenses_select_own" on public.licenses for select to authenticated using ((select auth.uid()) = user_id);
 

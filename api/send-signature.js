@@ -2,6 +2,8 @@ export const config = {
   runtime: "edge"
 };
 
+import { requireActiveAccess } from "../src/server-auth.js";
+
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -172,6 +174,9 @@ export default async function handler(request) {
   if (!apiKey) {
     return jsonResponse({ error: "La firma electrónica aún no está configurada." }, 503);
   }
+
+  const access = await requireActiveAccess(request, env);
+  if (!access.ok) return access.response;
 
   const payload = await request.json().catch(() => ({}));
   const title = String(payload.title || "Contrato LexContratos").trim().slice(0, 255);

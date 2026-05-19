@@ -81,7 +81,9 @@ if (!config.url || !config.publishableKey) {
       .maybeSingle();
 
     const status = license?.status || profile?.license_status || "inactive";
-    const hasAccess = profile?.account_status === "active" && (profile?.role === "admin" || ["active", "trial"].includes(status));
+    const expiresAt = license?.ends_at ? Date.parse(license.ends_at) : null;
+    const licenseCurrent = !expiresAt || Number.isNaN(expiresAt) || expiresAt >= Date.now();
+    const hasAccess = profile?.account_status === "active" && (profile?.role === "admin" || (["active", "trial"].includes(status) && licenseCurrent));
     return { user, profile, license, hasAccess, status };
   }
 
@@ -292,6 +294,7 @@ if (!config.url || !config.publishableKey) {
 
     const response = await fetch("/api/extract-party-data", {
       method: "POST",
+      headers: await authHeaders(),
       body: formData
     });
     if (!response.ok) {
