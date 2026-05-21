@@ -515,7 +515,8 @@ const roleLabels = {
   partnership: ["Socio operativo", "Socio inversionista"],
   amendment: ["Cliente o contratante", "Proveedor o prestador"],
   termination_agreement: ["Cliente o contratante", "Proveedor o prestador"],
-  debt_acknowledgment: ["Acreedor", "Deudor"]
+  debt_acknowledgment: ["Acreedor", "Deudor"],
+  ...(window.lexImportedRoleLabels || {})
 };
 
 const defaultValues = {
@@ -671,6 +672,8 @@ const openAdminUsers = document.querySelector("#open-admin-users");
 const adminUsersDialog = document.querySelector("#admin-users-dialog");
 const adminUsersSummary = document.querySelector("#admin-users-summary");
 const adminUsersList = document.querySelector("#admin-users-list");
+const adminBackupStatus = document.querySelector("#admin-backup-status");
+const downloadAdminBackupButton = document.querySelector("#download-admin-backup");
 const reviewFieldsButton = document.querySelector("#review-fields");
 const archiveDrawer = document.querySelector("#archive-drawer");
 const assistantPane = document.querySelector("#assistant-pane");
@@ -1616,6 +1619,7 @@ async function loadAdminUsers() {
     showToast("El panel de administración requiere Supabase en producción.");
     return;
   }
+  renderAdminBackupStatus();
   if (adminUsersSummary) adminUsersSummary.textContent = "Cargando usuarios...";
   if (adminUsersList) adminUsersList.innerHTML = "";
   try {
@@ -1625,6 +1629,49 @@ async function loadAdminUsers() {
     console.warn("LexContratos admin usuarios no disponible", error);
     if (adminUsersSummary) adminUsersSummary.textContent = "No se pudieron cargar usuarios.";
     if (adminUsersList) adminUsersList.innerHTML = `<div class="empty-state"><strong>Revisa que SUPABASE_SERVICE_ROLE_KEY esté configurada en Vercel.</strong></div>`;
+  }
+}
+
+function adminBackupStorageKey() {
+  return userStorageKey("last_admin_backup_date");
+}
+
+function renderAdminBackupStatus() {
+  if (!adminBackupStatus) return;
+  const last = localStorage.getItem(adminBackupStorageKey());
+  const today = new Date().toISOString().slice(0, 10);
+  adminBackupStatus.textContent = last === today
+    ? "Respaldo de hoy descargado. Puedes repetirlo si hiciste cambios importantes."
+    : "Pendiente de hoy: descarga una copia local de control antes de cerrar el día.";
+}
+
+async function runAdminBackup() {
+  const backend = productionBackend();
+  if (!backend?.downloadAdminBackup) {
+    showToast("El respaldo local requiere Supabase en producción.");
+    return;
+  }
+  if (!downloadAdminBackupButton) return;
+  downloadAdminBackupButton.disabled = true;
+  const originalText = downloadAdminBackupButton.textContent;
+  downloadAdminBackupButton.textContent = "Preparando respaldo...";
+  try {
+    const { blob, filename } = await backend.downloadAdminBackup();
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    link.download = filename;
+    link.click();
+    URL.revokeObjectURL(url);
+    localStorage.setItem(adminBackupStorageKey(), new Date().toISOString().slice(0, 10));
+    renderAdminBackupStatus();
+    showToast("Respaldo local descargado. Guárdalo en una carpeta segura.");
+  } catch (error) {
+    console.warn("LexContratos respaldo admin no disponible", error);
+    showToast("No se pudo generar el respaldo local. Revisa la configuración de administración.");
+  } finally {
+    downloadAdminBackupButton.disabled = false;
+    downloadAdminBackupButton.textContent = originalText;
   }
 }
 
@@ -2050,7 +2097,13 @@ function fieldsForRole(role) {
     [domicileField, `Domicilio de ${role.label}`]
   ];
   const names = fieldNamesInText(editor?.value || templates[activeTemplate]?.body || "");
-  return fields.filter(([name]) => names.has(name));
+  const roleFields = fields.filter(([name]) => names.has(name));
+  const customRoleFields = (templates[activeTemplate]?.customFields || [])
+    .filter((field) => field?.roleSide === side && names.has(field.name))
+    .map((field) => [field.name, field.label]);
+  return [...roleFields, ...customRoleFields].filter(
+    ([name], index, list) => list.findIndex(([candidate]) => candidate === name) === index
+  );
 }
 
 function requiredFieldsForActiveTemplate() {
@@ -2156,7 +2209,7 @@ function renderTemplates() {
         <h2>${template.title}</h2>
         <p>${template.category} · ${template.fields} campos</p>
         <footer>
-          <span>${template.personal ? "Documento base propio" : "Formato base protegido"}</span>
+          <span>${template.validatedLabel ? `Formato validado · ${escapeHtml(template.validatedLabel)}` : template.personal ? "Documento base propio" : "Formato base protegido"}</span>
           <button class="ghost-button use-template" type="button">Usar formato</button>
         </footer>
       </article>
@@ -5221,6 +5274,7 @@ adminUsersList?.addEventListener("click", (event) => {
   const button = event.target.closest("[data-admin-action]");
   if (button) runAdminUserAction(button);
 });
+downloadAdminBackupButton?.addEventListener("click", runAdminBackup);
 
 document.querySelector("#fill-contract").addEventListener("click", (event) => {
   event.stopPropagation();

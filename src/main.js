@@ -31,4 +31,5 @@ await loadOptionalLocalConfig();
 await import("./supabase-runtime.js");
 await import("./letterhead-catalog.js");
 await import("../template-prestacion-demanda.js");
+await import("./ok-tony-templates.js");
 await import("../app.js");

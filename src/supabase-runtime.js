@@ -339,6 +339,20 @@ if (!config.url || !config.publishableKey) {
     return response.json();
   }
 
+  async function downloadAdminBackup() {
+    const response = await fetch("/api/admin-backup", {
+      headers: await authHeaders()
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "No se pudo generar el respaldo.");
+    }
+    return {
+      blob: await response.blob(),
+      filename: response.headers.get("x-lex-backup-filename") || `lexcontratos-respaldo-${new Date().toISOString().slice(0, 10)}.json`
+    };
+  }
+
   announceBackend({
     enabled: true,
     supabase,
@@ -355,6 +369,7 @@ if (!config.url || !config.publishableKey) {
     uploadSupportDocuments,
     extractPartyData,
     listAdminUsers,
-    updateAdminUser
+    updateAdminUser,
+    downloadAdminBackup
   });
 }
