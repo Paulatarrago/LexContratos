@@ -986,10 +986,10 @@ function restoreActiveDraft({ silent = false } = {}) {
 }
 
 function loadLegalFormat() {
-  const saved = readJson(
+ const saved = readJson(
     userStorageKey("legal_format"),
     readJson("lexcontratos_legal_format", {
-      font: "Times New Roman",
+      font: "Georgia",
       size: "12",
       margin: "54pt",
       lineHeight: "1.5",
@@ -2243,7 +2243,7 @@ function readFormatControls() {
 }
 
 function applyEditorFormat() {
-  editor.style.fontFamily = `"${legalFormat.font}", ${legalFormat.font === "Times New Roman" ? "Times, serif" : "sans-serif"}`;
+  editor.style.fontFamily = `"${legalFormat.font}", ${["Georgia", "Times New Roman"].includes(legalFormat.font) ? "serif" : "sans-serif"}`;
   editor.style.fontSize = `${legalFormat.size}pt`;
   editor.style.lineHeight = legalFormat.lineHeight;
   editor.style.textAlign = legalFormat.justify ? "justify" : "left";
@@ -2251,7 +2251,7 @@ function applyEditorFormat() {
 
 function applyDefaultLegalFormat() {
   legalFormat = {
-    font: "Times New Roman",
+    font: "Georgia",
     size: "12",
     margin: "54pt",
     lineHeight: "1.5",
@@ -2259,7 +2259,7 @@ function applyDefaultLegalFormat() {
   };
   saveLegalFormat();
   syncFormatControls();
-  showToast("Formato legal aplicado: Times New Roman 12, margen moderado e interlineado 1.5.");
+  showToast("Formato legal aplicado: Georgia 12, margen moderado e interlineado 1.5.");
 }
 
 function normalizeExportText(value) {
