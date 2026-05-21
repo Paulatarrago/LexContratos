@@ -11,7 +11,7 @@ const lexContratosLogo = `
   <path d="M76 116h58M105 88v58M87 88l42 58M129 88l-42 58" stroke="#ffffff" stroke-width="10" stroke-linecap="round" stroke-linejoin="round"/>
   <path d="M42 166h118" stroke="#ffffff" stroke-width="8" opacity=".35"/>
   <text x="220" y="96" font-family="Arial, Helvetica, sans-serif" font-size="54" font-weight="800" fill="#09264d">LexContratos</text>
-  <text x="222" y="140" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600" fill="#51657f">Membrete autorizado</text>
+  <text x="222" y="140" font-family="Arial, Helvetica, sans-serif" font-size="25" font-weight="600" fill="#51657f">Página membretada</text>
   <path d="M220 164h325" stroke="#c77700" stroke-width="6" stroke-linecap="round"/>
 </svg>`;
 
@@ -20,6 +20,9 @@ window.lexLetterheadCatalog = [
   {
     id: "lexcontratos",
     name: "LexContratos",
+    companyName: "LexContratos",
+    addressLines: [],
+    footerLines: ["lexcontratos.com"],
     dataUrl: svgDataUrl(lexContratosLogo)
   }
 ];

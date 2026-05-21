@@ -158,11 +158,32 @@ function letterheadImageFromPayload(letterheadLogo) {
   };
 }
 
+function normalizeLetterheadLines(...values) {
+  return values
+    .flatMap((value) => Array.isArray(value) ? value : [value])
+    .map((value) => String(value || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+function letterheadFooterLinesFromPayload(letterheadLogo) {
+  if (!letterheadLogo) return [];
+  const lines = normalizeLetterheadLines(
+    letterheadLogo.companyName,
+    letterheadLogo.addressLines,
+    letterheadLogo.address,
+    letterheadLogo.footerLines,
+    letterheadLogo.footer
+  );
+  return lines.flatMap((line) => wrapTextLine(line, 112)).slice(0, 4);
+}
+
 function contractDocumentPdf({ title, folio, body, letterheadLogo }) {
   const encoder = new TextEncoder();
   const logo = letterheadImageFromPayload(letterheadLogo);
+  const footerLines = letterheadFooterLinesFromPayload(letterheadLogo);
   const lines = contractLines({ title, folio, body });
-  const linesPerPage = logo ? 48 : 52;
+  const linesPerPage = logo ? (footerLines.length ? 45 : 48) : (footerLines.length ? 49 : 52);
   const pages = [];
   for (let index = 0; index < lines.length; index += linesPerPage) {
     pages.push(lines.slice(index, index + linesPerPage));
@@ -185,6 +206,12 @@ function contractDocumentPdf({ title, folio, body, letterheadLogo }) {
     const logoCommands = logoId
       ? [`q`, `${logo.drawWidth} 0 0 ${logo.drawHeight} 72 ${746 - logo.drawHeight} cm`, `/Logo Do`, `Q`]
       : [];
+    const footerCommands = footerLines.map((line, lineIndex) => {
+      const approximateWidth = Math.min(468, line.length * 3.5);
+      const x = Math.max(54, Math.round((612 - approximateWidth) / 2));
+      const y = 28 + ((footerLines.length - lineIndex - 1) * 9);
+      return ["BT", "/F1 7 Tf", `${x} ${y} Td`, `(${pdfText(line)}) Tj`, "ET"].join("\n");
+    });
     const textStartY = logoId ? 690 : 742;
     const stream = [
       ...logoCommands,
@@ -193,7 +220,8 @@ function contractDocumentPdf({ title, folio, body, letterheadLogo }) {
       "14 TL",
       `72 ${textStartY} Td`,
       ...pageLines.map((line) => `(${pdfText(line)}) Tj T*`),
-      "ET"
+      "ET",
+      ...footerCommands
     ].join("\n");
     const contentId = addObject(`<< /Length ${encoder.encode(stream).length} >>\nstream\n${stream}\nendstream`);
     const xObjectResource = logoId ? `/XObject << /Logo ${logoId} 0 R >>` : "";

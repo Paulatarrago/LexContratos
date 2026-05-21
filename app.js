@@ -1044,6 +1044,19 @@ function selectedLetterheadLogo() {
   return letterheadLogos.find((logo) => logo.id === selectedLetterheadLogoId) || null;
 }
 
+function normalizeLetterheadLines(...values) {
+  return values
+    .flatMap((value) => Array.isArray(value) ? value : [value])
+    .map((value) => String(value || "").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .slice(0, 5);
+}
+
+function letterheadFooterLines(logo = selectedLetterheadLogo()) {
+  if (!logo) return [];
+  return normalizeLetterheadLines(logo.companyName, logo.addressLines, logo.address, logo.footerLines, logo.footer);
+}
+
 function letterheadCatalogLocked() {
   return Boolean(window.lexLetterheadCatalogLocked);
 }
@@ -1063,7 +1076,7 @@ function renderLetterheadLogos() {
     saveSelectedLetterheadLogoId();
   }
   letterheadLogoSelect.innerHTML = `
-    <option value="">Sin logo</option>
+    <option value="">Sin membrete</option>
     ${letterheadLogos.map((logo) => `<option value="${escapeHtml(logo.id)}">${escapeHtml(logo.name)}</option>`).join("")}
   `;
   letterheadLogoSelect.value = selectedLetterheadLogoId || "";
@@ -1110,7 +1123,7 @@ function addLetterheadLogo(file) {
     saveSelectedLetterheadLogoId();
     renderLetterheadLogos();
     saveActiveDraft("Membrete actualizado");
-    showToast(`Logo "${logo.name}" agregado como membrete.`);
+    showToast(`Membrete "${logo.name}" agregado.`);
   };
   reader.readAsDataURL(file);
 }
@@ -1118,14 +1131,14 @@ function addLetterheadLogo(file) {
 function removeSelectedLetterheadLogo() {
   const logo = selectedLetterheadLogo();
   if (!logo) {
-    showToast("No hay logo seleccionado.");
+    showToast("No hay membrete seleccionado.");
     return;
   }
   if (logo.source === "catalog") {
-    showToast("Este logo pertenece al catálogo aprobado y no puede eliminarse desde la cuenta.");
+    showToast("Este membrete pertenece al catálogo aprobado y no puede eliminarse desde la cuenta.");
     return;
   }
-  const confirmed = window.confirm(`¿Seguro que quieres eliminar este logo de tu biblioteca?\n\n${logo.name}`);
+  const confirmed = window.confirm(`¿Seguro que quieres eliminar este membrete de tu biblioteca?\n\n${logo.name}`);
   if (!confirmed) return;
   letterheadLogos = letterheadLogos.filter((item) => item.id !== logo.id);
   selectedLetterheadLogoId = "";
@@ -1133,7 +1146,7 @@ function removeSelectedLetterheadLogo() {
   saveSelectedLetterheadLogoId();
   renderLetterheadLogos();
   saveActiveDraft("Membrete eliminado");
-  showToast("Logo eliminado de la biblioteca de membretes.");
+  showToast("Membrete eliminado de la biblioteca.");
 }
 
 function letterheadLogoForSignature() {
@@ -1156,6 +1169,11 @@ function letterheadLogoForSignature() {
       context.drawImage(image, 0, 0, width, height);
       resolve({
         name: logo.name,
+        companyName: logo.companyName || logo.name,
+        address: logo.address || "",
+        addressLines: normalizeLetterheadLines(logo.addressLines),
+        footer: logo.footer || "",
+        footerLines: normalizeLetterheadLines(logo.footerLines),
         dataUrl: canvas.toDataURL("image/jpeg", 0.92)
       });
     };
@@ -2966,6 +2984,19 @@ function letterheadHeaderHtml() {
   `;
 }
 
+function letterheadFooterHtml(footerInitials) {
+  const lines = letterheadFooterLines();
+  const letterheadLines = lines.length
+    ? `<p class="letterhead-address">${lines.map((line) => escapeHtml(line)).join("<br />")}</p>`
+    : "";
+  return `
+    <div class="footer" id="footer1">
+      ${letterheadLines}
+      <p class="footer-initials">${escapeHtml(footerInitials)}</p>
+    </div>
+  `;
+}
+
 function isSignatureBlockStart(paragraphs, index) {
   return isRoleHeadingParagraph(paragraphs[index]) && isRoleHeadingParagraph(paragraphs[index + 1] || "");
 }
@@ -3026,6 +3057,7 @@ function exportWordDocument() {
   const documentBody = formattedContractHtml(editor.value);
   const footerInitials = currentUserInitials();
   const letterheadHtml = letterheadHeaderHtml();
+  const letterheadFooter = letterheadFooterHtml(footerInitials);
   const hasLetterhead = Boolean(letterheadHtml);
   const html = `<!doctype html>
   <html>
@@ -3038,7 +3070,9 @@ function exportWordDocument() {
         div.footer { mso-element: footer; }
         .header p { margin: 0; text-align: left; }
         .header img { max-width: 180pt; max-height: 52pt; width: auto; height: auto; }
-        .footer p { margin: 0; text-align: right; font-size: 8pt; color: #6b7280; }
+        .footer p { margin: 0; font-size: 8pt; color: #6b7280; }
+        .footer .letterhead-address { text-align: center; font-size: 7.5pt; color: #374151; line-height: 1.2; }
+        .footer .footer-initials { text-align: right; margin-top: 2pt; }
         body { font-family: "${legalFormat.font}", serif; color: #111827; line-height: ${legalFormat.lineHeight}; margin: 0; font-size: ${legalFormat.size}pt; }
         h1 { font-size: ${Number(legalFormat.size) + 2}pt; text-align: center; font-weight: 700; margin: 0 0 24pt; text-transform: uppercase; }
         h2 { font-size: ${legalFormat.size}pt; text-align: justify; font-weight: 700; margin: 18pt 0 10pt; text-transform: uppercase; }
@@ -3062,7 +3096,7 @@ function exportWordDocument() {
     <body>
       <div class="WordSection1">${documentBody || `<h1>${escapeHtml(title)}</h1>`}</div>
       ${letterheadHtml}
-      <div class="footer" id="footer1"><p>${escapeHtml(footerInitials)}</p></div>
+      ${letterheadFooter}
     </body>
   </html>`;
   const blob = new Blob(["\ufeff", html], { type: "application/msword" });
@@ -5939,7 +5973,7 @@ letterheadLogoSelect?.addEventListener("change", () => {
   saveSelectedLetterheadLogoId();
   renderLetterheadLogos();
   saveActiveDraft("Membrete seleccionado");
-  showToast(selectedLetterheadLogoId ? "Membrete seleccionado para este documento." : "Documento sin logo de membrete.");
+  showToast(selectedLetterheadLogoId ? "Membrete seleccionado para este documento." : "Documento sin página membretada.");
 });
 
 addLetterheadLogoButton?.addEventListener("click", () => {
