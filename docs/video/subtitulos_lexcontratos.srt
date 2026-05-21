@@ -1,0 +1,43 @@
+1
+00:00:00,000 --> 00:00:20,000
+Bienvenida a LexContratos. Esta guía acompaña la primera prueba piloto de la app. La herramienta ayuda, pero la revisión final siempre queda en manos de la usuaria responsable.
+
+2
+00:00:20,000 --> 00:00:52,000
+Entra a lexcontratos.com/login. Crea usuario con nombre, correo y contraseña. Tu cuenta quedará pendiente hasta que la administradora active tu licencia.
+
+3
+00:00:52,000 --> 00:01:21,000
+Selecciona un machote precargado o importa uno propio. LexContratos trabaja sobre una copia editable para no alterar la plantilla base.
+
+4
+00:01:21,000 --> 00:01:52,000
+Antes de avanzar, usa Guardar como. Elige carpeta, crea subcarpetas y usa nombres claros para encontrar el contrato después.
+
+5
+00:01:52,000 --> 00:02:22,000
+Antes de subir documentos o extraer datos, presiona Detectar campos editables. Este paso es obligatorio.
+
+6
+00:02:22,000 --> 00:02:58,000
+Sube documentos por cada parte. No mezcles documentos del cliente con documentos del proveedor, prestador o contraparte.
+
+7
+00:02:58,000 --> 00:03:30,000
+Usa Extraer e integrar datos. La app leerá documentos y llenará campos soportados. Si un dato no está claro, debe quedar pendiente.
+
+8
+00:03:30,000 --> 00:03:54,000
+Abre Integrar manualmente datos faltantes. Captura todos los datos disponibles y usa Integrar completados.
+
+9
+00:03:54,000 --> 00:04:23,000
+Edita cláusulas directamente en la app. Después usa Revisión crítica IA y decide qué sugerencias aplicar o descartar.
+
+10
+00:04:23,000 --> 00:04:46,000
+Exporta a Word. Por ahora la firma integrada está desactivada; usa la vía externa que la empresa autorice.
+
+11
+00:04:46,000 --> 00:04:58,000
+Reporta cualquier punto confuso con captura de pantalla y una breve explicación. LexContratos. Menos captura. Más criterio.

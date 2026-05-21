@@ -1,0 +1,514 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Video base de capacitación | LexContratos</title>
+  <style>
+    :root {
+      --navy: #09264d;
+      --blue: #155bb8;
+      --sky: #d9ecff;
+      --gold: #c9973a;
+      --ink: #102033;
+      --muted: #607089;
+      --line: #d9e3ef;
+      --paper: #fffdf8;
+      --soft: #f5f8fc;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: Arial, Helvetica, sans-serif;
+      color: var(--ink);
+      background:
+        radial-gradient(circle at top left, rgba(77, 163, 255, .18), transparent 32rem),
+        linear-gradient(135deg, #fffaf1 0%, #f5f9ff 52%, #eef5ff 100%);
+    }
+
+    .stage {
+      width: min(1180px, calc(100vw - 48px));
+      margin: 28px auto;
+      border: 1px solid rgba(9, 38, 77, .16);
+      border-radius: 26px;
+      background: rgba(255, 255, 255, .9);
+      box-shadow: 0 24px 70px rgba(9, 38, 77, .14);
+      overflow: hidden;
+    }
+
+    .topbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 20px;
+      padding: 22px 28px;
+      border-bottom: 1px solid var(--line);
+      background: linear-gradient(90deg, #fff 0%, #f7fbff 100%);
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      min-width: 0;
+    }
+
+    .mark {
+      display: grid;
+      place-items: center;
+      width: 54px;
+      height: 54px;
+      border-radius: 14px;
+      color: white;
+      font-weight: 800;
+      letter-spacing: -1px;
+      background: linear-gradient(145deg, #0d3470, #174f9f);
+      box-shadow: inset -10px -10px 0 rgba(255,255,255,.08);
+    }
+
+    .brand h1 {
+      margin: 0;
+      font-size: 24px;
+      line-height: 1.05;
+    }
+
+    .brand p {
+      margin: 5px 0 0;
+      color: var(--muted);
+      font-size: 14px;
+    }
+
+    .meta {
+      color: var(--muted);
+      font-size: 13px;
+      text-align: right;
+      line-height: 1.45;
+    }
+
+    .slide {
+      display: grid;
+      grid-template-columns: 1.05fr .95fr;
+      gap: 36px;
+      min-height: 610px;
+      padding: 48px;
+      align-items: center;
+    }
+
+    .kicker {
+      color: var(--blue);
+      font-size: 13px;
+      font-weight: 800;
+      letter-spacing: .14em;
+      text-transform: uppercase;
+    }
+
+    .title {
+      max-width: 680px;
+      margin: 14px 0 16px;
+      color: var(--navy);
+      font-size: clamp(40px, 5vw, 68px);
+      line-height: .98;
+      letter-spacing: -1.6px;
+    }
+
+    .copy {
+      max-width: 650px;
+      color: #31425b;
+      font-size: 22px;
+      line-height: 1.45;
+    }
+
+    .chipline {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      margin-top: 24px;
+    }
+
+    .chip {
+      border: 1px solid rgba(21, 91, 184, .22);
+      border-radius: 999px;
+      padding: 9px 13px;
+      background: #fff;
+      color: var(--navy);
+      font-size: 14px;
+      font-weight: 700;
+    }
+
+    .chip.gold {
+      border-color: rgba(201, 151, 58, .42);
+      background: #fff7e7;
+      color: #6b4a05;
+    }
+
+    .visual {
+      min-height: 420px;
+      border: 1px solid var(--line);
+      border-radius: 22px;
+      background: var(--paper);
+      box-shadow: 0 18px 40px rgba(9, 38, 77, .08);
+      padding: 22px;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .visual::before {
+      content: "";
+      position: absolute;
+      inset: 0;
+      background: linear-gradient(135deg, rgba(77,163,255,.14), transparent 42%, rgba(201,151,58,.12));
+      pointer-events: none;
+    }
+
+    .mock {
+      position: relative;
+      z-index: 1;
+      border: 1px solid #d4dfeb;
+      border-radius: 16px;
+      background: #fff;
+      overflow: hidden;
+    }
+
+    .mockbar {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      height: 42px;
+      padding: 0 14px;
+      border-bottom: 1px solid #e1e8f0;
+      background: #f8fbff;
+    }
+
+    .dot {
+      width: 9px;
+      height: 9px;
+      border-radius: 50%;
+      background: #b8c6d7;
+    }
+
+    .mockbody {
+      padding: 20px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 12px 0;
+    }
+
+    .field, .file, .folder, .action {
+      border: 1px solid #d8e3ef;
+      border-radius: 12px;
+      padding: 12px;
+      background: #fbfdff;
+      color: #22334a;
+      font-weight: 700;
+    }
+
+    .field small, .file small, .folder small {
+      display: block;
+      margin-top: 6px;
+      color: var(--muted);
+      font-weight: 500;
+    }
+
+    .action {
+      background: var(--navy);
+      color: white;
+      text-align: center;
+    }
+
+    .timeline {
+      display: grid;
+      grid-template-columns: repeat(7, 1fr);
+      gap: 8px;
+      padding: 0 28px 20px;
+      background: #fff;
+    }
+
+    .step {
+      height: 8px;
+      border-radius: 999px;
+      background: #dbe5f0;
+      transition: background .2s ease;
+    }
+
+    .step.active {
+      background: var(--gold);
+    }
+
+    .caption {
+      min-height: 74px;
+      padding: 18px 28px;
+      border-top: 1px solid var(--line);
+      background: #f9fbfe;
+      color: #243753;
+      font-size: 19px;
+      line-height: 1.4;
+    }
+
+    .controls {
+      display: grid;
+      grid-template-columns: auto 1fr auto auto;
+      gap: 14px;
+      align-items: center;
+      padding: 18px 28px 24px;
+      background: #fff;
+    }
+
+    button {
+      appearance: none;
+      border: 1px solid #cbd8e8;
+      border-radius: 12px;
+      padding: 12px 16px;
+      background: #fff;
+      color: var(--navy);
+      font-weight: 800;
+      cursor: pointer;
+    }
+
+    button.primary {
+      border-color: var(--navy);
+      background: var(--navy);
+      color: #fff;
+    }
+
+    audio {
+      width: 100%;
+    }
+
+    @media (max-width: 850px) {
+      .stage { width: calc(100vw - 18px); margin: 9px auto; }
+      .slide { grid-template-columns: 1fr; min-height: auto; padding: 28px; }
+      .visual { min-height: 300px; }
+      .controls { grid-template-columns: 1fr; }
+      .meta { display: none; }
+    }
+  </style>
+</head>
+<body>
+  <main class="stage">
+    <header class="topbar">
+      <div class="brand">
+        <div class="mark">LX</div>
+        <div>
+          <h1>LexContratos</h1>
+          <p>Video base de capacitación interna</p>
+        </div>
+      </div>
+      <div class="meta">
+        Prueba piloto<br>
+        Datos ficticios · Uso interno
+      </div>
+    </header>
+
+    <section class="slide" id="slide"></section>
+    <div class="timeline" id="timeline"></div>
+    <div class="caption" id="caption"></div>
+
+    <div class="controls">
+      <button class="primary" id="play">Reproducir guía</button>
+      <audio id="audio" controls preload="metadata" src="audio/narracion_lexcontratos.wav"></audio>
+      <button id="prev">Atrás</button>
+      <button id="next">Siguiente</button>
+    </div>
+  </main>
+
+  <script>
+    const slides = [
+      {
+        t: 0,
+        kicker: "Inicio",
+        title: "Menos captura. Menos errores. Contratos listos para revisar.",
+        copy: "LexContratos acompaña la prueba piloto como herramienta interna para preparar contratos con control humano.",
+        chips: ["Machotes", "Documentos", "Extracción", "Validación", "Word"],
+        caption: "Bienvenida a LexContratos. Esta guía acompaña la primera prueba piloto de la app. La herramienta ayuda, pero la revisión final siempre queda en manos de la usuaria responsable.",
+        visual: "flow"
+      },
+      {
+        t: 20,
+        kicker: "Acceso privado",
+        title: "Entra con tu cuenta y espera activación.",
+        copy: "El acceso requiere usuario, contraseña y licencia activa habilitada por la administradora.",
+        chips: ["lexcontratos.com/login", "Crear usuario", "Licencia activa"],
+        caption: "Entra a lexcontratos.com/login. Crea usuario con nombre, correo y contraseña. Tu cuenta quedará pendiente hasta que la administradora active tu licencia.",
+        visual: "login"
+      },
+      {
+        t: 52,
+        kicker: "Paso 1",
+        title: "Selecciona o importa un machote.",
+        copy: "Trabaja sobre una copia editable para proteger la plantilla base y conservar tus documentos limpios.",
+        chips: ["Seleccionar machote", "Importar machote propio", "Copia editable"],
+        caption: "Selecciona un machote precargado o importa uno propio. LexContratos trabaja sobre una copia editable para no alterar la plantilla base.",
+        visual: "template"
+      },
+      {
+        t: 81,
+        kicker: "Orden documental",
+        title: "Usa Guardar como desde el inicio.",
+        copy: "Elige expediente, carpeta y subcarpeta para que el contrato no se pierda después.",
+        chips: ["Clientes", "Proveedores", "Personales", "Documentos de las partes"],
+        caption: "Antes de avanzar, usa Guardar como. Elige carpeta, crea subcarpetas y usa nombres claros para encontrar el contrato después.",
+        visual: "finder"
+      },
+      {
+        t: 112,
+        kicker: "Obligatorio",
+        title: "Detecta campos editables antes de continuar.",
+        copy: "Este paso le indica a LexContratos qué datos debe buscar, pedir o integrar.",
+        chips: ["Detectar campos editables", "Campos pendientes", "Volver a detectar si editas"],
+        caption: "Antes de subir documentos o extraer datos, presiona Detectar campos editables. Este paso es obligatorio.",
+        visual: "detect"
+      },
+      {
+        t: 142,
+        kicker: "Documentos por parte",
+        title: "No mezcles documentos de distintas partes.",
+        copy: "Carga actas, poderes, constancias, identificaciones oficiales, correos, PDF, Word, Excel o imágenes legibles en la caja correcta.",
+        chips: ["Cliente", "Proveedor", "Prestador", "Contraparte"],
+        caption: "Sube documentos por cada parte. No mezcles documentos del cliente con documentos del proveedor, prestador o contraparte.",
+        visual: "uploads"
+      },
+      {
+        t: 178,
+        kicker: "Automatización",
+        title: "Extrae e integra datos soportados.",
+        copy: "La app intenta llenar razón social, RFC, representantes, poderes, domicilios y otros campos detectables.",
+        chips: ["Extraer", "Integrar", "Validar", "No inventar"],
+        caption: "Usa Extraer e integrar datos. La app leerá documentos y llenará campos soportados. Si un dato no está claro, debe quedar pendiente.",
+        visual: "extract"
+      },
+      {
+        t: 210,
+        kicker: "Datos faltantes",
+        title: "Completa solo lo que quede pendiente.",
+        copy: "Captura varios campos y usa Integrar completados para incorporarlos de una vez.",
+        chips: ["Integrar manualmente", "Integrar completados", "Pendientes visibles"],
+        caption: "Abre Integrar manualmente datos faltantes. Captura todos los datos disponibles y usa Integrar completados.",
+        visual: "manual"
+      },
+      {
+        t: 234,
+        kicker: "Revisión",
+        title: "Edita cláusulas y usa la revisión crítica IA.",
+        copy: "La IA señala posibles riesgos, contradicciones o errores; tú aceptas o descartas cada observación.",
+        chips: ["Editar cláusulas", "Aplicar", "Descartar", "Criterio humano"],
+        caption: "Edita cláusulas directamente en la app. Después usa Revisión crítica IA y decide qué sugerencias aplicar o descartar.",
+        visual: "review"
+      },
+      {
+        t: 263,
+        kicker: "Salida",
+        title: "Exporta a Word y firma por la vía autorizada.",
+        copy: "La firma integrada está desactivada por ahora; usa el proceso externo decidido por la empresa.",
+        chips: ["Word", "Formato legal", "Firma externa", "Archivo"],
+        caption: "Exporta a Word. Por ahora la firma integrada está desactivada; usa la vía externa que la empresa autorice.",
+        visual: "word"
+      },
+      {
+        t: 286,
+        kicker: "Cierre",
+        title: "Prueba, reporta y mejora el flujo.",
+        copy: "Comparte dudas, capturas y casos reales para fortalecer LexContratos antes de ampliar su uso.",
+        chips: ["Captura", "Explica", "Reporta", "Mejora"],
+        caption: "Reporta cualquier punto confuso con captura de pantalla y una breve explicación. LexContratos. Menos captura. Más criterio.",
+        visual: "checklist"
+      }
+    ];
+
+    const audio = document.getElementById("audio");
+    const slideEl = document.getElementById("slide");
+    const captionEl = document.getElementById("caption");
+    const timelineEl = document.getElementById("timeline");
+    const playBtn = document.getElementById("play");
+    let current = -1;
+
+    function visual(type) {
+      const blocks = {
+        flow: ["Machote", "Documentos", "Extracción", "Validación", "Word"],
+        login: ["Correo o usuario", "Contraseña", "Solicitar activación", "Licencia habilitada"],
+        template: ["Prestación de servicios", "Arrendamiento", "Confidencialidad", "Importar propio"],
+        finder: ["Clientes", "Proveedores", "Personales", "Documentos de las partes"],
+        detect: ["1 Detectar campos", "2 Cargar documentos", "3 Extraer e integrar", "4 Revisar"],
+        uploads: ["Acta constitutiva", "Poder notarial", "Constancia fiscal", "Identificación oficial"],
+        extract: ["Razón social", "RFC", "Representante legal", "Domicilio"],
+        manual: ["Fecha de firma", "Importe", "Objeto", "Correo electrónico"],
+        review: ["Dato faltante", "Ambigüedad", "Ortografía", "Cambio sugerido"],
+        word: ["Exportar Word", "Formato legal", "Enviar externo", "Archivar"],
+        checklist: ["Acceso", "Guardado", "Campos", "Documentos", "Word", "Feedback"]
+      };
+      const items = blocks[type] || blocks.flow;
+      return `
+        <div class="visual">
+          <div class="mock">
+            <div class="mockbar"><span class="dot"></span><span class="dot"></span><span class="dot"></span></div>
+            <div class="mockbody">
+              <div class="row">
+                ${items.slice(0, 2).map(item => `<div class="field">${item}<small>LexContratos</small></div>`).join("")}
+              </div>
+              <div class="row">
+                ${items.slice(2, 4).map(item => `<div class="file">${item}<small>Dato de prueba</small></div>`).join("")}
+              </div>
+              ${items.slice(4).map(item => `<div class="folder">${item}<small>Elemento del flujo</small></div>`).join("")}
+              <div class="action">Siguiente paso</div>
+            </div>
+          </div>
+        </div>`;
+    }
+
+    function render(index) {
+      const s = slides[index];
+      current = index;
+      slideEl.innerHTML = `
+        <div>
+          <div class="kicker">${s.kicker}</div>
+          <h2 class="title">${s.title}</h2>
+          <p class="copy">${s.copy}</p>
+          <div class="chipline">
+            ${s.chips.map((chip, i) => `<span class="chip ${i === 0 ? "gold" : ""}">${chip}</span>`).join("")}
+          </div>
+        </div>
+        ${visual(s.visual)}
+      `;
+      captionEl.textContent = s.caption;
+      timelineEl.innerHTML = slides.slice(0, 7).map((_, i) => `<span class="step ${i <= Math.min(index, 6) ? "active" : ""}"></span>`).join("");
+    }
+
+    function indexForTime(time) {
+      let idx = 0;
+      for (let i = 0; i < slides.length; i += 1) {
+        if (time >= slides[i].t) idx = i;
+      }
+      return idx;
+    }
+
+    audio.addEventListener("timeupdate", () => {
+      const next = indexForTime(audio.currentTime);
+      if (next !== current) render(next);
+    });
+
+    playBtn.addEventListener("click", async () => {
+      await audio.play();
+    });
+
+    document.getElementById("prev").addEventListener("click", () => {
+      const next = Math.max(0, current - 1);
+      audio.currentTime = slides[next].t;
+      render(next);
+    });
+
+    document.getElementById("next").addEventListener("click", () => {
+      const next = Math.min(slides.length - 1, current + 1);
+      audio.currentTime = slides[next].t;
+      render(next);
+    });
+
+    render(0);
+  </script>
+</body>
+</html>
