@@ -685,6 +685,7 @@ const saveLocationFileName = document.querySelector("#save-location-file-name");
 const saveLocationContextMenu = document.querySelector("#save-location-context-menu");
 const saveLocationCancel = document.querySelector("#save-location-cancel");
 const saveLocationConfirm = document.querySelector("#save-location-confirm");
+const saveLocationExpandButton = document.querySelector("#save-location-expand");
 const signatureDialog = document.querySelector("#signature-dialog");
 const signatureForm = document.querySelector("#signature-form");
 const signerList = document.querySelector("#signer-list");
@@ -4391,7 +4392,7 @@ function renderSaveLocationBrowser() {
       const label = folder.split("/").pop();
       const root = rootFolders.includes(folder);
       return `
-        <article class="save-file-row save-folder-row" data-save-folder="${escapeHtml(folder)}">
+        <article class="save-file-row save-folder-row" data-save-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
           <button class="save-file-name save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
             <span class="finder-icon" aria-hidden="true">▣</span><strong>${escapeHtml(label)}</strong>
           </button>
@@ -4410,7 +4411,7 @@ function renderSaveLocationBrowser() {
     .slice()
     .reverse()
     .map((contract) => `
-      <div class="save-file-row is-file">
+      <div class="save-file-row is-file" title="${escapeHtml(contract.title)}">
         <span class="save-file-name"><span aria-hidden="true">□</span><strong>${escapeHtml(contract.title)}</strong></span>
         <span>${escapeHtml(contract.date || "")}</span>
         <span>Contrato</span>
@@ -4423,7 +4424,7 @@ function renderSaveLocationBrowser() {
     .slice()
     .reverse()
     .map((document) => `
-      <div class="save-file-row is-file">
+      <div class="save-file-row is-file" title="${escapeHtml(document.name)}">
         <span class="save-file-name"><span aria-hidden="true">□</span><strong>${escapeHtml(document.name)}</strong></span>
         <span>${escapeHtml(document.date || "")}</span>
         <span>${escapeHtml(document.type || "Documento")}</span>
@@ -5821,6 +5822,12 @@ saveLocationConfirm?.addEventListener("click", () => {
 });
 
 saveLocationCancel?.addEventListener("click", () => resolveSaveLocation(null));
+
+saveLocationExpandButton?.addEventListener("click", () => {
+  saveLocationDialog?.classList.toggle("is-expanded");
+  const expanded = saveLocationDialog?.classList.contains("is-expanded");
+  saveLocationExpandButton.textContent = expanded ? "Reducir" : "Ampliar";
+});
 
 saveLocationDialog?.addEventListener("close", () => {
   hideSaveLocationContextMenu();
