@@ -471,6 +471,15 @@
                 <input id="format-justify" type="checkbox" checked disabled />
                 Justificado siempre
               </label>
+              <label class="letterhead-control">
+                Membrete aprobado
+                <select id="letterhead-logo-select">
+                  <option value="">Sin logo</option>
+                </select>
+              </label>
+              <input id="letterhead-logo-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden />
+              <button class="secondary-action" id="add-letterhead-logo" type="button" title="Agrega un logo del grupo para usarlo como membrete en Word.">Agregar logo</button>
+              <button class="secondary-action" id="remove-letterhead-logo" type="button" title="Elimina el logo seleccionado de tu biblioteca personal.">Quitar logo</button>
               <button class="primary-action" id="save-as-contract" type="button" title="Guarda el contrato con nombre y carpeta, como en Finder.">Guardar como</button>
             </section>
             <textarea id="contract-editor" spellcheck="true" placeholder="Selecciona un formato o importa un draft propio para comenzar."></textarea>
@@ -720,7 +729,7 @@
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar firma">×</button>
       </form>
-      <form class="signature-form" id="signature-form">
+      <form class="signature-form" id="signature-form" novalidate>
         <div class="signer-list" id="signer-list"></div>
         <button class="secondary-action" id="add-signer" type="button">Agregar firmante</button>
         <div class="signature-status">

@@ -19,6 +19,7 @@ import urllib.parse
 import urllib.request
 from pathlib import Path
 
+from PIL import Image, ImageDraw, ImageFont
 from docx import Document
 from docx.enum.section import WD_SECTION
 from docx.enum.text import WD_ALIGN_PARAGRAPH
@@ -31,6 +32,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT_DIR = ROOT / "docs" / "manual-ilustrado"
 ASSET_DIR = OUT_DIR / "capturas"
 DOCX_PATH = OUT_DIR / "Manual_LexContratos_Prueba_Piloto_Ilustrado.docx"
+NOTE_PATH = OUT_DIR / "Nota_cambios_para_usuaria_piloto.docx"
 PLAYWRIGHT_HEADLESS = Path("/private/tmp/pw-browsers/chromium_headless_shell-1217/chrome-headless-shell-mac-arm64/chrome-headless-shell")
 CHROME = PLAYWRIGHT_HEADLESS if PLAYWRIGHT_HEADLESS.exists() else Path("/Applications/Google Chrome.app/Contents/MacOS/Google Chrome")
 
@@ -293,6 +295,58 @@ def annotate_and_capture(cdp: CDP, filename: str, items: list[dict], wait=0.25) 
     return path
 
 
+def wrapped_lines(draw: ImageDraw.ImageDraw, text: str, font: ImageFont.ImageFont, max_width: int) -> list[str]:
+    words = text.split()
+    lines: list[str] = []
+    current = ""
+    for word in words:
+        candidate = f"{current} {word}".strip()
+        if draw.textbbox((0, 0), candidate, font=font)[2] <= max_width or not current:
+            current = candidate
+        else:
+            lines.append(current)
+            current = word
+    if current:
+        lines.append(current)
+    return lines
+
+
+def draw_callout(draw: ImageDraw.ImageDraw, number: int, text: str, box: tuple[int, int, int, int], target: tuple[int, int], font: ImageFont.ImageFont):
+    x, y, w, h = box
+    fill = "#fff8e6"
+    border = "#c77700"
+    text_color = "#13233a"
+    draw.rounded_rectangle((x, y, x + w, y + h), radius=14, fill=fill, outline=border, width=3)
+    lines = wrapped_lines(draw, f"{number}. {text}", font, w - 22)
+    ty = y + 10
+    for line in lines[:4]:
+        draw.text((x + 11, ty), line, fill=text_color, font=font)
+        ty += 19
+    sx = x + w if target[0] > x + w else x
+    sy = y + h // 2
+    draw.line((sx, sy, target[0], target[1]), fill=border, width=4)
+    draw.ellipse((target[0] - 9, target[1] - 9, target[0] + 9, target[1] + 9), outline=border, width=4)
+
+
+def draw_signature_callouts(path: Path) -> Path:
+    image = Image.open(path).convert("RGB")
+    draw = ImageDraw.Draw(image)
+    font_path = "/System/Library/Fonts/Supplemental/Arial.ttf"
+    font = ImageFont.truetype(font_path, 16) if Path(font_path).exists() else ImageFont.load_default()
+    callouts = [
+        ("Nombre del firmante: persona física que firmará", (45, 275, 315, 68), (448, 437)),
+        ("Correo: aquí llega la solicitud de Dropbox Sign", (45, 390, 315, 68), (670, 437)),
+        ("Rol: representante legal u otro rol aplicable", (45, 505, 315, 68), (848, 437)),
+        ("Agregar firmante si participa otra persona", (45, 620, 315, 68), (720, 586)),
+        ("Estado: confirma si Dropbox Sign está conectado", (1120, 520, 310, 72), (590, 640)),
+        ("Enviar prueba o enviar a firma según el modo configurado", (1120, 640, 310, 82), (720, 689)),
+    ]
+    for index, (text, box, target) in enumerate(callouts, 1):
+        draw_callout(draw, index, text, box, target, font)
+    image.save(path)
+    return path
+
+
 def launch_chrome(debug_port: int, user_dir: Path):
     cmd = [
         str(CHROME),
@@ -413,29 +467,29 @@ def capture_screenshots() -> list[tuple[str, Path, list[str]]]:
         annotate_and_capture(cdp, "04_app_acciones_principales.png", [
           {"selector": "#open-user-guide", "text": "Manual de Uso: guía completa dentro de la app", "x": 920, "y": 24},
           {"selector": "#toggle-archive", "text": "Expedientes: abre el archivo de carpetas y contratos", "x": 45, "y": 245, "width": 290},
-          {"selector": "#open-template-picker", "text": "Seleccionar machote: elige plantilla precargada", "x": 315, "y": 245, "width": 300},
-          {"selector": "label[for='template-import']", "text": "Importar machote propio: sube tu formato base", "x": 650, "y": 245, "width": 300},
-          {"selector": "#new-template", "text": "Nuevo machote: redacta una plantilla desde cero", "x": 975, "y": 245, "width": 300},
+          {"selector": "#open-template-picker", "text": "Seleccionar formato: elige una plantilla precargada", "x": 315, "y": 245, "width": 300},
+          {"selector": "label[for='template-import']", "text": "Importar draft propio: sube tu formato base", "x": 650, "y": 245, "width": 300},
+          {"selector": "#new-template", "text": "Nuevo formato: redacta una plantilla desde cero", "x": 975, "y": 245, "width": 300},
         ]),
         [
           "La tira superior concentra las acciones para iniciar trabajo.",
           "Expedientes abre el archivo documental.",
-          "Seleccionar o importar machote inicia el contrato de trabajo.",
+          "Seleccionar o importar formato inicia el contrato de trabajo.",
         ],
       ))
 
       cdp.eval("document.querySelector('#open-template-picker').click();")
       time.sleep(0.5)
       captures.append((
-        "5. Selector de machotes",
+        "5. Selector de formatos",
         annotate_and_capture(cdp, "05_selector_machotes.png", [
-          {"selector": "#template-search", "text": "Buscar machote por tipo de contrato", "x": 910, "y": 195},
-          {"selector": ".template-card", "text": "Tarjeta de machote: muestra nombre, categoría y campos", "x": 920, "y": 345, "width": 330},
-          {"selector": ".template-card .use-template", "text": "Usar machote: crea una copia de trabajo", "x": 920, "y": 505, "width": 330},
+          {"selector": "#template-search", "text": "Buscar formato por tipo de contrato", "x": 910, "y": 195},
+          {"selector": ".template-card", "text": "Tarjeta de formato: muestra nombre, categoría y campos", "x": 920, "y": 345, "width": 330},
+          {"selector": ".template-card .use-template", "text": "Usar formato: crea una copia de trabajo", "x": 920, "y": 505, "width": 330},
         ]),
         [
           "El selector evita tener una lista enorme ocupando la pantalla.",
-          "Al usar un machote, se trabaja una copia para no alterar la base.",
+          "Al usar un formato, se trabaja una copia para no alterar la base.",
           "El buscador ayuda a encontrar rápido el contrato correcto.",
         ],
       ))
@@ -476,6 +530,7 @@ def capture_screenshots() -> list[tuple[str, Path, list[str]]]:
           {"selector": "#critical-review", "text": "3. Revisión crítica IA: observaciones finales", "x": 940, "y": 485, "width": 300},
           {"selector": "#export-word", "text": "Exportar Word: genera versión editable con formato legal", "x": 1070, "y": 575, "width": 330},
           {"selector": "#save-as-contract", "text": "Guardar como: cambia nombre o ubicación del contrato", "x": 920, "y": 735, "width": 340},
+          {"selector": "#format-font", "text": "Fuente legal predeterminada: Georgia", "x": 40, "y": 665, "width": 300},
         ]),
         [
           "El flujo recomendado avanza de izquierda a derecha.",
@@ -527,21 +582,68 @@ def capture_screenshots() -> list[tuple[str, Path, list[str]]]:
         annotate_and_capture(cdp, "10_revision_critica.png", [
           {"selector": "#critical-observations", "text": "Solo observaciones: no modifica el contrato", "x": 760, "y": 170, "width": 330},
           {"selector": "#critical-suggest", "text": "Proponer ajustes: genera sugerencias para aceptar o descartar", "x": 780, "y": 245, "width": 360},
-          {"selector": "#critical-review-output", "text": "Área de resultados: muestra hallazgos y cambios sugeridos", "x": 780, "y": 430, "width": 360},
+          {"selector": "#critical-congruence", "text": "Congruencia: compara contrato, anexos y documentos soporte", "x": 760, "y": 320, "width": 360},
+          {"selector": "#critical-legal", "text": "Legislación aplicable: señala alertas normativas por país", "x": 760, "y": 395, "width": 360},
+          {"selector": "#critical-country", "text": "País de referencia para la revisión legal", "x": 760, "y": 470, "width": 360},
+          {"selector": "#critical-review-output", "text": "Área de resultados: hallazgos y cambios sugeridos", "x": 780, "y": 590, "width": 360},
           {"selector": "#critical-review-dialog .icon-button", "text": "Cerrar revisión: vuelve al contrato sin aplicar cambios", "x": 840, "y": 75, "width": 330},
         ]),
         [
           "La revisión crítica no sustituye el criterio del usuario.",
-          "Las sugerencias se pueden aceptar o descartar.",
+          "Las sugerencias se pueden aceptar o descartar una por una.",
+          "La revisión legal aplicable no sustituye un dictamen ni certifica vigencia normativa.",
           "Antes de exportar, conviene revisar observaciones importantes.",
         ],
       ))
 
-      cdp.eval("document.querySelector('#critical-review-dialog')?.close(); document.querySelector('#toggle-archive')?.click();")
+      cdp.eval("""
+        document.querySelector('#critical-review-dialog')?.close();
+        document.querySelector('#send-signature')?.click();
+      """)
+      time.sleep(0.6)
+      wait_for(cdp, "Boolean(document.querySelector('#signature-dialog')?.open)")
+      cdp.eval("""
+        const rows = Array.from(document.querySelectorAll('[data-signer-row]'));
+        const sampleSigners = [
+          { name: 'Ana Sofía Martínez Ríos', email: 'ana.demo@lexcontratos.com', role: 'Representante legal del Cliente' },
+          { name: 'Luis Eduardo Carranza Mora', email: 'luis.demo@lexcontratos.com', role: 'Representante legal del Prestador de servicios' },
+        ];
+        rows.forEach((row, index) => {
+          const signer = sampleSigners[index] || sampleSigners[0];
+          row.querySelector('[name="signerName"]').value = signer.name;
+          row.querySelector('[name="signerEmail"]').value = signer.email;
+          row.querySelector('[name="signerRole"]').value = signer.role;
+          row.querySelector('[name="signerOrder"]').value = String(index + 1);
+        });
+        const copy = document.querySelector('#signature-dialog-copy');
+        if (copy) copy.textContent = 'Dropbox Sign está conectado. El contrato se enviará por correo a los firmantes capturados. En modo prueba, el envío no es legalmente vinculante.';
+        const status = document.querySelector('#signature-status-label');
+        if (status) status.textContent = 'Dropbox Sign conectado · modo prueba';
+        const submit = document.querySelector('#signature-submit');
+        if (submit) submit.textContent = 'Enviar prueba de firma';
+      """)
+      time.sleep(0.3)
+      signature_path = ASSET_DIR / "11_firma_electronica.png"
+      cdp.screenshot(signature_path)
+      draw_signature_callouts(signature_path)
+      captures.append((
+        "11. Firma electrónica con Dropbox Sign",
+        signature_path,
+        [
+          "Para enviar a Dropbox Sign sí se necesita nombre, correo y rol de cada firmante.",
+          "El contrato puede seguir incompleto para una prueba, pero los datos de firmantes no pueden estar vacíos.",
+          "En modo prueba, el envío no es legalmente vinculante.",
+          "Cuando el botón diga Enviar prueba de firma, el correo sirve para validar el flujo, no para firmar legalmente.",
+          "Cuando el envío funciona, el firmante recibe un correo de Dropbox Sign para firmar desde su navegador.",
+          "Si Dropbox Sign limita correos externos en modo prueba, usa correos del dominio autorizado o cambia a modo real cuando proceda.",
+        ],
+      ))
+
+      cdp.eval("document.querySelector('#signature-dialog')?.close(); document.querySelector('#toggle-archive')?.click();")
       time.sleep(0.6)
       captures.append((
-        "11. Expedientes y archivo",
-        annotate_and_capture(cdp, "11_expedientes.png", [
+        "12. Expedientes y archivo",
+        annotate_and_capture(cdp, "12_expedientes.png", [
           {"selector": "#archive-drawer", "text": "Archivo contractual: carpetas, contratos y documentos", "x": 405, "y": 140, "width": 340},
           {"selector": "#folder-root", "text": "Tipo de carpeta raíz: Clientes, Proveedores, Personales o Documentos de las partes", "x": 420, "y": 310, "width": 380},
           {"selector": "#folder-name", "text": "Crear carpeta/subcarpeta: escribe nombre y presiona Enter", "x": 420, "y": 405, "width": 360},
@@ -646,19 +748,35 @@ def build_docx(captures: list[tuple[str, Path, list[str]]]):
         "Sigue las pantallas en orden. Las flechas señalan dónde está cada botón y para qué sirve. LexContratos asiste el llenado y organización contractual; la revisión final siempre queda bajo control del usuario.",
     )
 
+    doc.add_heading("Cambios incorporados en esta versión", level=1)
+    for change in [
+        "La palabra machote se sustituyó por formato o draft, para que el lenguaje sea más claro para usuarias internas.",
+        "El formato legal predeterminado cambió a fuente Georgia 12, con texto justificado y márgenes moderados para exportación a Word.",
+        "Cada documento exportado puede incluir en el pie las iniciales del usuario que lo trabajó.",
+        "Al seleccionar un formato precargado, se trabaja sobre una copia editable y se pide dónde guardar el documento.",
+        "La app conserva datos existentes del contrato cuando ya son correctos y solo integra información faltante o validada.",
+        "La revisión crítica IA ahora permite revisar observaciones, proponer ajustes granulares, comparar congruencia entre contrato/anexos/documentos y revisar legislación aplicable por país.",
+        "La revisión de legislación aplicable señala alertas normativas y formalidades a validar; no sustituye dictamen jurídico ni consulta oficial vigente.",
+        "Se agregó selección entre Notario Público y Corredor Público. Si es notario, el instrumento esperado es escritura pública; si es corredor, póliza o acta, según corresponda.",
+        "El módulo de firma electrónica con Dropbox Sign permite preparar firmantes y enviar solicitudes cuando la integración está configurada.",
+        "El guardado y archivo contractual se organizan con Guardar como, carpetas, expedientes y una vista más parecida a Finder.",
+    ]:
+        doc.add_paragraph(change, style="List Bullet")
+
     doc.add_heading("Flujo general", level=1)
     add_steps_table(
         doc,
         [
             ("1", "Entrar o crear usuario. La cuenta queda pendiente hasta que administración active la licencia."),
-            ("2", "Seleccionar o importar machote. La app trabaja sobre una copia para proteger la plantilla base."),
+            ("2", "Seleccionar o importar formato/draft. La app trabaja sobre una copia para proteger la plantilla base."),
             ("3", "Guardar como. Elegir carpeta o expediente desde el inicio."),
             ("4", "Detectar campos editables. Este paso es obligatorio antes de cargar documentos o integrar datos."),
             ("5", "Cargar documentos por parte. No mezclar información de cliente, proveedor, prestador o contraparte."),
             ("6", "Extraer e integrar datos. Validar lo integrado y dejar pendiente lo que no esté claro."),
             ("7", "Completar datos faltantes. Integrar todos los datos capturados de una vez."),
-            ("8", "Editar cláusulas y revisar con IA. Aceptar o descartar observaciones bajo criterio propio."),
-            ("9", "Exportar a Word. Circular o firmar por la vía externa autorizada."),
+            ("8", "Editar cláusulas y revisar con IA. Aceptar o descartar observaciones bajo criterio propio; revisar congruencia y legislación aplicable cuando convenga."),
+            ("9", "Exportar a Word. Generar una versión editable para circular, imprimir o conservar en expediente."),
+            ("10", "Preparar firma. Capturar firmantes, revisar correos y enviar por Dropbox Sign cuando la integración esté conectada."),
         ],
     )
 
@@ -680,8 +798,12 @@ def build_docx(captures: list[tuple[str, Path, list[str]]]):
         "Usar siempre lexcontratos.com para pruebas reales. Las vistas locales sirven solo para desarrollo.",
         "No subir documentos reales de terceros si no son necesarios para la prueba piloto.",
         "Separar documentos por parte. Si se mezclan, la extracción puede asignar datos al rol incorrecto.",
-        "Presionar Detectar campos editables cada vez que se cambie el machote o se borren campos del contrato.",
+        "Presionar Detectar campos editables cada vez que se cambie el formato/draft o se borren campos del contrato.",
         "Revisar siempre los datos integrados antes de exportar a Word.",
+        "Si se usa la revisión de legislación aplicable, tratarla como alerta de apoyo y no como dictamen definitivo.",
+        "Si se usa corredor público, verificar que el documento sea póliza o acta, no escritura pública salvo que el usuario confirme otra cosa.",
+        "Para enviar por Dropbox Sign, capturar nombre, correo y rol de cada firmante. No basta con tener el contrato abierto.",
+        "En modo prueba de Dropbox Sign, el envío no es legalmente vinculante y puede estar limitado a correos del dominio autorizado.",
         "Reportar cualquier error con captura de pantalla, contrato utilizado, documentos cargados y una breve explicación.",
     ]
     for rule in rules:
@@ -690,17 +812,93 @@ def build_docx(captures: list[tuple[str, Path, list[str]]]):
     add_note(
         doc,
         "Frase clave para soporte.",
-        "Si algo no se entiende, pedir a la usuaria que indique en qué paso se atoró: acceso, machote, guardar como, detectar campos, documentos por parte, extracción, datos faltantes, revisión IA, exportación o expedientes.",
+        "Si algo no se entiende, pedir a la usuaria que indique en qué paso se atoró: acceso, formato/draft, guardar como, detectar campos, documentos por parte, extracción, datos faltantes, revisión IA, exportación o expedientes.",
     )
 
     doc.save(DOCX_PATH)
     return DOCX_PATH
 
 
+def build_note_docx():
+    OUT_DIR.mkdir(parents=True, exist_ok=True)
+    doc = Document()
+    section = doc.sections[0]
+    section.top_margin = Inches(0.8)
+    section.bottom_margin = Inches(0.8)
+    section.left_margin = Inches(0.85)
+    section.right_margin = Inches(0.85)
+    styles = doc.styles
+    styles["Normal"].font.name = "Arial"
+    styles["Normal"].font.size = Pt(11)
+    styles["Heading 1"].font.name = "Arial"
+    styles["Heading 1"].font.size = Pt(16)
+    styles["Heading 1"].font.color.rgb = RGBColor(9, 38, 77)
+
+    title = doc.add_paragraph()
+    title.alignment = WD_ALIGN_PARAGRAPH.CENTER
+    r = title.add_run("Nota para prueba piloto de LexContratos")
+    r.bold = True
+    r.font.size = Pt(20)
+    r.font.name = "Arial"
+    r.font.color.rgb = RGBColor(9, 38, 77)
+
+    doc.add_paragraph(
+        "Hola. Te compartimos esta versión de LexContratos para prueba interna. La idea es validar si la herramienta realmente ayuda a reducir captura manual, evitar errores en generales y ordenar el trabajo contractual en expedientes."
+    )
+    doc.add_paragraph(
+        "LexContratos no sustituye el criterio jurídico ni toma decisiones por el usuario. Ayuda a extraer datos, detectar campos pendientes, comparar información, organizar documentos y preparar una versión editable para revisión."
+    )
+
+    doc.add_heading("Qué cambió en esta versión", level=1)
+    changes = [
+        "El lenguaje cambió de machote a formato/draft.",
+        "Al elegir un formato precargado, se genera una copia de trabajo y se pide dónde guardarla.",
+        "El editor y la exportación a Word usan Georgia como fuente legal predeterminada.",
+        "Los documentos exportados pueden llevar las iniciales del usuario en el pie.",
+        "La extracción intenta integrar datos automáticamente y deja visibles solo los faltantes.",
+        "Los datos manuales se pueden capturar en conjunto e integrar de una vez.",
+        "Se reforzó la revisión crítica IA: observaciones, cambios granulares, congruencia entre contrato/anexos y revisión de legislación aplicable.",
+        "Se agregó selección entre Notario Público y Corredor Público; si es corredor, se usa póliza o acta como instrumento.",
+        "Se agregó el flujo de firma electrónica con Dropbox Sign: captura de firmantes, orden de firma y envío cuando la integración está conectada.",
+        "El archivo de expedientes queda organizado por carpetas y subcarpetas para facilitar búsqueda.",
+    ]
+    for item in changes:
+        doc.add_paragraph(item, style="List Bullet")
+
+    doc.add_heading("Qué revisar durante la prueba", level=1)
+    checks = [
+        "Si el flujo resulta claro desde seleccionar formato hasta exportar.",
+        "Si Detectar campos editables se entiende como paso obligatorio.",
+        "Si los documentos por parte evitan confusión de datos.",
+        "Si la extracción identifica correctamente partes, representantes, fechas, poderes, RFC, domicilios y montos.",
+        "Si los campos pendientes son útiles o sobran.",
+        "Si la revisión crítica IA da observaciones accionables.",
+        "Si la revisión de congruencia ayuda a encontrar diferencias entre contrato y anexos.",
+        "Si el Word exportado se ve presentable para circular.",
+        "Si el envío de firma llega correctamente al correo del firmante y el flujo de Dropbox Sign se entiende.",
+    ]
+    for item in checks:
+        doc.add_paragraph(item, style="List Bullet")
+
+    doc.add_heading("Cómo reportar observaciones", level=1)
+    doc.add_paragraph(
+        "Cuando algo falle o no se entienda, por favor comparte: captura de pantalla, paso donde ocurrió, formato usado, tipo de documentos cargados y qué esperabas que hiciera la app. No es necesario mandar documentos sensibles si basta describir el caso."
+    )
+
+    add_note(
+        doc,
+        "Gracias por probarla.",
+        "Tus comentarios son especialmente valiosos porque esta versión está pensada para validar el uso real antes de seguir endureciendo automatizaciones, firma digital y consulta normativa oficial.",
+    )
+    doc.save(NOTE_PATH)
+    return NOTE_PATH
+
+
 def main():
     captures = capture_screenshots()
     docx = build_docx(captures)
-    print(json.dumps({"docx": str(docx), "screenshots": [str(path) for _, path, _ in captures]}, ensure_ascii=False, indent=2))
+    note = build_note_docx()
+    print(json.dumps({"docx": str(docx), "note": str(note), "screenshots": [str(path) for _, path, _ in captures]}, ensure_ascii=False, indent=2))
 
 
 if __name__ == "__main__":

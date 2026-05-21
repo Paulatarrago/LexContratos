@@ -491,30 +491,30 @@ CUARTA. Garantías. Las garantías personales, reales, títulos de crédito o do
 
 const roleLabels = {
   prestacionDemandaEjemplo: ["Prestador de servicios", "Cliente"],
-  services: ["Prestador de servicios", "Cliente"],
-  software: ["Desarrollador", "Cliente"],
+  services: ["Cliente", "Prestador de servicios"],
+  software: ["Cliente", "Desarrollador"],
   data: ["Responsable", "Encargado"],
   lease: ["Arrendador", "Arrendatario"],
   purchase: ["Vendedor", "Comprador"],
   loan: ["Mutuante", "Mutuario"],
-  supply: ["Proveedor", "Comprador"],
+  supply: ["Comprador", "Proveedor"],
   distribution: ["Fabricante", "Distribuidor"],
   commission: ["Comitente", "Comisionista"],
   mandate: ["Mandante", "Mandatario"],
-  nda: ["Parte A", "Parte B"],
-  work_order: ["Parte A", "Parte B"],
+  nda: ["Parte reveladora", "Parte receptora"],
+  work_order: ["Cliente", "Prestador de servicios"],
   trust: ["Fideicomitente", "Fiduciario"],
   association: ["Asociante", "Asociado"],
   agency: ["Principal", "Agente"],
   work_contract: ["Contratante", "Contratista"],
   professional_services: ["Cliente", "Profesionista"],
-  promise: ["Promitente A", "Promitente B"],
+  promise: ["Promitente comprador", "Promitente vendedor"],
   rights_assignment: ["Cedente", "Cesionario"],
   license_use: ["Licenciante", "Licenciatario"],
   franchise: ["Franquiciante", "Franquiciatario"],
-  partnership: ["Socio A", "Socio B"],
-  amendment: ["Parte A", "Parte B"],
-  termination_agreement: ["Parte A", "Parte B"],
+  partnership: ["Socio operativo", "Socio inversionista"],
+  amendment: ["Cliente o contratante", "Proveedor o prestador"],
+  termination_agreement: ["Cliente o contratante", "Proveedor o prestador"],
   debt_acknowledgment: ["Acreedor", "Deudor"]
 };
 
@@ -646,6 +646,10 @@ const formatSize = document.querySelector("#format-size");
 const formatMargin = document.querySelector("#format-margin");
 const formatLineHeight = document.querySelector("#format-line-height");
 const formatJustify = document.querySelector("#format-justify");
+const letterheadLogoSelect = document.querySelector("#letterhead-logo-select");
+const letterheadLogoInput = document.querySelector("#letterhead-logo-input");
+const addLetterheadLogoButton = document.querySelector("#add-letterhead-logo");
+const removeLetterheadLogoButton = document.querySelector("#remove-letterhead-logo");
 const currentUserLabel = document.querySelector("#current-user-label");
 const switchUserButton = document.querySelector("#switch-user");
 const renameTemplateButton = document.querySelector("#rename-template");
@@ -708,6 +712,8 @@ let savedContracts = loadSavedContracts();
 let versions = loadVersions();
 let supportDocuments = loadSupportDocuments();
 let legalFormat = loadLegalFormat();
+let letterheadLogos = loadLetterheadLogos();
+let selectedLetterheadLogoId = loadSelectedLetterheadLogoId();
 let masterInsights = loadMasterInsights();
 let activeMatterFolio = null;
 let matterHistoryEvents = [];
@@ -921,6 +927,7 @@ function saveActiveDraft(reason = "Borrador en curso") {
     sourceMaster: activeSourceMaster,
     language: activeLanguage,
     userInitials: currentUserInitials(),
+    letterheadLogoId: selectedLetterheadLogoId,
     body: editor.value,
     partyData: getPartyData(),
     sourceTextsBySide: serializableSourceFiles(),
@@ -963,6 +970,9 @@ function restoreActiveDraft({ silent = false } = {}) {
   isWorkingCopy = true;
   activeSourceMaster = draft.sourceMaster || templates[draft.template]?.sourceMaster || activeSourceMaster;
   activeLanguage = draft.language || activeLanguage;
+  selectedLetterheadLogoId = draft.letterheadLogoId && letterheadLogos.some((logo) => logo.id === draft.letterheadLogoId) ? draft.letterheadLogoId : selectedLetterheadLogoId;
+  saveSelectedLetterheadLogoId();
+  renderLetterheadLogos();
   editorTitle.textContent = draft.title || editorTitle.textContent;
   editor.value = draft.body;
   editor.readOnly = false;
@@ -1005,6 +1015,153 @@ function loadLegalFormat() {
 
 function saveLegalFormat() {
   localStorage.setItem(userStorageKey("legal_format"), JSON.stringify(legalFormat));
+}
+
+function loadLetterheadLogos() {
+  const catalog = defaultLetterheadLogos();
+  if (letterheadCatalogLocked()) return catalog;
+  const personal = readJson(userStorageKey("letterhead_logos"), [])
+    .filter((logo) => logo?.id && logo?.dataUrl && logo?.name)
+    .map((logo) => ({ ...logo, source: logo.source || "personal" }));
+  const byId = new Map([...catalog, ...personal].map((logo) => [logo.id, logo]));
+  return Array.from(byId.values());
+}
+
+function saveLetterheadLogos() {
+  if (letterheadCatalogLocked()) return;
+  localStorage.setItem(userStorageKey("letterhead_logos"), JSON.stringify(letterheadLogos.filter((logo) => logo.source !== "catalog").slice(-20)));
+}
+
+function loadSelectedLetterheadLogoId() {
+  return localStorage.getItem(userStorageKey("selected_letterhead_logo")) || "";
+}
+
+function saveSelectedLetterheadLogoId() {
+  localStorage.setItem(userStorageKey("selected_letterhead_logo"), selectedLetterheadLogoId || "");
+}
+
+function selectedLetterheadLogo() {
+  return letterheadLogos.find((logo) => logo.id === selectedLetterheadLogoId) || null;
+}
+
+function letterheadCatalogLocked() {
+  return Boolean(window.lexLetterheadCatalogLocked);
+}
+
+function defaultLetterheadLogos() {
+  return (Array.isArray(window.lexLetterheadCatalog) ? window.lexLetterheadCatalog : [])
+    .filter((logo) => logo?.id && logo?.dataUrl && logo?.name)
+    .map((logo) => ({ ...logo, source: "catalog" }));
+}
+
+function renderLetterheadLogos() {
+  if (!letterheadLogoSelect) return;
+  letterheadLogos = loadLetterheadLogos();
+  const activeExists = !selectedLetterheadLogoId || letterheadLogos.some((logo) => logo.id === selectedLetterheadLogoId);
+  if (!activeExists) {
+    selectedLetterheadLogoId = "";
+    saveSelectedLetterheadLogoId();
+  }
+  letterheadLogoSelect.innerHTML = `
+    <option value="">Sin logo</option>
+    ${letterheadLogos.map((logo) => `<option value="${escapeHtml(logo.id)}">${escapeHtml(logo.name)}</option>`).join("")}
+  `;
+  letterheadLogoSelect.value = selectedLetterheadLogoId || "";
+  if (addLetterheadLogoButton) addLetterheadLogoButton.hidden = letterheadCatalogLocked();
+  if (removeLetterheadLogoButton) {
+    const selected = selectedLetterheadLogo();
+    removeLetterheadLogoButton.hidden = letterheadCatalogLocked();
+    removeLetterheadLogoButton.disabled = !selectedLetterheadLogoId || selected?.source === "catalog";
+  }
+}
+
+function cleanLogoName(file) {
+  return String(file?.name || "Logo")
+    .replace(/\.[^.]+$/, "")
+    .replace(/[_-]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .slice(0, 55) || "Logo";
+}
+
+function addLetterheadLogo(file) {
+  if (!file) return;
+  if (!/^image\/(png|jpe?g|webp|svg\+xml)$/i.test(file.type)) {
+    showToast("Usa un archivo de imagen para el membrete: PNG, JPG, WebP o SVG.");
+    return;
+  }
+  if (file.size > 1_500_000) {
+    showToast("Ese logo pesa demasiado. Usa una versión ligera, idealmente menor a 1.5 MB.");
+    return;
+  }
+  const reader = new FileReader();
+  reader.onload = () => {
+    const logo = {
+      id: `logo-${Date.now()}`,
+      name: cleanLogoName(file),
+      dataUrl: String(reader.result || ""),
+      type: file.type,
+      source: "personal",
+      date: new Date().toLocaleString("es-MX")
+    };
+    letterheadLogos = [...letterheadLogos.filter((item) => item.name !== logo.name), logo].slice(-20);
+    selectedLetterheadLogoId = logo.id;
+    saveLetterheadLogos();
+    saveSelectedLetterheadLogoId();
+    renderLetterheadLogos();
+    saveActiveDraft("Membrete actualizado");
+    showToast(`Logo "${logo.name}" agregado como membrete.`);
+  };
+  reader.readAsDataURL(file);
+}
+
+function removeSelectedLetterheadLogo() {
+  const logo = selectedLetterheadLogo();
+  if (!logo) {
+    showToast("No hay logo seleccionado.");
+    return;
+  }
+  if (logo.source === "catalog") {
+    showToast("Este logo pertenece al catálogo aprobado y no puede eliminarse desde la cuenta.");
+    return;
+  }
+  const confirmed = window.confirm(`¿Seguro que quieres eliminar este logo de tu biblioteca?\n\n${logo.name}`);
+  if (!confirmed) return;
+  letterheadLogos = letterheadLogos.filter((item) => item.id !== logo.id);
+  selectedLetterheadLogoId = "";
+  saveLetterheadLogos();
+  saveSelectedLetterheadLogoId();
+  renderLetterheadLogos();
+  saveActiveDraft("Membrete eliminado");
+  showToast("Logo eliminado de la biblioteca de membretes.");
+}
+
+function letterheadLogoForSignature() {
+  const logo = selectedLetterheadLogo();
+  if (!logo?.dataUrl) return Promise.resolve(null);
+  return new Promise((resolve) => {
+    const image = new Image();
+    image.onload = () => {
+      const maxWidth = 600;
+      const maxHeight = 180;
+      const scale = Math.min(maxWidth / image.naturalWidth, maxHeight / image.naturalHeight, 1);
+      const width = Math.max(1, Math.round(image.naturalWidth * scale));
+      const height = Math.max(1, Math.round(image.naturalHeight * scale));
+      const canvas = document.createElement("canvas");
+      canvas.width = width;
+      canvas.height = height;
+      const context = canvas.getContext("2d");
+      context.fillStyle = "#ffffff";
+      context.fillRect(0, 0, width, height);
+      context.drawImage(image, 0, 0, width, height);
+      resolve({
+        name: logo.name,
+        dataUrl: canvas.toDataURL("image/jpeg", 0.92)
+      });
+    };
+    image.onerror = () => resolve(null);
+    image.src = logo.dataUrl;
+  });
 }
 
 function loadMasterInsights() {
@@ -1120,8 +1277,11 @@ function switchActiveUser(user, announce = true) {
   savedContracts = loadSavedContracts();
   versions = loadVersions();
   legalFormat = loadLegalFormat();
+  letterheadLogos = loadLetterheadLogos();
+  selectedLetterheadLogoId = loadSelectedLetterheadLogoId();
   renderUserSession();
   syncFormatControls();
+  renderLetterheadLogos();
   renderFolders();
   renderSavedContracts();
   renderVersions();
@@ -1816,11 +1976,39 @@ function integrateKnownDataIntoContract(reason = "Datos integrados al contrato")
 }
 
 function getRoles(key = activeTemplate) {
-  const [labelA, labelB] = roleLabels[key] || ["Parte A", "Parte B"];
+  const [labelA, labelB] = roleLabels[key] || ["Cliente o contratante", "Proveedor o prestador"];
   return [
     { side: "A", label: labelA, part: "parteA" },
     { side: "B", label: labelB, part: "parteB" }
   ];
+}
+
+function roleUploadPriority(role) {
+  const label = removeAccents(role?.label || "").toLowerCase();
+  if (
+    /cliente|comprador|arrendatario|contratante|comitente|mandante|principal|responsable|fideicomitente|mutuario|distribuidor|licenciatario|franquiciatario|cesionario|deudor|parte receptora|promitente comprador|socio inversionista/.test(label)
+  ) {
+    return 0;
+  }
+  if (
+    /prestador|proveedor|vendedor|desarrollador|profesionista|arrendador|contratista|comisionista|mandatario|encargado|fiduciario|fabricante|agente|licenciante|franquiciante|cedente|acreedor|parte reveladora|promitente vendedor|socio operativo/.test(label)
+  ) {
+    return 1;
+  }
+  return role?.side === "B" ? 0 : 1;
+}
+
+function documentUploadRoles() {
+  return getRoles()
+    .map((role, index) => ({ ...role, originalIndex: index }))
+    .sort((left, right) => roleUploadPriority(left) - roleUploadPriority(right) || left.originalIndex - right.originalIndex);
+}
+
+function documentRoleHint(role) {
+  const priority = roleUploadPriority(role);
+  return priority === 0
+    ? "Cliente, comprador, contratante o quien recibe y paga."
+    : "Proveedor, prestador, vendedor o quien entrega y cobra.";
 }
 
 function fieldsForRole(role) {
@@ -2148,6 +2336,7 @@ function autoSaveVersion(reason = "auto") {
     template: activeTemplate,
     language: activeLanguage,
     userInitials: currentUserInitials(),
+    letterheadLogoId: selectedLetterheadLogoId,
     date: new Date().toLocaleString("es-MX"),
     body,
     matter
@@ -2617,12 +2806,55 @@ function signatureRoleTitle(role) {
 function cleanRepresentativeCandidate(value) {
   const clean = String(value || "")
     .replace(/\{\{[^}]+\}\}/g, "")
+    .replace(/^nombre\s*:?\s*/i, "")
     .replace(/\s+/g, " ")
     .replace(/\b(?:quien|con|en su car[aá]cter|cuya personalidad|facultades|titular)\b.*$/i, "")
+    .replace(/[,:;.\s]+$/g, "")
     .trim();
-  if (!clean || clean.length < 5) return "";
-  if (/(S\.?\s*A|S\.?\s*DE\s*R\.?\s*L|RFC|escritura|notar[ií]a|representante legal|cliente|prestador|parte)/i.test(clean)) return "";
+  if (!isLikelyPersonName(clean)) return "";
   return clean;
+}
+
+function isLikelyPersonName(value) {
+  const clean = String(value || "").trim();
+  if (!clean || clean.length < 5 || clean.length > 95) return false;
+  if (/[:{}]|\d/.test(clean)) return false;
+  if (!/^[A-Za-zÁÉÍÓÚÑÜáéíóúñü.' -]+$/.test(clean)) return false;
+  const normalized = removeAccents(clean).toLowerCase();
+  const blockedTerms = [
+    "sociedad",
+    "mercantil",
+    "constituida",
+    "leyes",
+    "estados unidos",
+    "mexicanos",
+    "registro federal",
+    "rfc",
+    "domicilio",
+    "correo",
+    "escritura",
+    "poliza",
+    "acta",
+    "notaria",
+    "notario",
+    "corredor",
+    "fedatario",
+    "folio",
+    "cliente",
+    "prestador",
+    "proveedor",
+    "parte",
+    "contrato",
+    "firma",
+    "denominacion",
+    "representante legal",
+    "cuenta con",
+    "tiene interes"
+  ];
+  if (blockedTerms.some((term) => normalized.includes(term))) return false;
+  const words = clean.split(/\s+/).filter(Boolean);
+  if (words.length < 2 || words.length > 9) return false;
+  return words.some((word) => /^[A-ZÁÉÍÓÚÑÜ]/.test(word));
 }
 
 function uniqueNonEmpty(items) {
@@ -2678,8 +2910,11 @@ function emailsFromContractText() {
 
 function representativeForSide(side, values = getPartyData()) {
   const key = `rep${side}`;
-  const current = String(values[key] || partyDataStore[key] || "").trim();
+  const current = cleanRepresentativeCandidate(values[key] || partyDataStore[key] || "");
   if (current) return current;
+  if (partyDataStore[key] && !cleanRepresentativeCandidate(partyDataStore[key])) {
+    partyDataStore[key] = "";
+  }
   const fallback = representativesFromContractText()[side === "A" ? 0 : 1] || "";
   if (fallback) partyDataStore[key] = fallback;
   return fallback;
@@ -2719,6 +2954,16 @@ function signatureBlockHtml() {
     rows.push(`<tr>${signatureCellHtml(roles[index])}${signatureCellHtml(roles[index + 1])}</tr>`);
   }
   return `<table class="signature-table" role="presentation" border="0" cellspacing="0" cellpadding="0">${rows.join("")}</table>`;
+}
+
+function letterheadHeaderHtml() {
+  const logo = selectedLetterheadLogo();
+  if (!logo?.dataUrl) return "";
+  return `
+    <div class="header" id="header1">
+      <p><img src="${logo.dataUrl}" alt="${escapeHtml(logo.name)}" /></p>
+    </div>
+  `;
 }
 
 function isSignatureBlockStart(paragraphs, index) {
@@ -2780,14 +3025,19 @@ function exportWordDocument() {
   readFormatControls();
   const documentBody = formattedContractHtml(editor.value);
   const footerInitials = currentUserInitials();
+  const letterheadHtml = letterheadHeaderHtml();
+  const hasLetterhead = Boolean(letterheadHtml);
   const html = `<!doctype html>
   <html>
     <head>
       <meta charset="utf-8" />
       <style>
-        @page WordSection1 { margin: ${legalFormat.margin}; mso-footer: footer1; }
+        @page WordSection1 { margin: ${legalFormat.margin}; mso-footer: footer1; ${hasLetterhead ? "mso-header: header1;" : ""} }
         div.WordSection1 { page: WordSection1; }
+        div.header { mso-element: header; }
         div.footer { mso-element: footer; }
+        .header p { margin: 0; text-align: left; }
+        .header img { max-width: 180pt; max-height: 52pt; width: auto; height: auto; }
         .footer p { margin: 0; text-align: right; font-size: 8pt; color: #6b7280; }
         body { font-family: "${legalFormat.font}", serif; color: #111827; line-height: ${legalFormat.lineHeight}; margin: 0; font-size: ${legalFormat.size}pt; }
         h1 { font-size: ${Number(legalFormat.size) + 2}pt; text-align: center; font-weight: 700; margin: 0 0 24pt; text-transform: uppercase; }
@@ -2811,6 +3061,7 @@ function exportWordDocument() {
     </head>
     <body>
       <div class="WordSection1">${documentBody || `<h1>${escapeHtml(title)}</h1>`}</div>
+      ${letterheadHtml}
       <div class="footer" id="footer1"><p>${escapeHtml(footerInitials)}</p></div>
     </body>
   </html>`;
@@ -2828,10 +3079,10 @@ function exportWordDocument() {
 function signerRowTemplate(index, values = {}) {
   return `
     <div class="signer-row" data-signer-row>
-      <label>Nombre<input name="signerName" value="${values.name || ""}" required /></label>
-      <label>Correo<input name="signerEmail" type="email" value="${values.email || ""}" required /></label>
-      <label>Rol<input name="signerRole" value="${values.role || ""}" required /></label>
-      <label>Orden<input name="signerOrder" type="number" min="1" value="${values.order || index + 1}" /></label>
+      <label>Nombre<input name="signerName" value="${escapeHtml(values.name || "")}" required /></label>
+      <label>Correo<input name="signerEmail" type="email" value="${escapeHtml(values.email || "")}" required /></label>
+      <label>Rol<input name="signerRole" value="${escapeHtml(values.role || "")}" required /></label>
+      <label>Orden<input name="signerOrder" type="number" min="1" value="${escapeHtml(values.order || index + 1)}" /></label>
       <button class="icon-button remove-signer" type="button" title="Quitar firmante" aria-label="Quitar firmante">×</button>
     </div>
   `;
@@ -2871,6 +3122,27 @@ function getSignatureRequestSigners() {
     role: row.querySelector('[name="signerRole"]').value.trim(),
     order: Number(row.querySelector('[name="signerOrder"]').value || index + 1)
   }));
+}
+
+function isValidEmailAddress(value) {
+  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || "").trim());
+}
+
+function validateSignatureSigners(signers) {
+  const missingRows = [];
+  const invalidEmails = [];
+  signers.forEach((signer, index) => {
+    const row = index + 1;
+    if (!signer.name || !signer.email || !signer.role) missingRows.push(row);
+    if (signer.email && !isValidEmailAddress(signer.email)) invalidEmails.push(row);
+  });
+  if (missingRows.length) {
+    return `Para enviar por Dropbox Sign necesitas completar nombre, correo y rol del firmante ${missingRows.join(", ")}. El contrato puede seguir incompleto, pero los firmantes no.`;
+  }
+  if (invalidEmails.length) {
+    return `Revisa el correo del firmante ${invalidEmails.join(", ")}; Dropbox Sign necesita un correo válido para enviar la solicitud.`;
+  }
+  return "";
 }
 
 async function refreshSignatureStatus() {
@@ -2925,8 +3197,9 @@ async function submitSignaturePacket(event) {
   const title = cleanWorkingTitle(editorTitle.textContent);
   hydrateMissingSignerRowsFromDefaults();
   const signers = getSignatureRequestSigners();
-  if (signers.some((signer) => !signer.name || !signer.email || !signer.role)) {
-    showToast("Completa nombre, correo y rol de cada firmante.");
+  const signerValidationMessage = validateSignatureSigners(signers);
+  if (signerValidationMessage) {
+    showToast(signerValidationMessage);
     return;
   }
   if (!confirmCriticalFindingsBefore("enviar a firma")) {
@@ -2944,6 +3217,7 @@ async function submitSignaturePacket(event) {
   } else {
     try {
       showToast("Preparando envío a firma electrónica...");
+      const letterheadLogo = await letterheadLogoForSignature();
       const response = await fetch("/api/send-signature", {
         method: "POST",
         headers: {
@@ -2954,6 +3228,7 @@ async function submitSignaturePacket(event) {
           title,
           folio: previewMatterFolio(),
           body: fillPlaceholders(editor.value),
+          letterheadLogo,
           signers
         })
       });
@@ -2982,6 +3257,7 @@ async function submitSignaturePacket(event) {
     template: activeTemplate,
     language: activeLanguage,
     userInitials: currentUserInitials(),
+    letterheadLogoId: selectedLetterheadLogoId,
     date: new Date().toLocaleString("es-MX"),
     body: fillPlaceholders(editor.value),
     status,
@@ -3893,22 +4169,24 @@ function renderCustomFields() {
 
 function renderRoleDrops() {
   const values = getPartyData();
-  roleDropGrid.innerHTML = getRoles()
+  roleDropGrid.innerHTML = documentUploadRoles()
     .map((role) => {
       const files = sourceTextsBySide[role.side] || [];
+      const partyName = values[role.part] || role.label;
+      const roleHint = documentRoleHint(role);
       return `
         <section class="role-drop" data-side="${role.side}">
           <header>
             <div>
-              <p class="eyebrow">${role.label}</p>
-              <h3>${values[role.part] || role.label}</h3>
+              <p class="eyebrow">${escapeHtml(role.label)}</p>
+              <h3>${escapeHtml(partyName)}</h3>
             </div>
             <span>${files.length} archivo${files.length === 1 ? "" : "s"}</span>
           </header>
           <label>
             <input class="role-file-input" type="file" multiple accept=".csv,.txt,.eml,.pdf,.xlsx,.xls,.docx,.jpg,.jpeg,.png,.webp" data-side="${role.side}" />
-            <strong>Sube documentos corporativos, constancias fiscales e identificaciones por cada parte.</strong>
-            <small>Esta caja corresponde a ${role.label}. También puedes arrastrar una carpeta completa o capturar datos manualmente.</small>
+            <strong>Sube documentos de ${escapeHtml(role.label)}.</strong>
+            <small>${escapeHtml(roleHint)} Arrastra aquí actas, poderes, constancias fiscales, identificaciones, correos, PDF, Word, Excel o una carpeta completa de ${escapeHtml(partyName)}.</small>
           </label>
           <button class="folder-upload-trigger" type="button" data-side="${role.side}">Cargar carpeta completa</button>
           <input class="role-folder-input" type="file" multiple webkitdirectory directory data-side="${role.side}" />
@@ -5190,6 +5468,7 @@ async function saveContractToArchive({ saveAs = false } = {}) {
     template: activeTemplate,
     language: activeLanguage,
     userInitials: currentUserInitials(),
+    letterheadLogoId: selectedLetterheadLogoId,
     date: new Date().toLocaleString("es-MX"),
     body: filled,
     folio,
@@ -5507,6 +5786,9 @@ savedContractsList.addEventListener("click", (event) => {
   editor.value = contract.body;
   editor.readOnly = false;
   activeLanguage = contract.language;
+  selectedLetterheadLogoId = contract.letterheadLogoId && letterheadLogos.some((logo) => logo.id === contract.letterheadLogoId) ? contract.letterheadLogoId : selectedLetterheadLogoId;
+  saveSelectedLetterheadLogoId();
+  renderLetterheadLogos();
   if (contract.matter) {
     activeMatterFolio = contract.matter.folio;
     matterHistoryEvents = contract.matter.history || [];
@@ -5564,6 +5846,9 @@ versionList.addEventListener("click", (event) => {
   editor.value = version.body;
   editor.readOnly = false;
   activeLanguage = version.language;
+  selectedLetterheadLogoId = version.letterheadLogoId && letterheadLogos.some((logo) => logo.id === version.letterheadLogoId) ? version.letterheadLogoId : selectedLetterheadLogoId;
+  saveSelectedLetterheadLogoId();
+  renderLetterheadLogos();
   if (version.matter) {
     activeMatterFolio = version.matter.folio;
     matterHistoryEvents = version.matter.history || matterHistoryEvents;
@@ -5649,6 +5934,25 @@ document.addEventListener("visibilitychange", () => {
   control.addEventListener("change", readFormatControls);
 });
 
+letterheadLogoSelect?.addEventListener("change", () => {
+  selectedLetterheadLogoId = letterheadLogoSelect.value;
+  saveSelectedLetterheadLogoId();
+  renderLetterheadLogos();
+  saveActiveDraft("Membrete seleccionado");
+  showToast(selectedLetterheadLogoId ? "Membrete seleccionado para este documento." : "Documento sin logo de membrete.");
+});
+
+addLetterheadLogoButton?.addEventListener("click", () => {
+  letterheadLogoInput?.click();
+});
+
+letterheadLogoInput?.addEventListener("change", () => {
+  addLetterheadLogo(letterheadLogoInput.files?.[0]);
+  letterheadLogoInput.value = "";
+});
+
+removeLetterheadLogoButton?.addEventListener("click", removeSelectedLetterheadLogo);
+
 document.querySelector("#apply-legal-format")?.addEventListener("click", applyDefaultLegalFormat);
 
 const lastLoginEmail = localStorage.getItem("lexcontratos_last_login_email");
@@ -5661,6 +5965,7 @@ window.addEventListener("lexbackendready", () => {
 renderUserSession();
 renderMasterInsights();
 syncFormatControls();
+renderLetterheadLogos();
 renderFolders();
 renderSavedContracts();
 renderVersions();

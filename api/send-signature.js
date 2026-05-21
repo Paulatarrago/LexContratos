@@ -102,10 +102,67 @@ function contractLines({ title, folio, body }) {
   return lines;
 }
 
-function contractDocumentPdf({ title, folio, body }) {
+function bytesToHex(bytes) {
+  return Array.from(bytes).map((byte) => byte.toString(16).padStart(2, "0")).join("");
+}
+
+function bytesFromBase64(value) {
+  const binary = atob(value);
+  const bytes = new Uint8Array(binary.length);
+  for (let index = 0; index < binary.length; index += 1) bytes[index] = binary.charCodeAt(index);
+  return bytes;
+}
+
+function jpegDimensions(bytes) {
+  if (!bytes || bytes[0] !== 0xff || bytes[1] !== 0xd8) return null;
+  let offset = 2;
+  while (offset < bytes.length) {
+    if (bytes[offset] !== 0xff) {
+      offset += 1;
+      continue;
+    }
+    const marker = bytes[offset + 1];
+    offset += 2;
+    if (marker === 0xda || marker === 0xd9) break;
+    const length = (bytes[offset] << 8) + bytes[offset + 1];
+    if (!length || offset + length > bytes.length) break;
+    if ((marker >= 0xc0 && marker <= 0xc3) || (marker >= 0xc5 && marker <= 0xc7) || (marker >= 0xc9 && marker <= 0xcb) || (marker >= 0xcd && marker <= 0xcf)) {
+      return {
+        height: (bytes[offset + 3] << 8) + bytes[offset + 4],
+        width: (bytes[offset + 5] << 8) + bytes[offset + 6],
+        components: bytes[offset + 7] || 3
+      };
+    }
+    offset += length;
+  }
+  return null;
+}
+
+function letterheadImageFromPayload(letterheadLogo) {
+  const dataUrl = String(letterheadLogo?.dataUrl || "");
+  const match = dataUrl.match(/^data:image\/jpe?g;base64,(.+)$/i);
+  if (!match) return null;
+  const bytes = bytesFromBase64(match[1]);
+  const size = jpegDimensions(bytes);
+  if (!size?.width || !size?.height) return null;
+  const maxWidth = 150;
+  const maxHeight = 46;
+  const scale = Math.min(maxWidth / size.width, maxHeight / size.height, 1);
+  return {
+    bytes,
+    width: size.width,
+    height: size.height,
+    drawWidth: Math.round(size.width * scale),
+    drawHeight: Math.round(size.height * scale),
+    colorSpace: size.components === 1 ? "/DeviceGray" : size.components === 4 ? "/DeviceCMYK" : "/DeviceRGB"
+  };
+}
+
+function contractDocumentPdf({ title, folio, body, letterheadLogo }) {
   const encoder = new TextEncoder();
+  const logo = letterheadImageFromPayload(letterheadLogo);
   const lines = contractLines({ title, folio, body });
-  const linesPerPage = 52;
+  const linesPerPage = logo ? 48 : 52;
   const pages = [];
   for (let index = 0; index < lines.length; index += linesPerPage) {
     pages.push(lines.slice(index, index + linesPerPage));
@@ -119,19 +176,28 @@ function contractDocumentPdf({ title, folio, body }) {
   const catalogId = addObject("<< /Type /Catalog /Pages 2 0 R >>");
   const pagesId = addObject("");
   const fontId = addObject("<< /Type /Font /Subtype /Type1 /BaseFont /Times-Roman /Encoding /WinAnsiEncoding >>");
+  const logoId = logo
+    ? addObject(`<< /Type /XObject /Subtype /Image /Width ${logo.width} /Height ${logo.height} /ColorSpace ${logo.colorSpace} /BitsPerComponent 8 /Filter [/ASCIIHexDecode /DCTDecode] /Length ${bytesToHex(logo.bytes).length + 1} >>\nstream\n${bytesToHex(logo.bytes)}>\nendstream`)
+    : null;
   const pageIds = [];
 
   pages.forEach((pageLines) => {
+    const logoCommands = logoId
+      ? [`q`, `${logo.drawWidth} 0 0 ${logo.drawHeight} 72 ${746 - logo.drawHeight} cm`, `/Logo Do`, `Q`]
+      : [];
+    const textStartY = logoId ? 690 : 742;
     const stream = [
+      ...logoCommands,
       "BT",
       "/F1 11 Tf",
       "14 TL",
-      "72 742 Td",
+      `72 ${textStartY} Td`,
       ...pageLines.map((line) => `(${pdfText(line)}) Tj T*`),
       "ET"
     ].join("\n");
     const contentId = addObject(`<< /Length ${encoder.encode(stream).length} >>\nstream\n${stream}\nendstream`);
-    const pageId = addObject(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontId} 0 R >> >> /Contents ${contentId} 0 R >>`);
+    const xObjectResource = logoId ? `/XObject << /Logo ${logoId} 0 R >>` : "";
+    const pageId = addObject(`<< /Type /Page /Parent ${pagesId} 0 R /MediaBox [0 0 612 792] /Resources << /Font << /F1 ${fontId} 0 R >> ${xObjectResource} >> /Contents ${contentId} 0 R >>`);
     pageIds.push(pageId);
   });
 
@@ -153,7 +219,11 @@ function contractDocumentPdf({ title, folio, body }) {
 }
 
 function dropboxErrorMessage(data) {
-  return data?.error?.error_msg || data?.error?.message || data?.message || "Dropbox Sign no pudo procesar el documento.";
+  const raw = data?.error?.error_msg || data?.error?.message || data?.message || "";
+  if (/test mode/i.test(raw) && /own domain/i.test(raw)) {
+    return "Dropbox Sign está en modo prueba y por ahora solo permite enviar solicitudes a correos del mismo dominio de tu cuenta. Para probar con Hotmail, Outlook u otros dominios, solicita a Dropbox Sign que levante la restricción o usa un plan/API que permita envíos externos.";
+  }
+  return raw || "Dropbox Sign no pudo procesar el documento.";
 }
 
 export default async function handler(request) {
@@ -182,6 +252,7 @@ export default async function handler(request) {
   const title = String(payload.title || "Contrato LexContratos").trim().slice(0, 255);
   const folio = String(payload.folio || "").trim().slice(0, 120);
   const body = String(payload.body || "").trim();
+  const letterheadLogo = payload.letterheadLogo?.dataUrl ? payload.letterheadLogo : null;
   const signers = Array.isArray(payload.signers) ? payload.signers : [];
   const cleanSigners = signers
     .map((signer, index) => ({
@@ -193,11 +264,11 @@ export default async function handler(request) {
     .filter((signer) => signer.name && isEmail(signer.email));
 
   if (!body || !cleanSigners.length || cleanSigners.length !== signers.length) {
-    return jsonResponse({ error: "Completa contrato, nombre y correo válido de cada firmante." }, 400);
+    return jsonResponse({ error: "Dropbox Sign necesita un contrato y nombre/correo válido de cada firmante para poder enviar la solicitud." }, 400);
   }
 
   const formData = new FormData();
-  const file = new Blob([contractDocumentPdf({ title, folio, body })], {
+  const file = new Blob([contractDocumentPdf({ title, folio, body, letterheadLogo })], {
     type: "application/pdf"
   });
   formData.append("files[0]", file, `${folio || "contrato"}-${Date.now()}.pdf`);

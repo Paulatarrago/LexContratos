@@ -1507,7 +1507,7 @@ button {
 
 .format-panel {
   display: grid;
-  grid-template-columns: repeat(6, minmax(90px, 1fr));
+  grid-template-columns: repeat(8, minmax(82px, 1fr));
   gap: 6px;
   align-items: end;
   border: 1px solid var(--line);
@@ -1540,6 +1540,10 @@ button {
   align-items: center;
   gap: 6px;
   min-height: 34px;
+}
+
+.format-panel .letterhead-control {
+  grid-column: span 2;
 }
 
 .format-panel .secondary-action {

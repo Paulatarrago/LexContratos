@@ -29,5 +29,6 @@ async function loadOptionalLocalConfig() {
 
 await loadOptionalLocalConfig();
 await import("./supabase-runtime.js");
+await import("./letterhead-catalog.js");
 await import("../template-prestacion-demanda.js");
 await import("../app.js");
