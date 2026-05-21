@@ -522,19 +522,27 @@ const defaultValues = {
   parteA: "Servicios Delta, S.A. de C.V.",
   tipoA: "Sociedad Anónima de Capital Variable",
   repA: "Ana Lucía Romero",
-  poderA: "Escritura pública 18,245",
+  tipoInstrumentoConstitutivoA: "Escritura pública",
+  tipoFedatarioConstitutivoA: "Notario Público",
+  poderA: "Instrumento público 18,245",
+  tipoInstrumentoPoderA: "Escritura pública",
+  tipoFedatarioPoderA: "Notario Público",
   notarioA: "Notario Público 214 de la Ciudad de México",
   rfcA: "SDE240102AB1",
-  escrituraA: "Escritura pública 12,845",
+  escrituraA: "Instrumento público 12,845",
   folioA: "N-2024018842",
   fechaConstitucionA: "2 de enero de 2024",
   parteB: "Grupo Norte Capital, S. de R.L. de C.V.",
   tipoB: "Sociedad de Responsabilidad Limitada de Capital Variable",
   repB: "Carlos Medina Torres",
-  poderB: "Escritura pública 31,902",
+  tipoInstrumentoConstitutivoB: "Escritura pública",
+  tipoFedatarioConstitutivoB: "Notario Público",
+  poderB: "Instrumento público 31,902",
+  tipoInstrumentoPoderB: "Escritura pública",
+  tipoFedatarioPoderB: "Notario Público",
   notarioB: "Notario Público 89 de Nuevo León",
   rfcB: "GNC190811QL2",
-  escrituraB: "Escritura pública 22,410",
+  escrituraB: "Instrumento público 22,410",
   folioB: "M-2019081149",
   fechaConstitucionB: "11 de agosto de 2019",
   domicilioPrestador: "Av. Insurgentes Sur 1458, Col. Actipan, Ciudad de México",
@@ -607,8 +615,8 @@ const commonProtectionsEs = `\n\nCLÁUSULAS DE PROTECCIÓN REFORZADA\n\nPRIMERA.
 
 const commonProtectionsEn = `\n\nENHANCED PROTECTIVE CLAUSES\n\nFIRST. Compliance. The parties shall comply with applicable Mexican law, including civil, commercial, tax, labor, social security, personal data protection, anti-corruption and anti-money laundering provisions, to the extent applicable to the transaction.\n\nSECOND. Independent parties. Nothing in this agreement creates a partnership, joint venture, employment relationship, general agency or representation other than what is expressly agreed in writing.\n\nTHIRD. Corporate authority. Each party represents that its existence, authority, powers of attorney, internal approvals and capacity to execute this agreement are valid and sufficient, and shall notify any relevant revocation or limitation.\n\nFOURTH. Information and documents. Each party is responsible for the truthfulness, completeness, lawfulness and timely delivery of all information, documents, instructions, access credentials and materials it provides.\n\nFIFTH. Confidentiality. Technical, commercial, financial, tax, operational, legal, strategic, methodological and business information shall be treated as confidential and used solely to perform this agreement.\n\nSIXTH. Personal data. If a party accesses personal data controlled by the other party, it shall process such data only under lawful documented instructions and apply reasonable administrative, technical and physical safeguards.\n\nSEVENTH. Liability and indemnity. The breaching party shall hold the non-breaching party harmless from claims, fines, damages, costs, expenses and liabilities directly arising from its breach, willful misconduct, gross negligence or acts of its personnel, suppliers or subcontractors.\n\nEIGHTH. Anti-corruption. No party shall offer, promise, request, receive or deliver any undue benefit to obtain an advantage related to this agreement. Breach of this clause shall be cause for immediate termination.\n\nNINTH. Survival. Termination shall not release pending payment, confidentiality, personal data, intellectual property, indemnity, tax, governing law or dispute resolution obligations that by their nature should survive.\n\nTENTH. Mexican law. This agreement shall be interpreted under the applicable laws of Mexico, without prejudice to local formalities or mandatory rules that may apply due to domicile, real estate, subject matter or transaction type.`;
 
-// La integración queda conservada, pero fuera de la interfaz mientras se decide el proveedor de firma.
-const SIGNATURE_FEATURE_ENABLED = false;
+// La integración queda visible; si Dropbox Sign no está configurado, el flujo guarda el paquete sin enviar.
+const SIGNATURE_FEATURE_ENABLED = true;
 
 const editor = document.querySelector("#contract-editor");
 const editorTitle = document.querySelector("#editor-title");
@@ -912,6 +920,7 @@ function saveActiveDraft(reason = "Borrador en curso") {
     template: activeTemplate,
     sourceMaster: activeSourceMaster,
     language: activeLanguage,
+    userInitials: currentUserInitials(),
     body: editor.value,
     partyData: getPartyData(),
     sourceTextsBySide: serializableSourceFiles(),
@@ -1021,7 +1030,7 @@ function renderMasterInsights() {
           </article>
         `)
         .join("")
-    : `<span>Cuando reemplaces una plantilla base, LexContratos registrará mejoras anonimizadas para nutrir la biblioteca.</span>`;
+    : `<span>Cuando reemplaces un formato base, LexContratos registrará mejoras anonimizadas para nutrir la biblioteca.</span>`;
 }
 
 function clearWorkspaceState() {
@@ -1033,15 +1042,15 @@ function clearWorkspaceState() {
   activeMatterFolio = null;
   matterHistoryEvents = [];
   selectedCategory.textContent = "Inicio";
-  editorTitle.textContent = "Selecciona o importa un machote";
-  selectedDescription.textContent = "El contrato aparecerá aquí cuando elijas una plantilla base o importes un machote propio.";
+  editorTitle.textContent = "Selecciona o importa un formato";
+  selectedDescription.textContent = "El contrato aparecerá aquí cuando elijas un formato base o importes un draft propio.";
   editor.value = "";
   editor.readOnly = true;
   autosaveStatus.textContent = "Sin contrato seleccionado";
   autosaveStatus.classList.remove("autosave-highlight");
   if (renameTemplateButton) {
     renameTemplateButton.textContent = "Nombre protegido";
-    renameTemplateButton.title = "Selecciona un machote y duplica la plantilla para crear una copia editable.";
+    renameTemplateButton.title = "Selecciona un formato y crea una copia editable.";
   }
   criticalReviewDone = false;
   setFieldsReviewedState(false);
@@ -1076,7 +1085,7 @@ function recordMasterImprovement(masterKey, prepared) {
     title,
     fields: prepared.fields.length,
     date: new Date().toLocaleString("es-MX"),
-    status: isSharedBase ? "Plantilla base enriquecida" : "Mejora privada registrada"
+    status: isSharedBase ? "Formato base enriquecido" : "Mejora privada registrada"
   });
   saveMasterInsights();
 
@@ -1088,7 +1097,7 @@ function recordMasterImprovement(masterKey, prepared) {
       customFields: prepared.fields,
       fields: prepared.fields.length,
       master: true,
-      description: "Plantilla base enriquecida con mejoras anonimizadas de usuarios."
+      description: "Formato base enriquecido con mejoras anonimizadas de usuarios."
     };
     localStorage.setItem("lexcontratos_shared_master_templates", JSON.stringify(shared));
   }
@@ -1123,6 +1132,25 @@ function currentAccount() {
   const session = loadSession();
   if (!session?.email) return null;
   return loadUsers()[session.email] || null;
+}
+
+function initialsFromName(value) {
+  const clean = removeAccents(String(value || ""))
+    .replace(/@.*$/, "")
+    .replace(/[^a-zA-ZÁÉÍÓÚÑáéíóúñüÜ\s._-]+/g, " ")
+    .replace(/[._-]+/g, " ")
+    .trim();
+  const words = clean
+    .split(/\s+/)
+    .filter((word) => word && !/^(de|del|la|las|los|y|sa|cv|sapi|rl)$/i.test(word));
+  const initials = words.slice(0, 4).map((word) => word[0]).join("").toUpperCase();
+  return initials || "LC";
+}
+
+function currentUserInitials() {
+  const account = currentAccount();
+  const label = currentUserLabel?.textContent || "";
+  return initialsFromName(account?.name || label || activeUser);
 }
 
 function hasActiveAccess(account) {
@@ -1802,11 +1830,15 @@ function fieldsForRole(role) {
     [`tipo${side}`, `Tipo societario de ${role.label}`],
     [`rep${side}`, `Representante legal de ${role.label}`],
     [`rfc${side}`, `RFC de ${role.label}`],
-    [`escritura${side}`, `Escritura constitutiva de ${role.label}`],
+    [`tipoInstrumentoConstitutivo${side}`, `Tipo de instrumento constitutivo de ${role.label}`],
+    [`escritura${side}`, `Instrumento constitutivo de ${role.label} (escritura, póliza o acta)`],
+    [`tipoFedatarioConstitutivo${side}`, `Tipo de fedatario constitutivo de ${role.label}`],
     [`folio${side}`, `Folio mercantil de ${role.label}`],
     [`fechaConstitucion${side}`, `Fecha de constitución de ${role.label}`],
-    [`poder${side}`, `Escritura o instrumento de poderes de ${role.label}`],
-    [`notario${side}`, `Notario de poderes de ${role.label}`],
+    [`tipoInstrumentoPoder${side}`, `Tipo de instrumento de poderes de ${role.label}`],
+    [`poder${side}`, `Instrumento de poderes de ${role.label} (escritura, póliza o acta)`],
+    [`tipoFedatarioPoder${side}`, `Tipo de fedatario de poderes de ${role.label}`],
+    [`notario${side}`, `Fedatario de poderes de ${role.label} (notario o corredor)`],
     [domicileField, `Domicilio de ${role.label}`]
   ];
   const names = fieldNamesInText(editor?.value || templates[activeTemplate]?.body || "");
@@ -1859,11 +1891,15 @@ function fieldNameFromLabel(label) {
   if (side && clean.includes("REPRESENTANTE LEGAL")) return `rep${side}`;
   if (side && clean.includes("RFC")) return `rfc${side}`;
   if (side && clean.includes("DOMICILIO")) return side === "A" ? "domicilioPrestador" : "domicilioCliente";
-  if (side && clean.includes("ESCRITURA CONSTITUTIVA")) return `escritura${side}`;
+  if (side && clean.includes("TIPO DE INSTRUMENTO CONSTITUTIVO")) return `tipoInstrumentoConstitutivo${side}`;
+  if (side && (clean.includes("ESCRITURA CONSTITUTIVA") || clean.includes("INSTRUMENTO CONSTITUTIVO") || clean.includes("POLIZA") || clean.includes("ACTA"))) return `escritura${side}`;
+  if (side && clean.includes("TIPO DE FEDATARIO CONSTITUTIVO")) return `tipoFedatarioConstitutivo${side}`;
   if (side && clean.includes("FECHA DE CONSTITUCION")) return `fechaConstitucion${side}`;
   if (side && clean.includes("FOLIO MERCANTIL")) return `folio${side}`;
-  if (side && clean.includes("ESCRITURA DE PODER")) return `poder${side}`;
-  if (side && clean.includes("NOTARIO DE PODER")) return `notario${side}`;
+  if (side && clean.includes("TIPO DE INSTRUMENTO DE PODER")) return `tipoInstrumentoPoder${side}`;
+  if (side && (clean.includes("ESCRITURA DE PODER") || clean.includes("INSTRUMENTO DE PODER"))) return `poder${side}`;
+  if (side && clean.includes("TIPO DE FEDATARIO DE PODER")) return `tipoFedatarioPoder${side}`;
+  if (side && (clean.includes("NOTARIO DE PODER") || clean.includes("FEDATARIO DE PODER") || clean.includes("CORREDOR"))) return `notario${side}`;
   if (side && clean.includes("CORREO")) return side === "A" ? "correoPrestador" : "correoCliente";
   if (clean.includes("IMPORTE EN NUMERO")) return "importeNumero";
   if (clean.includes("IMPORTE EN LETRA")) return "importeLetra";
@@ -1912,14 +1948,14 @@ function renderTemplates() {
         <h2>${template.title}</h2>
         <p>${template.category} · ${template.fields} campos</p>
         <footer>
-          <span>${template.personal ? "Documento base propio" : "Plantilla base protegida"}</span>
-          <button class="ghost-button use-template" type="button">Usar machote</button>
+          <span>${template.personal ? "Documento base propio" : "Formato base protegido"}</span>
+          <button class="ghost-button use-template" type="button">Usar formato</button>
         </footer>
       </article>
     `)
     .join("");
 
-  templateCount.textContent = `${Object.values(templates).filter((template) => template.master).length} machotes`;
+  templateCount.textContent = `${Object.values(templates).filter((template) => template.master).length} formatos`;
 }
 
 function buildEnglishTemplate(template) {
@@ -1959,7 +1995,7 @@ function bodyForTemplate(key) {
 function createWorkingCopy(sourceKey, customBody, { announce = true } = {}) {
   const source = templates[sourceKey];
   if (!source) {
-    showToast("Primero selecciona un machote.");
+    showToast("Primero selecciona un formato.");
     return;
   }
   const key = `work-${Date.now()}`;
@@ -1968,7 +2004,7 @@ function createWorkingCopy(sourceKey, customBody, { announce = true } = {}) {
   templates[key] = {
     ...source,
     title: `${source.title} - copia de trabajo`,
-    description: "Copia editable. La plantilla base queda protegida.",
+    description: "Copia editable. El formato base queda protegido.",
     body: prepared.body,
     fields: prepared.fields.length,
     customFields: prepared.fields,
@@ -1979,14 +2015,14 @@ function createWorkingCopy(sourceKey, customBody, { announce = true } = {}) {
   editor.readOnly = false;
   addMatterEvent("Copia editable creada");
   saveActiveDraft("Copia editable creada");
-  if (announce) showToast("Copia creada. Ahora puedes editar sin tocar la plantilla base.");
+  if (announce) showToast("Copia creada. Ahora puedes editar sin tocar el formato base.");
   return true;
 }
 
 async function startContractFromTemplate(sourceKey) {
   const source = templates[sourceKey];
   if (!source) {
-    showToast("Primero selecciona un machote.");
+    showToast("Primero selecciona un formato.");
     return false;
   }
   const destination = await openSaveLocationDialog({
@@ -2010,7 +2046,7 @@ async function startContractFromTemplate(sourceKey) {
     editorTitle.textContent = destination.fileName;
   }
   renderFolderSelector();
-  saveActiveDraft("Contrato iniciado desde machote");
+  saveActiveDraft("Contrato iniciado desde formato");
   showToast(`Copia editable creada y lista para guardarse en ${activeFolder}.`);
   return true;
 }
@@ -2018,7 +2054,7 @@ async function startContractFromTemplate(sourceKey) {
 function ensureEditableWorkspace(actionLabel = "trabajar este contrato") {
   if (isWorkingCopy) return true;
   if (!activeTemplate) {
-    showToast("Primero selecciona o importa un machote.");
+    showToast("Primero selecciona o importa un formato.");
     return false;
   }
   const sourceKey = activeSourceMaster || activeTemplate;
@@ -2029,16 +2065,16 @@ function ensureEditableWorkspace(actionLabel = "trabajar este contrato") {
 
 function saveAsPersonalBaseTemplate() {
   if (!activeTemplate || !editor.value.trim()) {
-    showToast("Primero selecciona o importa un contrato para guardarlo como plantilla base.");
+    showToast("Primero selecciona o importa un contrato para guardarlo como formato base.");
     return;
   }
   if (!isWorkingCopy) {
-    showToast("Las plantillas base están protegidas. Trabaja una copia antes de guardar una versión limpia en la matriz de contratos master.");
+    showToast("Los formatos base están protegidos. Trabaja una copia antes de guardar una versión limpia en la matriz de formatos.");
     return;
   }
 
   const defaultName = cleanWorkingTitle(editorTitle.textContent).replace(/\s+-\s+copia(?:\s+de\s+trabajo)?$/i, "");
-  const name = window.prompt("Nombre para guardar la versión limpia en la matriz de contratos master. Ejemplo: Contrato marco de prestación de servicios", defaultName);
+  const name = window.prompt("Nombre para guardar la versión limpia en el catálogo de formatos base. Ejemplo: Contrato marco de prestación de servicios", defaultName);
   if (!name || !name.trim()) {
     showToast("Guardado cancelado. La copia sigue editable.");
     return;
@@ -2051,7 +2087,7 @@ function saveAsPersonalBaseTemplate() {
     ...(templates[activeSourceMaster] || templates[activeTemplate] || {}),
     title: name.trim(),
     category: "Documentos base propios",
-    description: "Machote propio guardado en tu biblioteca personal de documentos base.",
+    description: "Formato propio guardado en tu biblioteca personal de documentos base.",
     fields: prepared.fields.length,
     body: prepared.body,
     master: true,
@@ -2061,7 +2097,7 @@ function saveAsPersonalBaseTemplate() {
   saveMasterTemplates();
   renderTemplates();
   autoSaveVersion("manual");
-  showToast("Versión limpia guardada como plantilla base. La copia actual sigue editable con sus datos.");
+  showToast("Versión limpia guardada como formato base. La copia actual sigue editable con sus datos.");
 }
 
 function renderVersions() {
@@ -2109,6 +2145,7 @@ function autoSaveVersion(reason = "auto") {
     folder: activeFolder,
     template: activeTemplate,
     language: activeLanguage,
+    userInitials: currentUserInitials(),
     date: new Date().toLocaleString("es-MX"),
     body,
     matter
@@ -2130,7 +2167,7 @@ function autoSaveVersion(reason = "auto") {
 function scheduleAutoSave() {
   clearTimeout(autosaveTimer);
   if (!isWorkingCopy) {
-    autosaveStatus.textContent = "Plantilla protegida";
+    autosaveStatus.textContent = "Formato protegido";
     autosaveStatus.classList.remove("autosave-highlight");
     return;
   }
@@ -2155,10 +2192,10 @@ function loadTemplate(key) {
   selectedDescription.textContent = template.description;
   editor.value = bodyForTemplate(key);
   editor.readOnly = !isWorkingCopy;
-  autosaveStatus.textContent = isWorkingCopy ? "Copia de trabajo" : "Plantilla protegida";
+  autosaveStatus.textContent = isWorkingCopy ? "Copia de trabajo" : "Formato protegido";
   if (renameTemplateButton) {
     renameTemplateButton.textContent = isWorkingCopy ? "Renombrar copia" : "Nombre protegido";
-    renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Las plantillas base se protegen; duplica para renombrar una copia.";
+    renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Los formatos base se protegen; crea una copia para renombrar.";
   }
   setFieldsReviewedState(false);
   autosaveStatus.classList.remove("autosave-highlight");
@@ -2740,12 +2777,16 @@ function exportWordDocument() {
   }
   readFormatControls();
   const documentBody = formattedContractHtml(editor.value);
+  const footerInitials = currentUserInitials();
   const html = `<!doctype html>
   <html>
     <head>
       <meta charset="utf-8" />
       <style>
-        @page { margin: ${legalFormat.margin}; }
+        @page WordSection1 { margin: ${legalFormat.margin}; mso-footer: footer1; }
+        div.WordSection1 { page: WordSection1; }
+        div.footer { mso-element: footer; }
+        .footer p { margin: 0; text-align: right; font-size: 8pt; color: #6b7280; }
         body { font-family: "${legalFormat.font}", serif; color: #111827; line-height: ${legalFormat.lineHeight}; margin: 0; font-size: ${legalFormat.size}pt; }
         h1 { font-size: ${Number(legalFormat.size) + 2}pt; text-align: center; font-weight: 700; margin: 0 0 24pt; text-transform: uppercase; }
         h2 { font-size: ${legalFormat.size}pt; text-align: justify; font-weight: 700; margin: 18pt 0 10pt; text-transform: uppercase; }
@@ -2766,7 +2807,10 @@ function exportWordDocument() {
         strong { font-weight: 700; }
       </style>
     </head>
-    <body>${documentBody || `<h1>${escapeHtml(title)}</h1>`}</body>
+    <body>
+      <div class="WordSection1">${documentBody || `<h1>${escapeHtml(title)}</h1>`}</div>
+      <div class="footer" id="footer1"><p>${escapeHtml(footerInitials)}</p></div>
+    </body>
   </html>`;
   const blob = new Blob(["\ufeff", html], { type: "application/msword" });
   const link = document.createElement("a");
@@ -2935,6 +2979,7 @@ async function submitSignaturePacket(event) {
     folder: activeFolder,
     template: activeTemplate,
     language: activeLanguage,
+    userInitials: currentUserInitials(),
     date: new Date().toLocaleString("es-MX"),
     body: fillPlaceholders(editor.value),
     status,
@@ -2961,7 +3006,194 @@ async function submitSignaturePacket(event) {
   }
 }
 
-function buildLocalCriticalReview(mode) {
+function comparisonDocumentsForCriticalReview() {
+  return getRoles().flatMap((role) =>
+    (sourceTextsBySide[role.side] || []).map((file) => ({
+      role: role.label,
+      name: file.name,
+      type: file.type || classifySupportDocument(file.name),
+      text: file.text || ""
+    }))
+  );
+}
+
+function comparisonFileEntriesForCriticalReview() {
+  return getRoles().flatMap((role) =>
+    (sourceTextsBySide[role.side] || [])
+      .filter((entry) => entry.file)
+      .map((entry) => ({
+        role: role.label,
+        file: entry.file
+      }))
+  );
+}
+
+function uniqueTextMatches(text, regex) {
+  return Array.from(new Set(Array.from(String(text || "").matchAll(regex)).map((match) => match[0].trim()))).slice(0, 18);
+}
+
+function buildLocalCongruenceReview() {
+  const body = editor.value || "";
+  const relatedDocuments = comparisonDocumentsForCriticalReview();
+  const documentsWithText = relatedDocuments.filter((document) => String(document.text || "").trim());
+  const findings = [];
+
+  if (!relatedDocuments.length) {
+    findings.push({
+      severity: "Alta",
+      section: "Documentos para comparar",
+      observation: "No hay anexos o documentos soporte cargados para comparar contra el contrato.",
+      recommendation: "Carga el anexo, propuesta, orden de servicio o documento soporte que quieras contrastar y vuelve a ejecutar esta revisión."
+    });
+  } else if (!documentsWithText.length) {
+    findings.push({
+      severity: "Media",
+      section: "Texto documental",
+      observation: "Hay documentos cargados, pero esta revisión local no tiene texto extraído suficiente para comparar fechas, montos, partes o firmantes.",
+      recommendation: "En producción, ejecuta la revisión con IA documental o carga un archivo de texto/correo/CSV para una comparación preliminar."
+    });
+  }
+
+  const contractDates = uniqueTextMatches(body, /\b\d{1,2}(?:\/|-|\s+de\s+)[A-Za-zÁÉÍÓÚÑáéíóúñ0-9]+(?:\/|-|\s+de\s+)\d{2,4}\b/g);
+  const supportDates = uniqueTextMatches(documentsWithText.map((document) => document.text).join("\n"), /\b\d{1,2}(?:\/|-|\s+de\s+)[A-Za-zÁÉÍÓÚÑáéíóúñ0-9]+(?:\/|-|\s+de\s+)\d{2,4}\b/g);
+  const contractAmounts = uniqueTextMatches(body, /\$\s?[\d,]+(?:\.\d{2})?|\b\d{1,3}(?:,\d{3})+(?:\.\d{2})?\s?(?:MXN|pesos|USD|d[oó]lares)\b/gi);
+  const supportAmounts = uniqueTextMatches(documentsWithText.map((document) => document.text).join("\n"), /\$\s?[\d,]+(?:\.\d{2})?|\b\d{1,3}(?:,\d{3})+(?:\.\d{2})?\s?(?:MXN|pesos|USD|d[oó]lares)\b/gi);
+
+  if (contractDates.length && supportDates.length && !contractDates.some((date) => supportDates.includes(date))) {
+    findings.push({
+      severity: "Media",
+      section: "Fechas y vigencias",
+      observation: `El contrato y los documentos cargados contienen fechas, pero no hay coincidencia evidente. Contrato: ${contractDates.slice(0, 3).join(", ")}. Documentos: ${supportDates.slice(0, 3).join(", ")}.`,
+      recommendation: "Verifica fecha de firma, vigencia, fecha de anexo, inicio de servicios y vencimiento antes de circular la versión final."
+    });
+  }
+  if (contractAmounts.length && supportAmounts.length && !contractAmounts.some((amount) => supportAmounts.includes(amount))) {
+    findings.push({
+      severity: "Media",
+      section: "Montos",
+      observation: `El contrato y los documentos cargados contienen importes que no coinciden de forma evidente. Contrato: ${contractAmounts.slice(0, 3).join(", ")}. Documentos: ${supportAmounts.slice(0, 3).join(", ")}.`,
+      recommendation: "Revisa honorarios, moneda, periodicidad, IVA, anexos de servicio y condiciones comerciales."
+    });
+  }
+
+  if (!findings.length) {
+    findings.push({
+      severity: "Baja",
+      section: "Congruencia documental",
+      observation: "No se detectaron diferencias evidentes en la revisión local básica.",
+      recommendation: "Usa la revisión avanzada para comparar anexos, firmantes, montos, vigencias y alcance con mayor precisión."
+    });
+  }
+
+  return {
+    source: "revisión local",
+    summary: "Revisión preliminar de congruencia entre contrato, anexos y documentos cargados. No sustituye la revisión profesional.",
+    findings,
+    revisedBody: ""
+  };
+}
+
+function buildLocalLegalReview(country = "México") {
+  const body = editor.value || "";
+  const findings = [];
+  const normalizedCountry = removeAccents(country).toLowerCase();
+  const partyData = getPartyData();
+
+  if (!body.trim()) {
+    findings.push({
+      severity: "Alta",
+      section: "Documento",
+      observation: "No hay contrato cargado para revisar contra legislación aplicable.",
+      recommendation: "Selecciona o importa un formato, carga una copia editable y vuelve a ejecutar la revisión."
+    });
+  }
+  if (!normalizedCountry.includes("mexico")) {
+    findings.push({
+      severity: "Media",
+      section: "País seleccionado",
+      observation: `La revisión local solo tiene reglas básicas para México. País seleccionado: ${country}.`,
+      recommendation: "Usa la revisión avanzada en producción y valida con un abogado local del país aplicable."
+    });
+  }
+  [
+    ["A", "constitutivo", "Constitución de la parte A"],
+    ["A", "Poder", "Poderes de la parte A"],
+    ["B", "constitutivo", "Constitución de la parte B"],
+    ["B", "Poder", "Poderes de la parte B"]
+  ].forEach(([side, scope, section]) => {
+    const fieldScope = scope === "Poder" ? "Poder" : "Constitutivo";
+    const fedatario = removeAccents(partyData[`tipoFedatario${fieldScope}${side}`] || "").toLowerCase();
+    const instrumento = removeAccents(partyData[`tipoInstrumento${fieldScope}${side}`] || "").toLowerCase();
+    if (fedatario.includes("corredor") && instrumento.includes("escritura")) {
+      findings.push({
+        severity: "Alta",
+        section,
+        observation: "Se seleccionó corredor público, pero el instrumento aparece como escritura pública.",
+        recommendation: "Usa póliza o acta, según corresponda, o cambia el fedatario a notario público si el documento realmente es escritura."
+      });
+    }
+    if (fedatario.includes("notario") && instrumento.includes("poliza")) {
+      findings.push({
+        severity: "Media",
+        section,
+        observation: "Se seleccionó notario público, pero el instrumento aparece como póliza.",
+        recommendation: "Verifica si el documento fue otorgado ante corredor público o si debe capturarse como escritura pública."
+      });
+    }
+  });
+  if (!/leyes\s+aplicables|legislaci[oó]n\s+aplicable|ley\s+aplicable|jurisdicci[oó]n|tribunales/i.test(body)) {
+    findings.push({
+      severity: "Alta",
+      section: "Ley aplicable y jurisdicción",
+      observation: "No se detecta una cláusula clara de ley aplicable o jurisdicción.",
+      recommendation: "Define el país, estado o legislación aplicable y el mecanismo de solución de controversias antes de circular el contrato."
+    });
+  }
+  if (/prestaci[oó]n\s+de\s+servicios/i.test(body) && !/independiente|sin\s+subordinaci[oó]n|relaci[oó]n\s+laboral/i.test(body)) {
+    findings.push({
+      severity: "Media",
+      section: "Naturaleza del servicio",
+      observation: "El contrato parece de prestación de servicios, pero no se detecta una precisión clara sobre independencia y ausencia de subordinación.",
+      recommendation: "Verifica si conviene incluir una cláusula de naturaleza civil/mercantil e independencia de las partes."
+    });
+  }
+  if (!/datos\s+personales|protecci[oó]n\s+de\s+datos/i.test(body)) {
+    findings.push({
+      severity: "Media",
+      section: "Datos personales",
+      observation: "No se detecta una cláusula expresa sobre tratamiento de datos personales.",
+      recommendation: "Si el contrato implica acceso a datos personales, valida obligaciones de tratamiento, confidencialidad y medidas de seguridad."
+    });
+  }
+  if (/corredur[ií]a|corredor\s+p[uú]blico|p[oó]liza/i.test(body) && /inmueble|arrendamiento|compraventa\s+de\s+inmueble/i.test(body)) {
+    findings.push({
+      severity: "Alta",
+      section: "Corredor público e inmuebles",
+      observation: "Se detecta referencia a corredor público o póliza junto con posible materia inmobiliaria.",
+      recommendation: "Verifica formalidades específicas, porque la fe pública del corredor tiene límites en materia inmobiliaria."
+    });
+  }
+
+  if (!findings.length) {
+    findings.push({
+      severity: "Baja",
+      section: "Revisión normativa local",
+      observation: "No se detectaron alertas normativas evidentes en la revisión local básica.",
+      recommendation: "Ejecuta la revisión avanzada para contrastar el contrato contra el tipo contractual y país aplicable con mayor precisión."
+    });
+  }
+
+  return {
+    source: "revisión local",
+    summary: `Revisión preliminar de legislación aplicable para ${country}. No certifica vigencia normativa ni sustituye revisión jurídica profesional.`,
+    findings,
+    revisedBody: ""
+  };
+}
+
+function buildLocalCriticalReview(mode, country = "México") {
+  if (mode === "congruence") return buildLocalCongruenceReview();
+  if (mode === "legal") return buildLocalLegalReview(country);
   const body = editor.value || "";
   const missingFields = missingFieldsForActiveTemplate().map(([, label]) => label);
   const findings = [];
@@ -2971,7 +3203,7 @@ function buildLocalCriticalReview(mode) {
       severity: "Alta",
       section: "Documento",
       observation: "No hay contrato cargado para revisar.",
-      recommendation: "Selecciona o importa un machote, crea una copia editable y vuelve a ejecutar la revisión."
+      recommendation: "Selecciona o importa un formato, crea una copia editable y vuelve a ejecutar la revisión."
     });
   }
   if (missingFields.length) {
@@ -3169,29 +3401,60 @@ function confirmCriticalFindingsBefore(actionLabel) {
 
 async function runCriticalReview(mode) {
   if (!isWorkingCopy || !editor.value.trim()) {
-    showToast("Primero carga o duplica una plantilla para revisar un contrato editable.");
+    showToast("Primero carga o usa un formato para revisar un contrato editable.");
     return;
   }
 
   pendingCriticalReviewBody = "";
   applyCriticalReviewButton.classList.add("is-hidden");
-  criticalReviewOutput.textContent = mode === "propose" ? "Revisando contrato y preparando ajustes sugeridos..." : "Revisando contrato...";
+  const reviewCountry = document.querySelector("#critical-country")?.value || "México";
+  criticalReviewOutput.textContent =
+    mode === "propose"
+      ? "Revisando contrato y preparando ajustes sugeridos..."
+      : mode === "congruence"
+        ? "Revisando congruencia entre contrato, anexos y documentos soporte..."
+        : mode === "legal"
+          ? `Revisando legislación aplicable para ${reviewCountry}...`
+          : "Revisando contrato...";
 
   try {
-    const response = await fetch("/api/review-contract", {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
-        ...(await activeApiHeaders())
-      },
-      body: JSON.stringify({
-        title: cleanWorkingTitle(editorTitle.textContent),
-        mode,
-        contract: editor.value,
-        missingFields: missingFieldsForActiveTemplate().map(([name, label]) => ({ name, label })),
-        partyData: getPartyData()
-      })
-    });
+    const authHeaders = await activeApiHeaders();
+    let response;
+    if (mode === "congruence") {
+      const formData = new FormData();
+      formData.append("title", cleanWorkingTitle(editorTitle.textContent));
+      formData.append("mode", mode);
+      formData.append("country", reviewCountry);
+      formData.append("contract", editor.value);
+      formData.append("missingFields", JSON.stringify(missingFieldsForActiveTemplate().map(([name, label]) => ({ name, label }))));
+      formData.append("partyData", JSON.stringify(getPartyData()));
+      formData.append("relatedDocuments", JSON.stringify(comparisonDocumentsForCriticalReview()));
+      comparisonFileEntriesForCriticalReview().forEach(({ role, file }) => {
+        formData.append("files", file, file.webkitRelativePath || file.name || `${role}-documento`);
+      });
+      response = await fetch("/api/review-contract", {
+        method: "POST",
+        headers: authHeaders,
+        body: formData
+      });
+    } else {
+      response = await fetch("/api/review-contract", {
+        method: "POST",
+        headers: {
+          "content-type": "application/json",
+          ...authHeaders
+        },
+        body: JSON.stringify({
+          title: cleanWorkingTitle(editorTitle.textContent),
+          mode,
+          country: reviewCountry,
+          contract: editor.value,
+          missingFields: missingFieldsForActiveTemplate().map(([name, label]) => ({ name, label })),
+          partyData: getPartyData(),
+          relatedDocuments: []
+        })
+      });
+    }
     if (!response.ok) throw new Error("critical review unavailable");
     const result = await response.json();
     rememberCriticalReview(result);
@@ -3200,7 +3463,7 @@ async function runCriticalReview(mode) {
     pendingCriticalReviewBody = mode === "propose" && result.revisedBody ? result.revisedBody : "";
     renderCriticalReview(result, mode);
   } catch (error) {
-    const result = buildLocalCriticalReview(mode);
+    const result = buildLocalCriticalReview(mode, reviewCountry);
     rememberCriticalReview(result);
     criticalReviewDone = true;
     updateWorkflowStepState();
@@ -3273,7 +3536,7 @@ function renameActiveTemplate() {
   const current = templates[activeTemplate];
   if (!current) return;
   if (current.master) {
-    showToast("Las plantillas base no se renombran directo. Duplica el machote y renombra la copia.");
+    showToast("Los formatos base no se renombran directo. Crea una copia y renombra la copia.");
     return;
   }
   const name = window.prompt("Nuevo nombre para esta copia de trabajo", current.title);
@@ -3288,14 +3551,14 @@ function renameActiveTemplate() {
   if (!missingFieldsForActiveTemplate().length) assistantPane.classList.remove("open");
   autoSaveVersion("manual");
   saveActiveDraft("Copia renombrada");
-  showToast("Copia renombrada. La plantilla base original sigue intacta.");
+  showToast("Copia renombrada. El formato base original sigue intacto.");
 }
 
 function reviewEditableFieldsFromContract() {
   const template = templates[activeTemplate];
   if (!template) return;
   if (!isWorkingCopy) {
-    showToast("La plantilla base está protegida. Duplica el machote para revisar o ajustar campos.");
+    showToast("El formato base está protegido. Crea una copia para revisar o ajustar campos.");
     return;
   }
   const prepared = prepareTemplateFields(editor.value, template.customFields || []);
@@ -3312,7 +3575,7 @@ function reviewEditableFieldsFromContract() {
   autosaveStatus.textContent = "Campos editables revisados";
   autosaveStatus.classList.add("autosave-highlight");
   saveActiveDraft("Campos editables revisados");
-  showToast(`Campos revisados: ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"} en este machote.`);
+  showToast(`Campos revisados: ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"} en este formato.`);
 }
 
 function clearGeneralData(event) {
@@ -3335,6 +3598,8 @@ function clearGeneralData(event) {
 
 function manualFieldMarkup(name, label, value = "") {
   if (name === "servicioContratado") return serviceContractedFieldMarkup(label, value);
+  if (isFedatarioTypeField(name)) return fedatarioTypeFieldMarkup(name, label, value);
+  if (isInstrumentTypeField(name)) return instrumentTypeFieldMarkup(name, label, value);
   if (isManualDateField(name, label)) return manualDateFieldMarkup(name, label, value);
   return `
     <div class="manual-field">
@@ -3342,6 +3607,87 @@ function manualFieldMarkup(name, label, value = "") {
       <input name="${escapeHtml(name)}" value="${escapeHtml(value)}" aria-label="${escapeHtml(label)}" />
     </div>
   `;
+}
+
+function isFedatarioTypeField(name) {
+  return /^tipoFedatario(?:Constitutivo|Poder)[AB]$/.test(name);
+}
+
+function isInstrumentTypeField(name) {
+  return /^tipoInstrumento(?:Constitutivo|Poder)[AB]$/.test(name);
+}
+
+function typedSelectFieldMarkup({ name, label, value, options, help, dataAttribute }) {
+  const cleanValue = String(value || "");
+  return `
+    <div class="manual-field">
+      <span>${escapeHtml(label)}</span>
+      <select name="${escapeHtml(name)}" ${dataAttribute} aria-label="${escapeHtml(label)}">
+        <option value="">Selecciona una opción</option>
+        ${options
+          .map((option) => `<option value="${escapeHtml(option)}" ${cleanValue === option ? "selected" : ""}>${escapeHtml(option)}</option>`)
+          .join("")}
+      </select>
+      <small>${escapeHtml(help)}</small>
+    </div>
+  `;
+}
+
+function fedatarioTypeFieldMarkup(name, label, value = "") {
+  return typedSelectFieldMarkup({
+    name,
+    label,
+    value,
+    options: ["Notario Público", "Corredor Público"],
+    help: "Si eliges notario, LexContratos propondrá escritura pública; si eliges corredor, propondrá póliza.",
+    dataAttribute: "data-fedatario-kind"
+  });
+}
+
+function instrumentTypeFieldMarkup(name, label, value = "") {
+  return typedSelectFieldMarkup({
+    name,
+    label,
+    value,
+    options: ["Escritura pública", "Póliza", "Acta"],
+    help: "El tipo de instrumento se integra en las declaraciones del contrato.",
+    dataAttribute: "data-instrument-kind"
+  });
+}
+
+function instrumentFieldForFedatarioField(name) {
+  const match = String(name || "").match(/^tipoFedatario(Constitutivo|Poder)([AB])$/);
+  return match ? `tipoInstrumento${match[1]}${match[2]}` : "";
+}
+
+function defaultInstrumentForFedatario(value) {
+  const clean = removeAccents(value || "").toLowerCase();
+  if (clean.includes("corredor")) return "Póliza";
+  if (clean.includes("notario")) return "Escritura pública";
+  return "";
+}
+
+function syncFedatarioTypeField(input) {
+  const name = input?.name;
+  if (!name) return false;
+  const value = String(input.value || "").trim();
+  partyDataStore[name] = value;
+  const instrumentName = instrumentFieldForFedatarioField(name);
+  const instrumentValue = defaultInstrumentForFedatario(value);
+  const instrumentField = instrumentName ? partyForm.elements[instrumentName] : null;
+  if (instrumentField && instrumentValue && (!String(instrumentField.value || "").trim() || instrumentField.dataset.autoInstrument === "true")) {
+    instrumentField.value = instrumentValue;
+    instrumentField.dataset.autoInstrument = "true";
+    partyDataStore[instrumentName] = instrumentValue;
+  }
+  return true;
+}
+
+function syncInstrumentTypeField(input) {
+  if (!input?.name) return false;
+  partyDataStore[input.name] = String(input.value || "").trim();
+  input.dataset.autoInstrument = "false";
+  return true;
 }
 
 function isManualDateField(name, label = "") {
@@ -3932,7 +4278,7 @@ function renderSavedContracts() {
     : "";
   savedContractsList.innerHTML = contractHtml || documentHtml
     ? `<div class="content-list-header" aria-hidden="true"><span>Nombre</span><span>Clase</span><span>Fecha</span><span>Acciones</span></div>${contractHtml}${documentHtml}`
-    : `<span>No hay contratos ni documentos guardados en ${activeFolder}. Selecciona un machote o carga documentos por parte.</span>`;
+    : `<span>No hay contratos ni documentos guardados en ${activeFolder}. Selecciona un formato o carga documentos por parte.</span>`;
 }
 
 function createFolderFromInput() {
@@ -4181,7 +4527,7 @@ function deleteSavedContract(contractId) {
   const folio = contract.matter?.folio || contract.folio || "";
   const relatedVersions = folio ? versions.filter((version) => version.matter?.folio === folio).length : 0;
   const confirmed = window.confirm(
-    `¿Seguro que quieres eliminar este contrato guardado?\n\n${contract.title}\n\n${relatedVersions ? `También se eliminarán ${relatedVersions} versión(es) guardada(s) del mismo expediente.` : "Esta acción no elimina machotes base."}`
+    `¿Seguro que quieres eliminar este contrato guardado?\n\n${contract.title}\n\n${relatedVersions ? `También se eliminarán ${relatedVersions} versión(es) guardada(s) del mismo expediente.` : "Esta acción no elimina formatos base."}`
   );
   if (!confirmed) return;
 
@@ -4250,18 +4596,28 @@ function inferDataFromText(text, side) {
   const updates = {};
   const rfcs = cleanText.match(/\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b/gi) || [];
   const companies = cleanText.match(/[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚÑ&.,\s-]{3,90}S\.?\s*(?:A\.?|DE|C\.?V\.?|R\.?L\.?)[\wÁÉÍÓÚÑ&.,\s-]{0,45}/gi) || [];
-  const escrituras = cleanText.match(/(?:escritura|instrumento)\s+(?:pública\s+)?(?:número\s+)?[\w,.-]+/gi) || [];
+  const escrituras = cleanText.match(/(?:escritura|instrumento|p[oó]liza|acta)\s+(?:p[uú]blica\s+)?(?:n[uú]mero\s+)?[\w,.-]+/gi) || [];
   const folios = cleanText.match(/folio\s+mercantil\s+(?:electrónico\s+)?[\w-]+/gi) || [];
-  const notarios = cleanText.match(/notari[oa]\s+públic[oa]\s+(?:número\s+)?[\w\s,.#-]{3,70}/gi) || [];
+  const fedatarios = cleanText.match(/(?:notari[oa]|corredor[ae]?)\s+p[uú]blic[oa]\s+(?:n[uú]mero\s+)?[\w\s,.#-]{3,70}/gi) || [];
   const reps = cleanText.match(/(?:representad[ao]\s+por|representante\s+legal)\s+([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑ\s.]{6,70})/g) || [];
   const dates = cleanText.match(/\b\d{1,2}\s+de\s+[a-záéíóúñ]+\s+de\s+\d{4}\b/gi) || [];
   const domicile = cleanText.match(/domicilio(?:\s+fiscal)?(?:\s+en)?\s+([A-ZÁÉÍÓÚÑ0-9][\wÁÉÍÓÚÑ\s.,#-]{12,120})/i);
 
   if (companies[0]) updates[`parte${side}`] = companies[0].trim();
   if (rfcs[0]) updates[`rfc${side}`] = rfcs[0].toUpperCase();
-  if (escrituras[0]) updates[`escritura${side}`] = escrituras[0].trim();
+  if (escrituras[0]) {
+    updates[`escritura${side}`] = escrituras[0].trim();
+    const instrumentClean = removeAccents(escrituras[0]).toLowerCase();
+    if (instrumentClean.includes("poliza")) updates[`tipoInstrumentoConstitutivo${side}`] = "Póliza";
+    else if (instrumentClean.includes("acta")) updates[`tipoInstrumentoConstitutivo${side}`] = "Acta";
+    else if (instrumentClean.includes("escritura")) updates[`tipoInstrumentoConstitutivo${side}`] = "Escritura pública";
+  }
   if (folios[0]) updates[`folio${side}`] = folios[0].replace(/folio mercantil electrónico?/i, "").trim();
-  if (notarios[0]) updates[`notario${side}`] = notarios[0].trim();
+  if (fedatarios[0]) {
+    updates[`notario${side}`] = fedatarios[0].trim();
+    updates[`tipoFedatarioPoder${side}`] = removeAccents(fedatarios[0]).toLowerCase().includes("corredor") ? "Corredor Público" : "Notario Público";
+    updates[`tipoInstrumentoPoder${side}`] = removeAccents(fedatarios[0]).toLowerCase().includes("corredor") ? "Póliza" : "Escritura pública";
+  }
   if (dates[0]) updates[`fechaConstitucion${side}`] = dates[0].trim();
   if (reps[0]) updates[`rep${side}`] = reps[0].replace(/representad[ao]\s+por|representante\s+legal/i, "").trim();
   if (domicile) updates[side === "A" ? "domicilioPrestador" : "domicilioCliente"] = domicile[1].trim();
@@ -4269,15 +4625,29 @@ function inferDataFromText(text, side) {
   return updates;
 }
 
-function applyDetectedData(updates) {
+function applyDetectedData(updates, options = {}) {
+  const preserveExisting = options.preserveExisting !== false;
   criticalReviewDone = false;
   const nextUpdates = { ...updates };
   if (nextUpdates.importeNumero && !nextUpdates.importeLetra) {
     const amountInWords = amountToSpanishCurrency(nextUpdates.importeNumero);
     if (amountInWords) nextUpdates.importeLetra = amountInWords;
   }
-  partyDataStore = { ...partyDataStore, ...nextUpdates };
+  const applied = {};
+  const skipped = [];
   Object.entries(nextUpdates).forEach(([name, value]) => {
+    const incoming = String(value || "").trim();
+    if (!incoming) return;
+    const existing = String(partyDataStore[name] || "").trim();
+    const sameValue = removeAccents(existing).toLowerCase() === removeAccents(incoming).toLowerCase();
+    if (preserveExisting && existing && !sameValue) {
+      skipped.push({ name, existing, incoming });
+      return;
+    }
+    applied[name] = incoming;
+  });
+  partyDataStore = { ...partyDataStore, ...applied };
+  Object.entries(applied).forEach(([name, value]) => {
     const input = partyForm.elements[name];
     if (input && value) input.value = value;
   });
@@ -4285,6 +4655,7 @@ function applyDetectedData(updates) {
   renderRequirements();
   renderMatterPanel();
   saveActiveDraft("Datos extraídos");
+  return { appliedCount: Object.keys(applied).length, skipped };
 }
 
 function integrateCompletedManualFields(event) {
@@ -4487,7 +4858,7 @@ document.querySelectorAll(".language-toggle button").forEach((button) => {
     activeLanguage = button.dataset.language;
     document.querySelectorAll(".language-toggle button").forEach((item) => item.classList.toggle("active", item === button));
     if (!activeTemplate) {
-      showToast(activeLanguage === "en" ? "English mode selected. Choose a template to begin." : "Modo español seleccionado. Elige un machote para comenzar.");
+      showToast(activeLanguage === "en" ? "English mode selected. Choose a draft to begin." : "Modo español seleccionado. Elige un formato para comenzar.");
       return;
     }
     editor.value = bodyForTemplate(activeTemplate);
@@ -4565,6 +4936,8 @@ document.querySelector("#critical-review")?.addEventListener("click", () => {
 
 document.querySelector("#critical-observations")?.addEventListener("click", () => runCriticalReview("observations"));
 document.querySelector("#critical-suggest")?.addEventListener("click", () => runCriticalReview("propose"));
+document.querySelector("#critical-congruence")?.addEventListener("click", () => runCriticalReview("congruence"));
+document.querySelector("#critical-legal")?.addEventListener("click", () => runCriticalReview("legal"));
 applyCriticalReviewButton?.addEventListener("click", applyCriticalReviewSuggestion);
 criticalReviewOutput?.addEventListener("click", (event) => {
   const actionButton = event.target.closest("[data-critical-action]");
@@ -4814,6 +5187,7 @@ async function saveContractToArchive({ saveAs = false } = {}) {
     folder: activeFolder,
     template: activeTemplate,
     language: activeLanguage,
+    userInitials: currentUserInitials(),
     date: new Date().toLocaleString("es-MX"),
     body: filled,
     folio,
@@ -4841,14 +5215,14 @@ document.querySelector("#new-template").addEventListener("click", () => {
   const prepared = prepareTemplateFields(body, []);
   templates[activeTemplate] = {
     category: "Operación",
-    title: "Nuevo machote",
-    description: "Machote propio en construcción.",
+    title: "Nuevo formato",
+    description: "Formato propio en construcción.",
     fields: prepared.fields.length,
     body: prepared.body,
     customFields: prepared.fields
   };
   loadTemplate(activeTemplate);
-  showToast("Machote nuevo listo para redactar.");
+  showToast("Formato nuevo listo para redactar.");
 });
 
 document.querySelector("#extract-data").addEventListener("click", async () => {
@@ -4873,20 +5247,25 @@ document.querySelector("#extract-data").addEventListener("click", async () => {
     const text = (sourceTextsBySide[role.side] || []).map((file) => file.text).join("\n\n");
     if (text.trim()) detected = { ...detected, ...inferDataFromText(text, role.side) };
   }
-  applyDetectedData(detected);
-  const integrated = Object.keys(detected).length ? integrateKnownDataIntoContract("Datos extraídos integrados al contrato") : 0;
+  const detectionResult = applyDetectedData(detected);
+  const appliedCount = detectionResult?.appliedCount || 0;
+  const preservedCount = detectionResult?.skipped?.length || 0;
+  const integrated = appliedCount ? integrateKnownDataIntoContract("Datos extraídos integrados al contrato") : 0;
   const missing = missingFieldsForActiveTemplate().length;
   if (Object.keys(detected).length) {
-    addMatterEvent(`Datos extraídos e integrados: ${integrated || Object.keys(detected).length}`);
+    addMatterEvent(`Datos extraídos e integrados: ${integrated || appliedCount || Object.keys(detected).length}`);
     if (!missing) assistantPane.classList.remove("open");
     if (missing && integrated) {
       assistantPane.classList.add("open");
-      showToast(`Se extrajeron e integraron ${integrated} dato${integrated === 1 ? "" : "s"}. Quedan ${missing} pendiente${missing === 1 ? "" : "s"} para integrar manualmente.`);
+      showToast(`Se extrajeron e integraron ${integrated} dato${integrated === 1 ? "" : "s"}. Quedan ${missing} pendiente${missing === 1 ? "" : "s"}${preservedCount ? `; conservé ${preservedCount} dato${preservedCount === 1 ? "" : "s"} existente${preservedCount === 1 ? "" : "s"}` : ""}.`);
+    } else if (preservedCount && !appliedCount) {
+      assistantPane.classList.add("open");
+      showToast(`La información nueva no reemplazó datos ya capturados. Conservé ${preservedCount} dato${preservedCount === 1 ? "" : "s"} existente${preservedCount === 1 ? "" : "s"}; puedes cambiarlo manualmente si corresponde.`);
     } else if (missing) {
       assistantPane.classList.add("open");
-      showToast(`Se extrajeron ${Object.keys(detected).length} dato${Object.keys(detected).length === 1 ? "" : "s"}. No encontré campos equivalentes en el contrato; revisa los pendientes manualmente.`);
+      showToast(`Se extrajeron ${Object.keys(detected).length} dato${Object.keys(detected).length === 1 ? "" : "s"}. ${preservedCount ? `Conservé ${preservedCount} dato${preservedCount === 1 ? "" : "s"} existente${preservedCount === 1 ? "" : "s"}. ` : ""}Revisa los pendientes manualmente.`);
     } else {
-      showToast("Datos extraídos e integrados al contrato. No quedan campos pendientes.");
+      showToast(`Datos extraídos e integrados al contrato. No quedan campos pendientes${preservedCount ? `; conservé ${preservedCount} dato${preservedCount === 1 ? "" : "s"} existente${preservedCount === 1 ? "" : "s"}` : ""}.`);
     }
   } else if (aiOnlyDocuments.length && isLocalStaticPreview()) {
     showToast("Los documentos quedaron cargados, pero esta vista local no ejecuta IA documental. Abre lexcontratos.com para extraerlos o captura los datos manualmente.");
@@ -4901,7 +5280,7 @@ templateImport.addEventListener("change", async () => {
   const [file] = Array.from(templateImport.files);
   if (!file) return;
 
-  const addToMaster = window.confirm("¿Quieres guardar este contrato como machote del catálogo?\n\nAceptar: revisa campos, limpia marcadores y lo guarda como plantilla base.\nCancelar: solo lo abre como copia de trabajo para este contrato.");
+  const addToMaster = window.confirm("¿Quieres guardar este contrato como formato del catálogo?\n\nAceptar: revisa campos, limpia marcadores y lo guarda como formato base.\nCancelar: solo lo abre como copia de trabajo para este contrato.");
   const keyPrefix = addToMaster ? "custom-master" : "work";
   activeTemplate = `custom-${Date.now()}`;
   activeTemplate = `${keyPrefix}-${Date.now()}`;
@@ -4909,7 +5288,7 @@ templateImport.addEventListener("change", async () => {
   templates[activeTemplate] = {
     category: "Operación",
     title: file.name.replace(/\.[^.]+$/, ""),
-    description: addToMaster ? "Machote importado, revisado y guardado como plantilla base." : "Contrato importado como copia de trabajo temporal.",
+    description: addToMaster ? "Formato importado, revisado y guardado como formato base." : "Contrato importado como copia de trabajo temporal.",
     fields: 0,
     body: "",
     customFields: [],
@@ -4921,10 +5300,10 @@ templateImport.addEventListener("change", async () => {
     templates[activeTemplate].body = prepared.body;
     templates[activeTemplate].customFields = prepared.fields;
     templates[activeTemplate].fields = prepared.fields.length;
-    showToast(addToMaster ? `Machote guardado con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} limpio${prepared.fields.length === 1 ? "" : "s"}. Duplica la plantilla para trabajarlo.` : `Copia de trabajo importada con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"}.`);
+    showToast(addToMaster ? `Formato guardado con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} limpio${prepared.fields.length === 1 ? "" : "s"}. Crea una copia para trabajarlo.` : `Copia de trabajo importada con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"}.`);
   } else {
     templates[activeTemplate].body = `MACHOTE IMPORTADO: ${file.name}\n\nEn la versión completa, LexContratos extraería el texto de PDF o Word, conservaría su estructura y detectaría campos rellenables para cada parte.`;
-    showToast(addToMaster ? "Machote creado. PDF y Word requieren extracción documental en backend para limpiar campos con precisión." : "Contrato abierto como trabajo temporal. PDF y Word requieren extracción documental en backend.");
+    showToast(addToMaster ? "Formato creado. PDF y Word requieren extracción documental en backend para limpiar campos con precisión." : "Contrato abierto como trabajo temporal. PDF y Word requieren extracción documental en backend.");
   }
 
   if (addToMaster) saveMasterTemplates();
@@ -5206,6 +5585,8 @@ partyForm.addEventListener("input", (event) => {
   criticalReviewDone = false;
   if (event.target?.matches("[data-service-mode], [data-service-catalog]")) syncServiceContractedField(event.target);
   if (event.target?.matches("[data-service-value]")) partyDataStore.servicioContratado = event.target.value.trim();
+  if (event.target?.matches("[data-fedatario-kind]")) syncFedatarioTypeField(event.target);
+  if (event.target?.matches("[data-instrument-kind]")) syncInstrumentTypeField(event.target);
   if (event.target?.matches("[data-date-text]")) syncManualDateTextField(event.target);
   if (event.target?.matches("[data-date-picker]")) syncManualDatePickerField(event.target);
   if (event.target?.name === "importeNumero") syncAmountInWords({ force: true });
@@ -5225,6 +5606,18 @@ partyForm.addEventListener("change", (event) => {
     renderRequirements();
     if (!activeMatterFolio) renderMatterPanel();
     saveActiveDraft("Servicio contratado actualizado");
+  }
+  if (event.target?.matches("[data-fedatario-kind]")) {
+    criticalReviewDone = false;
+    syncFedatarioTypeField(event.target);
+    renderRequirements();
+    saveActiveDraft("Fedatario actualizado");
+  }
+  if (event.target?.matches("[data-instrument-kind]")) {
+    criticalReviewDone = false;
+    syncInstrumentTypeField(event.target);
+    renderRequirements();
+    saveActiveDraft("Tipo de instrumento actualizado");
   }
   if (event.target?.matches("[data-date-picker]")) syncManualDatePickerField(event.target);
   if (event.target?.matches("[data-signature-date]")) syncSignatureDateFields(event.target.value);

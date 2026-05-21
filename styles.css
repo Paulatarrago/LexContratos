@@ -2829,6 +2829,30 @@ dialog {
   margin: 12px 0;
 }
 
+.critical-country {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin-left: auto;
+  color: var(--muted);
+  font-size: 12px;
+  font-weight: 750;
+}
+
+.critical-country select {
+  min-height: 36px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  padding: 6px 28px 6px 10px;
+  color: var(--ink);
+  background: white;
+  font-weight: 750;
+}
+
+.critical-legal-note {
+  margin-top: 10px;
+}
+
 .critical-review-output {
   max-height: 48vh;
   overflow: auto;

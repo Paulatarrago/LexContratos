@@ -72,6 +72,7 @@ La variable `SUPABASE_SERVICE_ROLE_KEY` solo debe vivir en Vercel o en un entorn
 
 - Migrar contratos existentes de localStorage a Supabase.
 - Probar extraccion real de PDF, Word, Excel e imagenes ya desplegada en Vercel con `OPENAI_API_KEY`.
+- Conectar un modulo de consulta normativa oficial para que la revision legal pueda contrastar cada contrato contra fuentes vigentes del pais aplicable, sin presentarlo como dictamen automatico.
 - Generar `.docx` real en backend.
 - Probar Dropbox Sign de punta a punta con usuarios internos.
 - Personalizar plantillas de correo en Supabase Auth.

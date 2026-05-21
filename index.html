@@ -57,8 +57,8 @@
           <h2>Cómo trabajar un contrato en LexContratos</h2>
           <p class="manual-hint"><strong>Guía de color:</strong> en la tira de acciones, la caja resaltada en color ámbar indica el siguiente paso recomendado una vez terminado el anterior.</p>
           <div class="manual-card-grid">
-            <article><span>1</span><strong>Elige o sube machote</strong><p>Usa una plantilla base o importa tu formato.</p></article>
-            <article><span>2</span><strong>Crea una copia editable</strong><p>Trabaja sin alterar la plantilla original.</p></article>
+            <article><span>1</span><strong>Elige o sube formato</strong><p>Usa un formato base o importa tu draft.</p></article>
+            <article><span>2</span><strong>Crea una copia editable</strong><p>Trabaja sin alterar el formato original.</p></article>
             <article class="required-step"><span>3</span><strong>Detecta campos editables</strong><p>Este paso es obligatorio antes de cargar documentos, extraer datos o completar el contrato.</p></article>
             <article><span>4</span><strong>Carga documentos de cada parte</strong><p>Actas, poderes, constancias, identificaciones oficiales, correos, Word, PDF, Excel o JPG.</p></article>
             <article><span>5</span><strong>Valida y completa generales</strong><p>Revisa los datos extraídos y corrige o captura manualmente lo que falte.</p></article>
@@ -74,7 +74,7 @@
           </article>
           <article>
             <strong>Biblioteca personal editable</strong>
-            <span>Guarda tus machotes, versiones trabajadas y plantillas propias para reutilizarlas.</span>
+            <span>Guarda tus formatos, drafts, versiones trabajadas y documentos base propios para reutilizarlos.</span>
           </article>
           <article>
             <strong>Carpetas por cliente y asunto</strong>
@@ -102,7 +102,7 @@
         </div>
 
         <div class="auth-flow">
-          <span>1. Selecciona plantilla</span>
+          <span>1. Selecciona formato</span>
           <span>2. Carga documentos de cada parte</span>
           <span>3. Extrae generales</span>
           <span>4. Valida y edita</span>
@@ -194,7 +194,7 @@
         <p class="legal-intro">Estos términos regulan el uso privado inicial de LexContratos. La plataforma se encuentra en etapa de validación interna y deberá contar con revisión legal final antes de ofrecerse como producto comercial abierto al público.</p>
         <article>
           <h2>Naturaleza del servicio</h2>
-          <p>LexContratos es una herramienta de apoyo operativo para preparar contratos desde machotes, extraer datos de documentos soporte, organizar expedientes, revisar campos pendientes, generar versiones editables y preparar flujos de exportación o firma. No sustituye el criterio jurídico, la revisión profesional ni la decisión final del usuario.</p>
+          <p>LexContratos es una herramienta de apoyo operativo para preparar contratos desde formatos o drafts, extraer datos de documentos soporte, organizar expedientes, revisar campos pendientes, generar versiones editables y preparar flujos de exportación o firma. No sustituye el criterio jurídico, la revisión profesional ni la decisión final del usuario.</p>
         </article>
         <article>
           <h2>Acceso, cuenta y licencia</h2>
@@ -330,7 +330,7 @@
             <div class="brand-mark" aria-hidden="true"><span>LX</span></div>
             <div>
               <strong>LexContratos</strong>
-            <span>Generales, machotes y expedientes</span>
+          <span>Generales, formatos y expedientes</span>
             </div>
           </div>
 
@@ -389,12 +389,12 @@
           <article class="selected-summary">
             <div>
               <p class="eyebrow" id="selected-category">Inicio</p>
-              <h2 id="editor-title">Selecciona o importa un machote</h2>
-              <p id="selected-description">El contrato aparecerá aquí cuando elijas una plantilla base o importes un machote propio.</p>
+              <h2 id="editor-title">Selecciona o importa un formato</h2>
+              <p id="selected-description">El contrato aparecerá aquí cuando elijas un formato base o importes un draft propio.</p>
             </div>
             <div class="summary-actions">
               <span id="autosave-status">Sin cambios</span>
-              <span id="template-count">13 machotes</span>
+              <span id="template-count">13 formatos</span>
             </div>
           </article>
 
@@ -412,12 +412,12 @@
           <section class="editor-pane document-focus">
             <div class="workspace-action-strip" aria-label="Acciones principales de contrato">
               <button class="secondary-action" id="toggle-archive" type="button">Expedientes</button>
-              <button class="primary-action" id="open-template-picker" type="button">Seleccionar machote</button>
+              <button class="primary-action" id="open-template-picker" type="button">Seleccionar formato</button>
               <label class="secondary-action file-action" for="template-import">
-                Importar machote propio
+                Importar draft propio
                 <input id="template-import" type="file" accept=".txt,.csv,.eml,.docx,.pdf" />
               </label>
-              <button class="secondary-action" id="new-template" type="button">Nuevo machote</button>
+              <button class="secondary-action" id="new-template" type="button">Nuevo formato</button>
               <div class="segmented-control language-toggle" role="tablist" aria-label="Idioma del contrato">
                 <button class="active" type="button" data-language="es">ES</button>
                 <button type="button" data-language="en">EN</button>
@@ -433,8 +433,8 @@
                 <button class="secondary-action workflow-step" id="fill-contract" type="button" title="Disponible después de detectar campos editables. Abre el panel para completar únicamente los datos pendientes.">2. Integrar manualmente datos faltantes</button>
                 <button class="secondary-action workflow-step" id="critical-review" type="button" title="Pide una revisión final con observaciones de claridad, riesgos y consistencia.">3. Revisión crítica IA</button>
                 <button class="secondary-action" id="export-word" type="button" title="Exporta el contrato editable a Word con formato legal.">Exportar Word</button>
-                <button class="secondary-action is-hidden" id="send-signature" type="button" title="La firma electrónica está desactivada por ahora. Exporta el Word y envíalo por la vía de firma que decidas.">Preparar firma</button>
-                <button class="secondary-action" id="save-version" type="button" title="Guarda una versión sin datos de las partes dentro de tu biblioteca de plantillas base.">Guardar versión limpia como plantilla base</button>
+                <button class="secondary-action is-hidden" id="send-signature" type="button" title="Prepara y envía el contrato a firma electrónica cuando la integración esté configurada.">Preparar firma</button>
+                <button class="secondary-action" id="save-version" type="button" title="Guarda una versión sin datos de las partes dentro de tu biblioteca de formatos base.">Guardar versión limpia como formato base</button>
               </div>
             </div>
             <p class="editor-guidance">El contrato sigue siendo editable. LexContratos te ayuda con datos, campos y tareas repetitivas, pero el criterio jurídico y el contenido final permanecen bajo tu control. Cuando esté revisado, expórtalo a Word y envíalo a firma por la vía externa que decidas.</p>
@@ -473,7 +473,7 @@
               </label>
               <button class="primary-action" id="save-as-contract" type="button" title="Guarda el contrato con nombre y carpeta, como en Finder.">Guardar como</button>
             </section>
-            <textarea id="contract-editor" spellcheck="true" placeholder="Selecciona un machote o importa uno propio para comenzar."></textarea>
+            <textarea id="contract-editor" spellcheck="true" placeholder="Selecciona un formato o importa un draft propio para comenzar."></textarea>
           </section>
 
           <section class="party-upload-section" aria-label="Carga por parte contractual">
@@ -536,7 +536,7 @@
         </details>
 
         <section class="data-section ai-panel">
-          <p class="eyebrow">Mejora de plantillas</p>
+          <p class="eyebrow">Mejora de formatos</p>
           <div id="ai-insights" class="ai-insights" aria-live="polite"></div>
         </section>
       </aside>
@@ -554,7 +554,7 @@
 
       <section class="user-guide">
         <div class="guide-note guide-alert">
-          <strong>Regla importante:</strong> si seleccionas otro machote, importas un contrato, editas campos entre llaves o borras partes del contrato, vuelve a presionar “Detectar campos editables”. Esto evita que LexContratos busque datos que ya no existen o deje pendientes que sí deben llenarse.
+          <strong>Regla importante:</strong> si seleccionas otro formato, importas un contrato, editas campos entre llaves o borras partes del contrato, vuelve a presionar “Detectar campos editables”. Esto evita que LexContratos busque datos que ya no existen o deje pendientes que sí deben llenarse.
         </div>
         <div class="guide-note">
           <strong>Cómo leer la tira de acciones:</strong> avanza de izquierda a derecha. Cuando una caja aparece resaltada en color ámbar, esa es la acción que sigue después de completar el paso anterior; las cajas atenuadas todavía no están listas.
@@ -563,8 +563,8 @@
           <article>
             <span>1</span>
             <div>
-              <strong>Selecciona o importa el machote</strong>
-              <p>Empieza desde “Seleccionar machote” para usar una plantilla precargada, o desde “Importar machote propio” si quieres traer un contrato tuyo. La plantilla base no debe trabajarse como versión final: úsala como punto de partida.</p>
+              <strong>Selecciona o importa el formato</strong>
+              <p>Empieza desde “Seleccionar formato” para usar un formato precargado, o desde “Importar draft propio” si quieres traer un contrato tuyo. El formato base no debe trabajarse como versión final: úsalo como punto de partida.</p>
             </div>
           </article>
           <article>
@@ -647,24 +647,24 @@
           </article>
         </div>
 
-        <p class="guide-note">Para pruebas con usuarios reales, conviene pedirles que documenten dónde se atoraron: selección de machote, guardado, carga por parte, extracción, integración manual o exportación. Eso ayuda a mejorar la experiencia sin perder control jurídico.</p>
+        <p class="guide-note">Para pruebas con usuarios reales, conviene pedirles que documenten dónde se atoraron: selección de formato, guardado, carga por parte, extracción, integración manual o exportación. Eso ayuda a mejorar la experiencia sin perder control jurídico.</p>
       </section>
     </dialog>
 
     <dialog class="contract-picker" id="template-picker">
       <form method="dialog" class="dialog-close-row">
         <div>
-          <p class="eyebrow">Machotes / plantillas precargadas</p>
-          <h2>Seleccionar machote o plantilla</h2>
-          <p class="dialog-copy">Elige una plantilla precargada o importa tu propio machote. Tus formatos guardados aparecerán como documentos base propios para reutilizarlos sin alterar las plantillas originales.</p>
+          <p class="eyebrow">Formatos / drafts precargados</p>
+          <h2>Seleccionar formato o draft</h2>
+          <p class="dialog-copy">Elige un formato precargado o importa tu propio draft. Tus formatos guardados aparecerán como documentos base propios para reutilizarlos sin alterar los formatos originales.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar selector">×</button>
       </form>
       <label class="search-field">
-        Buscar machote
+        Buscar formato
         <input id="template-search" type="search" placeholder="Arrendamiento, renta, prestación de servicios, fideicomiso..." />
       </label>
-      <div class="template-list" id="template-grid" aria-label="Lista compacta de machotes"></div>
+      <div class="template-list" id="template-grid" aria-label="Lista compacta de formatos"></div>
     </dialog>
 
     <dialog class="save-location-dialog" id="save-location-dialog">
@@ -736,14 +736,25 @@
         <div>
           <p class="eyebrow">Revisión crítica IA</p>
           <h2>Observaciones finales del contrato</h2>
-          <p class="dialog-copy">LexContratos puede señalar ambigüedades, datos faltantes, contradicciones, errores de forma y redacciones débiles. Tú decides qué integrar.</p>
+          <p class="dialog-copy">LexContratos puede señalar ambigüedades, datos faltantes, contradicciones, errores de forma, redacciones débiles y problemas de congruencia entre contrato, anexos y documentos soporte. Tú decides qué integrar.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar revisión">×</button>
       </form>
       <div class="critical-review-actions">
         <button class="secondary-action" id="critical-observations" type="button">Solo observaciones</button>
         <button class="primary-action" id="critical-suggest" type="button">Proponer ajustes</button>
+        <button class="secondary-action" id="critical-congruence" type="button">Revisar congruencia contrato/anexos</button>
+        <button class="secondary-action" id="critical-legal" type="button">Revisar legislación aplicable</button>
+        <label class="critical-country">
+          <span>País</span>
+          <select id="critical-country" aria-label="País para revisión de legislación aplicable">
+            <option value="México">México</option>
+            <option value="Estados Unidos">Estados Unidos</option>
+            <option value="Otro país">Otro país</option>
+          </select>
+        </label>
       </div>
+      <p class="dialog-copy critical-legal-note">La revisión de legislación aplicable señala alertas normativas y formalidades que conviene validar. No sustituye una revisión jurídica contra fuentes oficiales vigentes.</p>
       <div class="critical-review-output" id="critical-review-output" aria-live="polite">
         Selecciona un modo de revisión para analizar el contrato activo.
       </div>
