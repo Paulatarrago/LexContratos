@@ -1,0 +1,23 @@
+{
+  "name": "LexContratos",
+  "short_name": "LexContratos",
+  "description": "Menos captura. Menos errores. Contratos listos para revisar.",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#082f6f",
+  "icons": [
+    {
+      "src": "/assets/lexcontratos-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "any"
+    },
+    {
+      "src": "/assets/lexcontratos-icon.svg",
+      "sizes": "any",
+      "type": "image/svg+xml",
+      "purpose": "maskable"
+    }
+  ]
+}
