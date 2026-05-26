@@ -2044,8 +2044,9 @@ button {
 
 .archive-rootbar {
   display: flex;
+  flex-wrap: wrap;
   gap: 6px;
-  overflow-x: auto;
+  overflow-x: visible;
   padding: 8px;
   background: #f2eee7;
   border-bottom: 1px solid #e6dfd4;
@@ -2743,7 +2744,7 @@ dialog {
 }
 
 .save-location-roots button {
-  min-height: 32px;
+  min-height: 34px;
   display: flex;
   align-items: center;
   gap: 8px;
@@ -2754,6 +2755,7 @@ dialog {
   background: transparent;
   font-weight: 780;
   text-align: left;
+  line-height: 1.15;
 }
 
 .save-location-roots button.active {

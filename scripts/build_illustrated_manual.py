@@ -645,7 +645,7 @@ def capture_screenshots() -> list[tuple[str, Path, list[str]]]:
         "12. Expedientes y archivo",
         annotate_and_capture(cdp, "12_expedientes.png", [
           {"selector": "#archive-drawer", "text": "Archivo contractual: carpetas, contratos y documentos", "x": 405, "y": 140, "width": 340},
-          {"selector": "#folder-root", "text": "Tipo de carpeta raíz: Clientes, Proveedores, Personales o Documentos de las partes", "x": 420, "y": 310, "width": 380},
+          {"selector": "#folder-root", "text": "Tipo de carpeta raíz: Clientes, Proveedores, Empresas del Grupo, Personales o Documentos de las partes", "x": 420, "y": 310, "width": 380},
           {"selector": "#folder-name", "text": "Crear carpeta/subcarpeta: escribe nombre y presiona Enter", "x": 420, "y": 405, "width": 360},
           {"selector": "#saved-contracts", "text": "Contenido de la carpeta: contratos guardados y acciones disponibles", "x": 420, "y": 640, "width": 360},
           {"selector": "#close-archive", "text": "Cerrar expedientes: oculta la barra lateral", "x": 355, "y": 65, "width": 310},
