@@ -3976,11 +3976,11 @@ function manualFieldMarkup(name, label, value = "") {
 }
 
 function isFedatarioTypeField(name) {
-  return /^tipoFedatario(?:Constitutivo|Poder)[AB]$/.test(name);
+  return /^tipoFedatario(?:Constitutivo|Poder)[AB]$/.test(name) || /^TIPO_FE_PUBLICA/.test(name);
 }
 
 function isInstrumentTypeField(name) {
-  return /^tipoInstrumento(?:Constitutivo|Poder)[AB]$/.test(name);
+  return /^tipoInstrumento(?:Constitutivo|Poder)[AB]$/.test(name) || /^TIPO_INSTRUMENTO/.test(name);
 }
 
 function typedSelectFieldMarkup({ name, label, value, options, help, dataAttribute }) {
@@ -4023,7 +4023,10 @@ function instrumentTypeFieldMarkup(name, label, value = "") {
 
 function instrumentFieldForFedatarioField(name) {
   const match = String(name || "").match(/^tipoFedatario(Constitutivo|Poder)([AB])$/);
-  return match ? `tipoInstrumento${match[1]}${match[2]}` : "";
+  if (match) return `tipoInstrumento${match[1]}${match[2]}`;
+  const importedMatch = String(name || "").match(/^TIPO_FE_PUBLICA(_PODER)?_(.+)$/);
+  if (importedMatch) return `TIPO_INSTRUMENTO${importedMatch[1] || "_CONST"}_${importedMatch[2]}`;
+  return "";
 }
 
 function defaultInstrumentForFedatario(value) {
