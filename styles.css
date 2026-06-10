@@ -2163,7 +2163,7 @@ button {
 .finder-row,
 .content-row {
   display: grid;
-  grid-template-columns: minmax(210px, 1fr) 138px 72px 110px 132px;
+  grid-template-columns: minmax(210px, 1fr) 132px 138px 72px 110px;
   gap: 8px;
   align-items: center;
 }
@@ -2171,13 +2171,52 @@ button {
 .archive-list-header,
 .content-list-header {
   grid-column: 2;
-  padding: 7px 10px;
+  padding: 5px 10px;
   color: #667085;
   background: #f7f7f5;
   border-bottom: 1px solid #e6dfd4;
   font-size: 11px;
   font-weight: 900;
   text-transform: uppercase;
+}
+
+.archive-context-actions {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+  text-transform: none;
+}
+
+.archive-context-button {
+  width: 26px;
+  height: 26px;
+  display: grid;
+  place-items: center;
+  border: 1px solid #d4cbbd;
+  border-radius: 7px;
+  color: #3d4856;
+  background: #fffdf9;
+  font-size: 13px;
+  font-weight: 900;
+}
+
+.archive-context-button:hover:not(:disabled),
+.archive-context-button.has-target:not(:disabled) {
+  color: var(--blue);
+  border-color: #b9cce6;
+  background: #eef6ff;
+}
+
+.archive-context-button.danger:hover:not(:disabled),
+.archive-context-button.danger.has-target:not(:disabled) {
+  color: #8f1f18;
+  border-color: #f1c4c0;
+  background: #fff5f4;
+}
+
+.archive-context-button:disabled {
+  opacity: 0.34;
+  cursor: not-allowed;
 }
 
 .archive-list-body {
@@ -2206,6 +2245,11 @@ button {
 .content-row:hover,
 .finder-row.active {
   background: #edf5ff;
+}
+
+.finder-row.is-selected {
+  background: #e6f1ff;
+  box-shadow: inset 3px 0 0 var(--blue);
 }
 
 .finder-folder,
@@ -2288,6 +2332,10 @@ button {
   accent-color: var(--blue);
 }
 
+.archive-row-action-space {
+  min-height: 1px;
+}
+
 .saved-contract-actions,
 .folder-actions {
   justify-content: flex-end;
@@ -2311,8 +2359,6 @@ button {
   background: #fff5f4;
 }
 
-.archive-finder.view-icons .archive-list-header,
-.archive-finder.view-gallery .archive-list-header,
 .saved-contracts.view-icons .content-list-header,
 .saved-contracts.view-gallery .content-list-header {
   display: none;
@@ -2394,9 +2440,9 @@ button {
   font-size: 18px;
 }
 
-.archive-finder.view-names .archive-list-header span:nth-child(n+2),
+.archive-finder.view-names .archive-list-header span:nth-child(n+3),
 .saved-contracts.view-names .content-list-header span:nth-child(n+2),
-.archive-finder.view-names .finder-row > span:nth-child(n+2),
+.archive-finder.view-names .finder-row > span:nth-child(n+3),
 .saved-contracts.view-names .content-row > span:nth-child(n+2),
 .archive-finder.view-names .folder-actions,
 .saved-contracts.view-names .saved-contract-actions {
