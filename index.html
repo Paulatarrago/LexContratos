@@ -441,7 +441,7 @@
                 <button class="secondary-action workflow-step" id="fill-contract" type="button" title="Disponible después de detectar campos editables. Abre el panel para completar únicamente los datos pendientes.">2. Integrar manualmente datos faltantes</button>
                 <button class="secondary-action workflow-step" id="critical-review" type="button" title="Pide una revisión final con observaciones de claridad, riesgos y consistencia.">3. Revisión crítica IA</button>
                 <button class="secondary-action" id="export-word" type="button" title="Exporta el contrato editable a Word con formato legal.">Exportar Word</button>
-                <button class="secondary-action is-hidden" id="send-signature" type="button" title="Prepara y envía el contrato a firma electrónica cuando la integración esté configurada.">Preparar firma</button>
+                <button class="secondary-action is-hidden" id="send-signature" type="button" title="Prepara firmantes y guarda un paquete para enviar el contrato por tu proveedor externo de firma.">Preparar paquete de firma</button>
                 <button class="secondary-action" id="save-version" type="button" title="Guarda una versión sin datos de las partes dentro de tu biblioteca de formatos base.">Guardar versión limpia como formato base</button>
               </div>
             </div>
@@ -742,8 +742,8 @@
       <form method="dialog" class="dialog-close-row">
         <div>
           <p class="eyebrow">Firma electrónica</p>
-          <h2>Enviar contrato a firma</h2>
-          <p class="dialog-copy" id="signature-dialog-copy">Captura los firmantes y su orden. Si la integración está activa, LexContratos enviará el contrato por Dropbox Sign; si no, guardará el paquete en el expediente.</p>
+          <h2>Preparar paquete de firma</h2>
+          <p class="dialog-copy" id="signature-dialog-copy">Captura los firmantes y su orden para conservar el paquete en el expediente. Exporta el contrato final y envíalo desde tu cuenta de Dropbox Sign, MiFiel u otro proveedor externo.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar firma">×</button>
       </form>
@@ -752,9 +752,9 @@
         <button class="secondary-action" id="add-signer" type="button">Agregar firmante</button>
         <div class="signature-status">
           <strong>Estado:</strong>
-          <span id="signature-status-label">Verificando firma electrónica...</span>
+          <span id="signature-status-label">Firma externa lista para preparar</span>
         </div>
-        <button class="primary-action" id="signature-submit" type="submit">Enviar a firma</button>
+        <button class="primary-action" id="signature-submit" type="submit">Guardar paquete de firma</button>
       </form>
     </dialog>
 

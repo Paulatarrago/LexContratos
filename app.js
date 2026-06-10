@@ -616,7 +616,7 @@ const commonProtectionsEs = `\n\nCLÁUSULAS DE PROTECCIÓN REFORZADA\n\nPRIMERA.
 
 const commonProtectionsEn = `\n\nENHANCED PROTECTIVE CLAUSES\n\nFIRST. Compliance. The parties shall comply with applicable Mexican law, including civil, commercial, tax, labor, social security, personal data protection, anti-corruption and anti-money laundering provisions, to the extent applicable to the transaction.\n\nSECOND. Independent parties. Nothing in this agreement creates a partnership, joint venture, employment relationship, general agency or representation other than what is expressly agreed in writing.\n\nTHIRD. Corporate authority. Each party represents that its existence, authority, powers of attorney, internal approvals and capacity to execute this agreement are valid and sufficient, and shall notify any relevant revocation or limitation.\n\nFOURTH. Information and documents. Each party is responsible for the truthfulness, completeness, lawfulness and timely delivery of all information, documents, instructions, access credentials and materials it provides.\n\nFIFTH. Confidentiality. Technical, commercial, financial, tax, operational, legal, strategic, methodological and business information shall be treated as confidential and used solely to perform this agreement.\n\nSIXTH. Personal data. If a party accesses personal data controlled by the other party, it shall process such data only under lawful documented instructions and apply reasonable administrative, technical and physical safeguards.\n\nSEVENTH. Liability and indemnity. The breaching party shall hold the non-breaching party harmless from claims, fines, damages, costs, expenses and liabilities directly arising from its breach, willful misconduct, gross negligence or acts of its personnel, suppliers or subcontractors.\n\nEIGHTH. Anti-corruption. No party shall offer, promise, request, receive or deliver any undue benefit to obtain an advantage related to this agreement. Breach of this clause shall be cause for immediate termination.\n\nNINTH. Survival. Termination shall not release pending payment, confidentiality, personal data, intellectual property, indemnity, tax, governing law or dispute resolution obligations that by their nature should survive.\n\nTENTH. Mexican law. This agreement shall be interpreted under the applicable laws of Mexico, without prejudice to local formalities or mandatory rules that may apply due to domicile, real estate, subject matter or transaction type.`;
 
-// La integración queda visible; si Dropbox Sign no está configurado, el flujo guarda el paquete sin enviar.
+// La firma se prepara como paquete externo: LexContratos no envía correos por API en esta fase.
 const SIGNATURE_FEATURE_ENABLED = true;
 
 const editor = document.querySelector("#contract-editor");
@@ -720,6 +720,7 @@ let letterheadLogos = loadLetterheadLogos();
 let selectedLetterheadLogoId = loadSelectedLetterheadLogoId();
 let masterInsights = loadMasterInsights();
 let activeMatterFolio = null;
+let activeMatterDraftId = "";
 let matterHistoryEvents = [];
 let toastTimer;
 let autosaveTimer;
@@ -935,6 +936,7 @@ function saveActiveDraft(reason = "Borrador en curso") {
     body: editor.value,
     partyData: getPartyData(),
     sourceTextsBySide: serializableSourceFiles(),
+    draftId: ensureDraftMatterId(),
     matter: matterSnapshot(reason, false),
     history: matterHistoryEvents.slice(),
     templateSnapshot: {
@@ -983,6 +985,7 @@ function restoreActiveDraft({ silent = false } = {}) {
   setPartyData(draft.partyData || {});
   sourceTextsBySide = draft.sourceTextsBySide || { A: [], B: [] };
   activeMatterFolio = draft.matter?.folio || null;
+  activeMatterDraftId = draft.draftId || draft.matter?.draftId || "";
   matterHistoryEvents = draft.history || draft.matter?.history || [];
   autosaveStatus.textContent = `Borrador recuperado · ${draft.date || ""}`.trim();
   autosaveStatus.classList.add("autosave-highlight");
@@ -1221,6 +1224,7 @@ function clearWorkspaceState() {
   partyDataStore = {};
   sourceTextsBySide = { A: [], B: [] };
   activeMatterFolio = null;
+  activeMatterDraftId = "";
   matterHistoryEvents = [];
   selectedCategory.textContent = "Inicio";
   editorTitle.textContent = "Selecciona o importa un formato";
@@ -1294,6 +1298,8 @@ function switchActiveUser(user, announce = true) {
   activeSourceMaster = null;
   isWorkingCopy = false;
   sourceTextsBySide = { A: [], B: [] };
+  activeMatterFolio = null;
+  activeMatterDraftId = "";
   folders = loadFolders();
   activeFolder = folders[0] || "Clientes";
   savedContracts = loadSavedContracts();
@@ -1893,6 +1899,15 @@ function nextMatterSequence(base) {
   return String(max + 1).padStart(3, "0");
 }
 
+function ensureDraftMatterId() {
+  if (!activeMatterDraftId) activeMatterDraftId = `BORRADOR-${Date.now().toString(36).toUpperCase()}`;
+  return activeMatterDraftId;
+}
+
+function visibleMatterCode() {
+  return activeMatterFolio || "Borrador sin folio final";
+}
+
 function previewMatterFolio() {
   if (activeMatterFolio) return activeMatterFolio;
   const base = matterBaseCode();
@@ -1933,7 +1948,9 @@ function matterSnapshot(status = "En preparación", lock = false) {
   const required = requiredFieldsForActiveTemplate();
   const completed = required.filter(([name]) => String(values[name] || "").trim()).length;
   return {
-    folio: lock ? ensureMatterFolio() : previewMatterFolio(),
+    folio: lock ? ensureMatterFolio() : (activeMatterFolio || ""),
+    draftId: ensureDraftMatterId(),
+    displayCode: lock ? ensureMatterFolio() : visibleMatterCode(),
     status,
     folder: activeFolder,
     contractTitle: cleanWorkingTitle(editorTitle.textContent),
@@ -1957,7 +1974,7 @@ function matterSnapshot(status = "En preparación", lock = false) {
 
 function renderMatterPanel() {
   if (!matterFolio || !matterTree || !matterHistory) return;
-  const folio = previewMatterFolio();
+  const folio = visibleMatterCode();
   matterFolio.textContent = folio;
   const values = getPartyData();
   const required = requiredFieldsForActiveTemplate();
@@ -1966,7 +1983,8 @@ function renderMatterPanel() {
   const contractFiles = [
     "Contrato editable",
     events.includes("Word") ? "Contrato exportado Word" : "Word pendiente",
-    events.includes("firma") || events.includes("Firma") ? "Contrato enviado a firma" : "Firma pendiente",
+    activeMatterFolio ? `Folio final: ${activeMatterFolio}` : "Folio final pendiente",
+    events.includes("firma") || events.includes("Firma") ? "Paquete de firma preparado" : "Firma pendiente",
     "Contrato firmado pendiente"
   ];
 
@@ -2275,9 +2293,9 @@ function createWorkingCopy(sourceKey, customBody, { announce = true } = {}) {
   };
   loadTemplate(key);
   editor.readOnly = false;
-  addMatterEvent("Copia editable creada");
-  saveActiveDraft("Copia editable creada");
-  if (announce) showToast("Copia creada. Ahora puedes editar sin tocar el formato base.");
+  addMatterEvent("Documento de trabajo creado");
+  saveActiveDraft("Documento de trabajo creado");
+  if (announce) showToast("Documento creado. Ahora puedes editar sin tocar el formato base.");
   return true;
 }
 
@@ -2288,14 +2306,14 @@ async function startContractFromTemplate(sourceKey) {
     return false;
   }
   const destination = await openSaveLocationDialog({
-    title: `Guardar copia de ${source.title}`,
+    title: `Guardar como: ${source.title}`,
     initialFolder: activeFolder || "Clientes",
-    confirmLabel: "Crear contrato aquí",
+    confirmLabel: "Guardar aquí",
     defaultName: cleanWorkingTitle(source.title),
     requireName: true
   });
   if (!destination) {
-    showToast("Selección cancelada. No se creó una copia de trabajo.");
+    showToast("Selección cancelada. No se creó el documento de trabajo.");
     return false;
   }
   activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || "Clientes");
@@ -2309,7 +2327,7 @@ async function startContractFromTemplate(sourceKey) {
   }
   renderFolderSelector();
   saveActiveDraft("Contrato iniciado desde formato");
-  showToast(`Copia editable creada y lista para guardarse en ${activeFolder}.`);
+  showToast(`Documento de trabajo creado y listo en ${activeFolder}.`);
   return true;
 }
 
@@ -2321,7 +2339,7 @@ function ensureEditableWorkspace(actionLabel = "trabajar este contrato") {
   }
   const sourceKey = activeSourceMaster || activeTemplate;
   createWorkingCopy(sourceKey, editor.value || bodyForTemplate(sourceKey), { announce: false });
-  showToast(`Copia editable creada para ${actionLabel}.`);
+  showToast(`Documento de trabajo creado para ${actionLabel}.`);
   return true;
 }
 
@@ -2374,7 +2392,7 @@ function renderVersions() {
           <article class="saved-contract" data-version-id="${version.id}">
             <button class="saved-contract-open open-version" type="button" data-version-id="${version.id}">
               <strong>${version.title}</strong>
-              <span>${version.matter?.folio || "Sin folio"} · ${(version.language || "es").toUpperCase()} · ${version.date}</span>
+              <span>${version.matter?.folio || version.matter?.displayCode || "Borrador sin folio final"} · ${(version.language || "es").toUpperCase()} · ${version.date}</span>
             </button>
             <div class="saved-contract-actions">
               <button class="folder-action move-version" type="button" data-version-id="${version.id}">Mover</button>
@@ -2464,6 +2482,7 @@ function loadTemplate(key) {
   autosaveStatus.classList.remove("autosave-highlight");
   sourceTextsBySide = { A: [], B: [] };
   activeMatterFolio = null;
+  activeMatterDraftId = "";
   matterHistoryEvents = [];
   renderTemplates();
   renderDynamicFields();
@@ -3225,47 +3244,20 @@ function validateSignatureSigners(signers) {
     if (signer.email && !isValidEmailAddress(signer.email)) invalidEmails.push(row);
   });
   if (missingRows.length) {
-    return `Para enviar por Dropbox Sign necesitas completar nombre, correo y rol del firmante ${missingRows.join(", ")}. El contrato puede seguir incompleto, pero los firmantes no.`;
+    return `Para preparar el paquete de firma necesitas completar nombre, correo y rol del firmante ${missingRows.join(", ")}.`;
   }
   if (invalidEmails.length) {
-    return `Revisa el correo del firmante ${invalidEmails.join(", ")}; Dropbox Sign necesita un correo válido para enviar la solicitud.`;
+    return `Revisa el correo del firmante ${invalidEmails.join(", ")}; se necesita un correo válido para circular el documento a firma.`;
   }
   return "";
 }
 
 async function refreshSignatureStatus() {
   if (!signatureStatusLabel || !signatureSubmitButton) return;
-  signatureStatusLabel.textContent = "Verificando firma electrónica...";
-  signatureSubmitButton.textContent = "Enviar a firma";
-  try {
-    const response = await fetch("/api/send-signature", { method: "GET" });
-    if (!response.ok) throw new Error("signature status unavailable");
-    const status = await response.json();
-    if (status.configured) {
-      signatureStatusLabel.textContent = status.testMode ? "Dropbox Sign conectado · modo prueba" : "Dropbox Sign conectado · envío real";
-      signatureSubmitButton.textContent = status.testMode ? "Enviar prueba de firma" : "Enviar a firma";
-      if (signatureDialogCopy) {
-        signatureDialogCopy.textContent = status.testMode
-          ? "Dropbox Sign está conectado en modo prueba. El envío no será legalmente vinculante hasta desactivar el modo prueba."
-          : "Dropbox Sign está conectado. El contrato se enviará por correo a los firmantes capturados.";
-      }
-      return;
-    }
-  } catch (error) {
-    console.warn("LexContratos estado de firma no disponible", error);
-  }
-  if (isLocalStaticPreview()) {
-    signatureStatusLabel.textContent = "Dropbox Sign se prueba desde lexcontratos.com";
-    signatureSubmitButton.textContent = "Guardar paquete de firma";
-    if (signatureDialogCopy) {
-      signatureDialogCopy.textContent = "Esta vista local no ejecuta envíos de firma si no hay servidor de prueba activo. Puedes capturar firmantes y guardar el paquete; para enviar una prueba por Dropbox Sign, abre la versión publicada.";
-    }
-    return;
-  }
-  signatureStatusLabel.textContent = "Firma electrónica en configuración";
+  signatureStatusLabel.textContent = "Firma externa: paquete listo para guardar";
   signatureSubmitButton.textContent = "Guardar paquete de firma";
   if (signatureDialogCopy) {
-    signatureDialogCopy.textContent = "Captura los firmantes y su orden. La integración se activará cuando Dropbox Sign esté configurado en producción.";
+    signatureDialogCopy.textContent = "Captura los firmantes y su orden. LexContratos guardará el paquete en el expediente; después exporta el contrato y envíalo desde tu cuenta de Dropbox Sign, MiFiel u otro proveedor externo.";
   }
 }
 
@@ -3290,54 +3282,15 @@ async function submitSignaturePacket(event) {
     showToast(signerValidationMessage);
     return;
   }
-  if (!confirmCriticalFindingsBefore("enviar a firma")) {
-    showToast("Envío detenido para revisar observaciones.");
+  if (!confirmCriticalFindingsBefore("preparar paquete de firma")) {
+    showToast("Preparación detenida para revisar observaciones.");
     return;
   }
   ensureMatterFolio();
-  let sendResult = null;
-  let signatureFeedbackShown = false;
-  let status = "Pendiente de envío";
-  let signatureState = "pending_configuration";
+  const status = "Paquete preparado para firma";
+  const signatureState = "external_ready";
 
-  if (isLocalStaticPreview()) {
-    showToast("Para enviar correos de firma, abre la versión publicada en lexcontratos.com. Aquí se guardará el paquete en el expediente.");
-  } else {
-    try {
-      showToast("Preparando envío a firma electrónica...");
-      const letterheadLogo = await letterheadLogoForSignature();
-      const response = await fetch("/api/send-signature", {
-        method: "POST",
-        headers: {
-          "content-type": "application/json",
-          ...(await activeApiHeaders())
-        },
-        body: JSON.stringify({
-          title,
-          folio: previewMatterFolio(),
-          body: fillPlaceholders(editor.value),
-          letterheadLogo,
-          signers
-        })
-      });
-      if (response.ok) {
-        sendResult = await response.json();
-        status = sendResult.testMode ? "Enviado a firma en modo prueba" : "Enviado a firma";
-        signatureState = sendResult.testMode ? "sent_test" : "sent";
-      } else {
-        const data = await response.json().catch(() => ({}));
-        showToast(data.error || "No se pudo enviar a firma. El paquete quedará guardado.");
-        signatureFeedbackShown = true;
-      }
-    } catch (error) {
-      console.warn("LexContratos firma no disponible", error);
-      showToast("No se pudo conectar con firma electrónica. El paquete quedará guardado.");
-      signatureFeedbackShown = true;
-    }
-  }
-
-  const eventLabel = sendResult ? "Contrato enviado a firma electrónica" : "Contrato preparado para firma";
-  addMatterEvent(eventLabel);
+  addMatterEvent("Paquete preparado para firma externa");
   const contract = {
     id: Date.now().toString(),
     title: `${previewMatterFolio()} · ${status} · ${title}`,
@@ -3349,10 +3302,10 @@ async function submitSignaturePacket(event) {
     date: new Date().toLocaleString("es-MX"),
     body: fillPlaceholders(editor.value),
     status,
-    signatureProvider: "Firma electrónica",
+    signatureProvider: "Firma externa",
     signatureState,
-    signatureRequestId: sendResult?.signatureRequestId || "",
-    signatureDetailsUrl: sendResult?.detailsUrl || "",
+    signatureRequestId: "",
+    signatureDetailsUrl: "",
     signers,
     matter: matterSnapshot(status, true)
   };
@@ -3361,15 +3314,7 @@ async function submitSignaturePacket(event) {
   renderSavedContracts();
   autoSaveVersion("manual");
   signatureDialog.close();
-  if (sendResult) {
-    showToast(sendResult.testMode ? "Prueba de firma enviada. Revisa la bandeja de entrada y spam del firmante." : "Contrato enviado a firma electrónica.");
-  } else if (signatureFeedbackShown) {
-    return;
-  } else if (isLocalStaticPreview()) {
-    showToast("Paquete guardado. Los correos de firma solo se envían desde lexcontratos.com.");
-  } else {
-    showToast("Paquete de firma guardado. La integración se activará cuando esté configurada.");
-  }
+  showToast("Paquete de firma guardado. Exporta el contrato y envíalo desde tu cuenta externa de firma; después sube el firmado al expediente.");
 }
 
 function comparisonDocumentsForCriticalReview() {
@@ -4619,6 +4564,7 @@ function renderSavedContracts() {
             <span>Contrato</span>
             <span>${escapeHtml(contract.date || "")}</span>
             <div class="saved-contract-actions">
+              <button class="folder-action rename-contract" type="button" data-id="${contract.id}">Renombrar</button>
               <button class="folder-action move-contract" type="button" data-id="${contract.id}">Mover</button>
               <button class="folder-action copy-contract" type="button" data-id="${contract.id}">Copiar</button>
               <button class="folder-action danger delete-contract" type="button" data-id="${contract.id}">Eliminar</button>
@@ -4632,7 +4578,7 @@ function renderSavedContracts() {
         .slice()
         .reverse()
         .map((document) => `
-          <article class="saved-contract content-row support-document">
+          <article class="saved-contract content-row support-document" data-document-id="${document.id}">
             <button class="saved-contract-open" type="button" disabled>
               <span class="finder-icon" aria-hidden="true">□</span>
               <span>
@@ -4642,7 +4588,12 @@ function renderSavedContracts() {
             </button>
             <span>${escapeHtml(document.type || "Documento")}</span>
             <span>${escapeHtml(document.date || "")}</span>
-            <div></div>
+            <div class="saved-contract-actions">
+              <button class="folder-action rename-document" type="button" data-id="${document.id}">Renombrar</button>
+              <button class="folder-action move-document" type="button" data-id="${document.id}">Mover</button>
+              <button class="folder-action copy-document" type="button" data-id="${document.id}">Copiar</button>
+              <button class="folder-action danger delete-document" type="button" data-id="${document.id}">Eliminar</button>
+            </div>
           </article>
         `)
         .join("")
@@ -4837,19 +4788,41 @@ function deleteFolder(folder) {
   return true;
 }
 
-function askDestinationFolder(currentFolder) {
-  const destination = window.prompt(
-    "Carpeta destino. Puedes escribir una ruta nueva, por ejemplo: Clientes/Cliente Demo/Servicios 2026",
-    currentFolder || activeFolder
-  );
-  if (!destination || !destination.trim()) return null;
-  return ensureFolderPath(destination.trim(), (currentFolder || activeFolder).split("/")[0]);
+async function askDestinationFolder(currentFolder, { title = "Elige carpeta destino", confirmLabel = "Seleccionar carpeta" } = {}) {
+  const destination = await openSaveLocationDialog({
+    title,
+    initialFolder: currentFolder || activeFolder || "Clientes",
+    confirmLabel,
+    requireName: false
+  });
+  if (!destination) return null;
+  return ensureFolderPath(destination.folder, (currentFolder || activeFolder || "Clientes").split("/")[0]);
 }
 
-function moveContractToFolder(contractId) {
+function renameSavedContract(contractId) {
   const contract = savedContracts.find((item) => item.id === contractId);
   if (!contract) return;
-  const destination = askDestinationFolder(contract.folder);
+  const currentName = cleanWorkingTitle(contract.title || "Contrato");
+  const nextName = window.prompt("Nuevo nombre del contrato", currentName);
+  if (!nextName || !nextName.trim()) return;
+  const cleanName = nextName.trim();
+  const confirmed = window.confirm(`¿Renombrar este contrato como "${cleanName}"?`);
+  if (!confirmed) return;
+  contract.title = cleanName;
+  if (contract.matter) contract.matter.contractTitle = cleanName;
+  saveSavedContracts(contract);
+  renderSavedContracts();
+  saveActiveDraft("Contrato renombrado");
+  showToast("Contrato renombrado.");
+}
+
+async function moveContractToFolder(contractId) {
+  const contract = savedContracts.find((item) => item.id === contractId);
+  if (!contract) return;
+  const destination = await askDestinationFolder(contract.folder, {
+    title: `Mover "${contract.title}"`,
+    confirmLabel: "Mover aquí"
+  });
   if (!destination) return;
   const folio = contract.matter?.folio || contract.folio;
   contract.folder = destination;
@@ -4868,12 +4841,16 @@ function moveContractToFolder(contractId) {
   showToast("Contrato movido con sus versiones del expediente.");
 }
 
-function copyContractToFolder(contractId) {
+async function copyContractToFolder(contractId) {
   const contract = savedContracts.find((item) => item.id === contractId);
   if (!contract) return;
-  const destination = askDestinationFolder(contract.folder);
+  const destination = await askDestinationFolder(contract.folder, {
+    title: `Copiar "${contract.title}"`,
+    confirmLabel: "Copiar aquí"
+  });
   if (!destination) return;
-  const copyFolio = `${contract.matter?.folio || contract.folio || "EXP"}-COPIA`;
+  const sourceFolio = contract.matter?.folio || contract.folio || "";
+  const copyFolio = sourceFolio ? `${sourceFolio}-COPIA` : "";
   const copy = {
     ...contract,
     id: Date.now().toString(),
@@ -4882,7 +4859,7 @@ function copyContractToFolder(contractId) {
     date: new Date().toLocaleString("es-MX"),
     status: "Copia editable",
     folio: copyFolio,
-    matter: contract.matter ? { ...contract.matter, folio: copyFolio, folder: destination, status: "Copia editable" } : contract.matter
+    matter: contract.matter ? { ...contract.matter, folio: copyFolio, displayCode: copyFolio || "Borrador sin folio final", folder: destination, status: "Copia editable" } : contract.matter
   };
   savedContracts.push(copy);
   activeFolder = destination;
@@ -4915,10 +4892,96 @@ function deleteSavedContract(contractId) {
   showToast("Contrato eliminado del archivo.");
 }
 
-function moveVersionToFolder(versionId) {
+function renameSupportDocument(documentId) {
+  const document = supportDocuments.find((item) => item.id === documentId);
+  if (!document) return;
+  const nextName = window.prompt("Nuevo nombre del documento", document.name || "Documento soporte");
+  if (!nextName || !nextName.trim()) return;
+  const cleanName = nextName.trim();
+  const oldName = document.name;
+  document.name = cleanName;
+  document.date = new Date().toLocaleString("es-MX");
+  Object.keys(sourceTextsBySide).forEach((side) => {
+    sourceTextsBySide[side] = (sourceTextsBySide[side] || []).map((entry) => (
+      entry.name === oldName && entry.size === document.size ? { ...entry, name: cleanName } : entry
+    ));
+  });
+  saveSupportDocuments();
+  renderSavedContracts();
+  renderRoleDrops();
+  renderMatterPanel();
+  saveActiveDraft("Documento soporte renombrado");
+  showToast("Documento renombrado.");
+}
+
+async function moveSupportDocumentToFolder(documentId) {
+  const document = supportDocuments.find((item) => item.id === documentId);
+  if (!document) return;
+  const destination = await askDestinationFolder(document.folder, {
+    title: `Mover "${document.name}"`,
+    confirmLabel: "Mover aquí"
+  });
+  if (!destination) return;
+  document.folder = destination;
+  document.date = new Date().toLocaleString("es-MX");
+  activeFolder = destination;
+  saveSupportDocuments();
+  renderFolders();
+  renderSavedContracts();
+  renderMatterPanel();
+  saveActiveDraft("Documento soporte movido");
+  showToast("Documento movido a la carpeta seleccionada.");
+}
+
+async function copySupportDocumentToFolder(documentId) {
+  const document = supportDocuments.find((item) => item.id === documentId);
+  if (!document) return;
+  const destination = await askDestinationFolder(document.folder, {
+    title: `Copiar "${document.name}"`,
+    confirmLabel: "Copiar aquí"
+  });
+  if (!destination) return;
+  const copy = {
+    ...document,
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    name: `Copia de ${document.name}`,
+    folder: destination,
+    date: new Date().toLocaleString("es-MX")
+  };
+  supportDocuments.push(copy);
+  activeFolder = destination;
+  saveSupportDocuments();
+  renderFolders();
+  renderSavedContracts();
+  showToast("Documento copiado a la carpeta seleccionada.");
+}
+
+function deleteSupportDocument(documentId) {
+  const document = supportDocuments.find((item) => item.id === documentId);
+  if (!document) return;
+  const confirmed = window.confirm(`¿Seguro que quieres eliminar este documento del expediente?\n\n${document.name}`);
+  if (!confirmed) return;
+  supportDocuments = supportDocuments.filter((item) => item.id !== documentId);
+  Object.keys(sourceTextsBySide).forEach((side) => {
+    sourceTextsBySide[side] = (sourceTextsBySide[side] || []).filter((entry) => (
+      entry.name !== document.name || entry.size !== document.size
+    ));
+  });
+  saveSupportDocuments();
+  renderSavedContracts();
+  renderRoleDrops();
+  renderMatterPanel();
+  saveActiveDraft("Documento soporte eliminado");
+  showToast("Documento eliminado del expediente.");
+}
+
+async function moveVersionToFolder(versionId) {
   const version = versions.find((item) => item.id === versionId);
   if (!version) return;
-  const destination = askDestinationFolder(version.folder);
+  const destination = await askDestinationFolder(version.folder, {
+    title: `Mover "${version.title}"`,
+    confirmLabel: "Mover aquí"
+  });
   if (!destination) return;
   version.folder = destination;
   if (version.matter) version.matter.folder = destination;
@@ -4929,10 +4992,13 @@ function moveVersionToFolder(versionId) {
   showToast("Versión movida a la carpeta seleccionada.");
 }
 
-function copyVersionToFolder(versionId) {
+async function copyVersionToFolder(versionId) {
   const version = versions.find((item) => item.id === versionId);
   if (!version) return;
-  const destination = askDestinationFolder(version.folder);
+  const destination = await askDestinationFolder(version.folder, {
+    title: `Copiar "${version.title}"`,
+    confirmLabel: "Copiar aquí"
+  });
   if (!destination) return;
   versions.push({
     ...version,
@@ -5142,7 +5208,8 @@ async function addFilesToRole(side, fileList) {
       folder: supportFolder,
       roleLabel: role?.label || "Parte",
       party: values[role?.part] || role?.label || "Parte",
-      folio: previewMatterFolio(),
+      folio: activeMatterFolio || "",
+      draftId: ensureDraftMatterId(),
       name: entry.name,
       size: entry.size,
       type: entry.type,
@@ -5154,7 +5221,7 @@ async function addFilesToRole(side, fileList) {
   if (backend) {
     backend
       .uploadSupportDocuments({
-        folio: previewMatterFolio(),
+        folio: activeMatterFolio || ensureDraftMatterId(),
         roleLabel: role?.label || "parte",
         files: entries.map((entry) => entry.file).filter(Boolean)
       })
@@ -5550,12 +5617,11 @@ async function saveContractToArchive({ saveAs = false } = {}) {
   }
   const filled = fillPlaceholders(editor.value);
   editor.value = filled;
-  const folio = ensureMatterFolio();
   addMatterEvent(saveAs ? "Contrato guardado como copia" : "Contrato guardado");
-  const title = `${cleanWorkingTitle(destination.fileName || templates[activeTemplate].title)} · ${new Date().toLocaleDateString("es-MX")}`;
+  const title = cleanWorkingTitle(destination.fileName || templates[activeTemplate].title);
   const contract = {
     id: Date.now().toString(),
-    title: `${folio} · ${title}`,
+    title,
     folder: activeFolder,
     template: activeTemplate,
     language: activeLanguage,
@@ -5563,8 +5629,8 @@ async function saveContractToArchive({ saveAs = false } = {}) {
     letterheadLogoId: selectedLetterheadLogoId,
     date: new Date().toLocaleString("es-MX"),
     body: filled,
-    folio,
-    matter: matterSnapshot("Contrato creado", true)
+    folio: activeMatterFolio || "",
+    matter: matterSnapshot("Borrador guardado", false)
   };
   savedContracts.push(contract);
   saveSavedContracts(contract);
@@ -5846,6 +5912,11 @@ folderName.addEventListener("keydown", (event) => {
 });
 
 savedContractsList.addEventListener("click", (event) => {
+  const renameButton = event.target.closest(".rename-contract");
+  if (renameButton) {
+    renameSavedContract(renameButton.dataset.id);
+    return;
+  }
   const moveButton = event.target.closest(".move-contract");
   if (moveButton) {
     moveContractToFolder(moveButton.dataset.id);
@@ -5859,6 +5930,26 @@ savedContractsList.addEventListener("click", (event) => {
   const deleteButton = event.target.closest(".delete-contract");
   if (deleteButton) {
     deleteSavedContract(deleteButton.dataset.id);
+    return;
+  }
+  const renameDocumentButton = event.target.closest(".rename-document");
+  if (renameDocumentButton) {
+    renameSupportDocument(renameDocumentButton.dataset.id);
+    return;
+  }
+  const moveDocumentButton = event.target.closest(".move-document");
+  if (moveDocumentButton) {
+    moveSupportDocumentToFolder(moveDocumentButton.dataset.id);
+    return;
+  }
+  const copyDocumentButton = event.target.closest(".copy-document");
+  if (copyDocumentButton) {
+    copySupportDocumentToFolder(copyDocumentButton.dataset.id);
+    return;
+  }
+  const deleteDocumentButton = event.target.closest(".delete-document");
+  if (deleteDocumentButton) {
+    deleteSupportDocument(deleteDocumentButton.dataset.id);
     return;
   }
   const button = event.target.closest(".open-saved-contract");
@@ -5888,7 +5979,8 @@ savedContractsList.addEventListener("click", (event) => {
   saveSelectedLetterheadLogoId();
   renderLetterheadLogos();
   if (contract.matter) {
-    activeMatterFolio = contract.matter.folio;
+    activeMatterFolio = contract.matter.folio || null;
+    activeMatterDraftId = contract.matter.draftId || "";
     matterHistoryEvents = contract.matter.history || [];
     const roles = getRoles();
     sourceTextsBySide = {
@@ -5948,7 +6040,8 @@ versionList.addEventListener("click", (event) => {
   saveSelectedLetterheadLogoId();
   renderLetterheadLogos();
   if (version.matter) {
-    activeMatterFolio = version.matter.folio;
+    activeMatterFolio = version.matter.folio || null;
+    activeMatterDraftId = version.matter.draftId || "";
     matterHistoryEvents = version.matter.history || matterHistoryEvents;
     renderMatterPanel();
   }
