@@ -709,9 +709,9 @@ let activeCategory = "Todos";
 let activeLanguage = "es";
 let partyDataStore = {};
 let sourceTextsBySide = { A: [], B: [] };
-const rootFolders = ["Clientes", "Proveedores", "Empresas del Grupo", "Personales", "Documentos de las partes"];
+const rootFolders = ["Mis Documentos", "Clientes", "Proveedores", "Empresas del Grupo", "Personales", "Documentos de las partes"];
 let folders = loadFolders();
-let activeFolder = folders[0] || "Clientes";
+let activeFolder = folders[0] || "Mis Documentos";
 let savedContracts = loadSavedContracts();
 let versions = loadVersions();
 let supportDocuments = loadSupportDocuments();
@@ -727,7 +727,7 @@ let autosaveTimer;
 let folderClickTimer;
 let contextMenuFolder = "";
 let saveLocationResolve = null;
-let saveLocationState = { folder: "Clientes", confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
+let saveLocationState = { folder: "Mis Documentos", confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
 let saveContextFolder = "";
 let pendingCriticalReviewBody = "";
 let pendingCriticalChanges = [];
@@ -856,7 +856,7 @@ function saveMasterTemplates() {
 function loadFolders() {
   const saved = readJson(userStorageKey("folders"), readJson("lexcontratos_folders", rootFolders));
   const normalized = saved
-    .map((folder) => (folder === "General" ? "Clientes/General" : folder))
+    .map((folder) => (folder === "General" ? "Mis Documentos/General" : folder))
     .filter(Boolean);
   return Array.from(new Set([...rootFolders, ...normalized]));
 }
@@ -871,7 +871,7 @@ function loadSavedContracts() {
   const saved = readJson(userStorageKey("saved_contracts"), readJson("lexcontratos_saved_contracts", []));
   return saved.map((contract) => ({
     ...contract,
-    folder: contract.folder === "General" ? "Clientes/General" : contract.folder
+    folder: contract.folder === "General" ? "Mis Documentos/General" : (contract.folder || "Mis Documentos")
   }));
 }
 
@@ -887,7 +887,7 @@ function loadVersions() {
   const saved = readJson(userStorageKey("versions"), readJson("lexcontratos_versions", []));
   return saved.map((version) => ({
     ...version,
-    folder: version.folder === "General" ? "Clientes/General" : version.folder
+    folder: version.folder === "General" ? "Mis Documentos/General" : (version.folder || "Mis Documentos")
   }));
 }
 
@@ -896,7 +896,10 @@ function saveVersions() {
 }
 
 function loadSupportDocuments() {
-  return readJson(userStorageKey("support_documents"), []);
+  return readJson(userStorageKey("support_documents"), []).map((document) => ({
+    ...document,
+    folder: document.folder || "Mis Documentos"
+  }));
 }
 
 function saveSupportDocuments() {
@@ -1301,7 +1304,7 @@ function switchActiveUser(user, announce = true) {
   activeMatterFolio = null;
   activeMatterDraftId = "";
   folders = loadFolders();
-  activeFolder = folders[0] || "Clientes";
+  activeFolder = folders[0] || "Mis Documentos";
   savedContracts = loadSavedContracts();
   versions = loadVersions();
   legalFormat = loadLegalFormat();
@@ -2307,7 +2310,7 @@ async function startContractFromTemplate(sourceKey) {
   }
   const destination = await openSaveLocationDialog({
     title: `Guardar como: ${source.title}`,
-    initialFolder: activeFolder || "Clientes",
+    initialFolder: activeFolder || "Mis Documentos",
     confirmLabel: "Guardar aquí",
     defaultName: cleanWorkingTitle(source.title),
     requireName: true
@@ -2316,7 +2319,7 @@ async function startContractFromTemplate(sourceKey) {
     showToast("Selección cancelada. No se creó el documento de trabajo.");
     return false;
   }
-  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || "Clientes");
+  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || "Mis Documentos");
   renderFolders();
   renderSavedContracts();
   renderVersions();
@@ -4251,7 +4254,7 @@ function renderFolderSelector() {
   if (!contractFolderSelect) return;
   const sorted = folders.slice().sort((a, b) => a.localeCompare(b, "es"));
   contractFolderSelect.innerHTML = sorted.map((folder) => `<option value="${folder}">${folder}</option>`).join("");
-  if (!sorted.includes(activeFolder)) activeFolder = sorted[0] || "Clientes";
+  if (!sorted.includes(activeFolder)) activeFolder = sorted[0] || "Mis Documentos";
   contractFolderSelect.value = activeFolder;
 }
 
@@ -4274,7 +4277,7 @@ function directChildFolders(parent = "") {
 }
 
 function folderColumnParents() {
-  const parts = String(activeFolder || "Clientes").split("/").filter(Boolean);
+  const parts = String(activeFolder || "Mis Documentos").split("/").filter(Boolean);
   const columns = [""];
   let path = "";
   parts.forEach((part) => {
@@ -4301,9 +4304,15 @@ function folderMetaText(folder) {
   return parts.join(" · ") || "Vacía";
 }
 
+function contractFileSize(contract) {
+  const characters = String(contract?.body || "").length;
+  const kb = Math.max(1, Math.ceil(characters / 1024));
+  return `${kb} KB`;
+}
+
 function renderFinderPath() {
   if (!finderPath) return;
-  const parts = String(activeFolder || "Clientes").split("/").filter(Boolean);
+  const parts = String(activeFolder || "Mis Documentos").split("/").filter(Boolean);
   let path = "";
   finderPath.innerHTML = parts
     .map((part, index) => {
@@ -4315,7 +4324,7 @@ function renderFinderPath() {
 }
 
 function folderColumnParentsFor(folder) {
-  const parts = String(folder || "Clientes").split("/").filter(Boolean);
+  const parts = String(folder || "Mis Documentos").split("/").filter(Boolean);
   const columns = [""];
   let path = "";
   parts.forEach((part) => {
@@ -4327,7 +4336,7 @@ function folderColumnParentsFor(folder) {
 
 function renderSaveLocationBrowser() {
   if (!saveLocationBrowser || !saveLocationSelected) return;
-  const selected = saveLocationState.folder || activeFolder || "Clientes";
+  const selected = saveLocationState.folder || activeFolder || "Mis Documentos";
   saveLocationSelected.textContent = selected;
   if (saveLocationFileName) {
     saveLocationFileName.value = saveLocationState.fileName || saveLocationState.defaultName || "";
@@ -4344,6 +4353,7 @@ function renderSaveLocationBrowser() {
           <button class="save-file-name save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
             <span class="finder-icon" aria-hidden="true">▣</span><strong>${escapeHtml(label)}</strong>
           </button>
+          <span>--</span>
           <span>${escapeHtml(folderMetaText(folder))}</span>
           <span>Carpeta</span>
           <div class="save-folder-actions">
@@ -4362,6 +4372,7 @@ function renderSaveLocationBrowser() {
       <div class="save-file-row is-file" title="${escapeHtml(contract.title)}">
         <span class="save-file-name"><span aria-hidden="true">□</span><strong>${escapeHtml(contract.title)}</strong></span>
         <span>${escapeHtml(contract.date || "")}</span>
+        <span>${escapeHtml(contractFileSize(contract))}</span>
         <span>Contrato</span>
         <span></span>
       </div>
@@ -4375,6 +4386,7 @@ function renderSaveLocationBrowser() {
       <div class="save-file-row is-file" title="${escapeHtml(document.name)}">
         <span class="save-file-name"><span aria-hidden="true">□</span><strong>${escapeHtml(document.name)}</strong></span>
         <span>${escapeHtml(document.date || "")}</span>
+        <span>${escapeHtml(document.size || "")}</span>
         <span>${escapeHtml(document.type || "Documento")}</span>
         <span></span>
       </div>
@@ -4401,6 +4413,7 @@ function renderSaveLocationBrowser() {
         <div class="save-file-header">
           <span>Nombre</span>
           <span>Fecha de modificación</span>
+          <span>Tamaño</span>
           <span>Clase</span>
           <span>Acciones</span>
         </div>
@@ -4424,7 +4437,7 @@ function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder 
   return new Promise((resolve) => {
     saveLocationResolve = resolve;
     saveLocationState = {
-      folder: ensureFolderPath(initialFolder || activeFolder || "Clientes"),
+      folder: ensureFolderPath(initialFolder || activeFolder || "Mis Documentos"),
       confirmLabel,
       defaultName,
       fileName: defaultName,
@@ -4436,12 +4449,12 @@ function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder 
   });
 }
 
-function createFolderInsideSaveLocationAt(folder = saveLocationState.folder || "Clientes") {
-  const baseFolder = ensureFolderPath(folder || saveLocationState.folder || "Clientes");
+function createFolderInsideSaveLocationAt(folder = saveLocationState.folder || "Mis Documentos") {
+  const baseFolder = ensureFolderPath(folder || saveLocationState.folder || "Mis Documentos");
   const name = window.prompt(`Nombre de la nueva carpeta dentro de "${baseFolder}"`);
   if (!name || !name.trim()) return;
   saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
-  saveLocationState.folder = ensureFolderPath(`${baseFolder}/${name.trim().replace(/\//g, " ")}`, baseFolder.split("/")[0] || "Clientes");
+  saveLocationState.folder = ensureFolderPath(`${baseFolder}/${name.trim().replace(/\//g, " ")}`, baseFolder.split("/")[0] || "Mis Documentos");
   renderFolders();
   renderSaveLocationBrowser();
   showToast(`Carpeta lista: ${saveLocationState.folder}.`);
@@ -4457,20 +4470,20 @@ function renameFolderInsideSaveLocation(folder) {
 
 function deleteFolderInsideSaveLocation(folder) {
   saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
-  const parent = folderParent(folder) || "Clientes";
+  const parent = folderParent(folder) || "Mis Documentos";
   if (!deleteFolder(folder)) return;
   saveLocationState.folder = pathInFolder(saveLocationState.folder || activeFolder, folder) ? parent : saveLocationState.folder;
-  if (!folders.includes(saveLocationState.folder)) saveLocationState.folder = "Clientes";
+  if (!folders.includes(saveLocationState.folder)) saveLocationState.folder = "Mis Documentos";
   renderSaveLocationBrowser();
 }
 
-function ensureFolderPath(value, fallbackRoot = activeFolder.split("/")[0] || "Clientes") {
+function ensureFolderPath(value, fallbackRoot = activeFolder.split("/")[0] || "Mis Documentos") {
   const parts = String(value || "")
     .split("/")
     .map((part) => part.trim())
     .filter(Boolean);
-  if (!parts.length) return activeFolder;
-  if (!rootFolders.includes(parts[0])) parts.unshift(rootFolders.includes(fallbackRoot) ? fallbackRoot : "Clientes");
+  if (!parts.length) return activeFolder || "Mis Documentos";
+  if (!rootFolders.includes(parts[0])) parts.unshift(rootFolders.includes(fallbackRoot) ? fallbackRoot : "Mis Documentos");
 
   let path = "";
   parts.forEach((part) => {
@@ -4494,7 +4507,7 @@ function renderFolders() {
   while (!folders.includes(activeFolder) && folderParent(activeFolder)) {
     activeFolder = folderParent(activeFolder);
   }
-  if (!folders.includes(activeFolder)) activeFolder = "Clientes";
+  if (!folders.includes(activeFolder)) activeFolder = "Mis Documentos";
   renderFinderPath();
   const children = directChildFolders(activeFolder);
   const parent = folderParent(activeFolder);
@@ -4510,8 +4523,9 @@ function renderFolders() {
             <small>${escapeHtml(description)}</small>
           </span>
         </button>
-        <span>${parentRow ? "Carpeta superior" : "Carpeta"}</span>
+        <span>--</span>
         <span>${escapeHtml(folderMetaText(folder))}</span>
+        <span>${parentRow ? "Carpeta superior" : "Carpeta"}</span>
         <div class="folder-actions" aria-label="Acciones de carpeta">
           <button class="folder-action rename-folder" type="button" data-folder="${escapeHtml(folder)}" ${rootFolders.includes(folder) || parentRow ? "disabled" : ""}>Renombrar</button>
           <button class="folder-action danger delete-folder" type="button" data-folder="${escapeHtml(folder)}" ${rootFolders.includes(folder) || parentRow ? "disabled" : ""}>Eliminar</button>
@@ -4532,8 +4546,9 @@ function renderFolders() {
       </div>
       <div class="archive-list-header" aria-hidden="true">
         <span>Nombre</span>
+        <span>Fecha de modificación</span>
+        <span>Tamaño</span>
         <span>Clase</span>
-        <span>Contenido</span>
         <span>Acciones</span>
       </div>
       <div class="archive-list-body">
@@ -4561,8 +4576,9 @@ function renderSavedContracts() {
                 <small>${contract.status || (contract.language || "es").toUpperCase()} · ${contract.date}</small>
               </span>
             </button>
-            <span>Contrato</span>
             <span>${escapeHtml(contract.date || "")}</span>
+            <span>${escapeHtml(contractFileSize(contract))}</span>
+            <span>Contrato</span>
             <div class="saved-contract-actions">
               <button class="folder-action rename-contract" type="button" data-id="${contract.id}">Renombrar</button>
               <button class="folder-action move-contract" type="button" data-id="${contract.id}">Mover</button>
@@ -4586,8 +4602,9 @@ function renderSavedContracts() {
                 <small>${escapeHtml(document.type || "Documento soporte")} · ${escapeHtml(document.size || "")}</small>
               </span>
             </button>
-            <span>${escapeHtml(document.type || "Documento")}</span>
             <span>${escapeHtml(document.date || "")}</span>
+            <span>${escapeHtml(document.size || "")}</span>
+            <span>${escapeHtml(document.type || "Documento")}</span>
             <div class="saved-contract-actions">
               <button class="folder-action rename-document" type="button" data-id="${document.id}">Renombrar</button>
               <button class="folder-action move-document" type="button" data-id="${document.id}">Mover</button>
@@ -4599,12 +4616,12 @@ function renderSavedContracts() {
         .join("")
     : "";
   savedContractsList.innerHTML = contractHtml || documentHtml
-    ? `<div class="content-list-header" aria-hidden="true"><span>Nombre</span><span>Clase</span><span>Fecha</span><span>Acciones</span></div>${contractHtml}${documentHtml}`
+    ? `<div class="content-list-header" aria-hidden="true"><span>Nombre</span><span>Fecha de modificación</span><span>Tamaño</span><span>Clase</span><span>Acciones</span></div>${contractHtml}${documentHtml}`
     : `<span>No hay contratos ni documentos guardados en ${activeFolder}. Selecciona un formato o carga documentos por parte.</span>`;
 }
 
 function createFolderFromInput() {
-  const root = folderRoot.value || "Clientes";
+  const root = folderRoot.value || "Mis Documentos";
   const parts = folderName.value
     .split("/")
     .map((part) => part.trim())
@@ -4631,11 +4648,11 @@ function createFolderFromInput() {
 }
 
 function createFolderInsideArchive(folder = activeFolder) {
-  const baseFolder = ensureFolderPath(folder || activeFolder || "Clientes");
+  const baseFolder = ensureFolderPath(folder || activeFolder || "Mis Documentos");
   const name = window.prompt(`Nombre de la nueva carpeta dentro de "${baseFolder}"`);
   if (!name || !name.trim()) return;
   const cleanName = name.trim().replace(/\//g, " ");
-  const newPath = ensureFolderPath(`${baseFolder}/${cleanName}`, baseFolder.split("/")[0] || "Clientes");
+  const newPath = ensureFolderPath(`${baseFolder}/${cleanName}`, baseFolder.split("/")[0] || "Mis Documentos");
   activeFolder = newPath;
   renderFolders();
   renderSavedContracts();
@@ -4658,7 +4675,7 @@ function showFolderContextMenu(event, folder = activeFolder, { onNew = null, onR
   if (!folderContextMenu) return;
   event.preventDefault();
   event.stopPropagation();
-  contextMenuFolder = ensureFolderPath(folder || activeFolder || "Clientes");
+  contextMenuFolder = ensureFolderPath(folder || activeFolder || "Mis Documentos");
   folderContextMenu._onNew = onNew;
   folderContextMenu._onRename = onRename;
   folderContextMenu._onDelete = onDelete;
@@ -4678,11 +4695,11 @@ function hideSaveLocationContextMenu() {
   saveContextFolder = "";
 }
 
-function showSaveLocationContextMenu(event, folder = saveLocationState.folder || activeFolder || "Clientes") {
+function showSaveLocationContextMenu(event, folder = saveLocationState.folder || activeFolder || "Mis Documentos") {
   if (!saveLocationContextMenu) return;
   event.preventDefault();
   event.stopPropagation();
-  saveContextFolder = ensureFolderPath(folder || saveLocationState.folder || activeFolder || "Clientes");
+  saveContextFolder = ensureFolderPath(folder || saveLocationState.folder || activeFolder || "Mis Documentos");
   const isRoot = rootFolders.includes(saveContextFolder);
   saveLocationContextMenu.querySelector('[data-save-context-action="rename"]').disabled = isRoot;
   saveLocationContextMenu.querySelector('[data-save-context-action="delete"]').disabled = isRoot;
@@ -4728,7 +4745,7 @@ function renameFolder(folder) {
   folders = folders.map((path) => replaceFolderPath(path, folder, newPath));
   savedContracts = savedContracts.map((contract) => ({
     ...contract,
-    folder: replaceFolderPath(contract.folder || "Clientes", folder, newPath)
+    folder: replaceFolderPath(contract.folder || "Mis Documentos", folder, newPath)
   }));
   supportDocuments = supportDocuments.map((document) => ({
     ...document,
@@ -4736,7 +4753,7 @@ function renameFolder(folder) {
   }));
   versions = versions.map((version) => ({
     ...version,
-    folder: replaceFolderPath(version.folder || "Clientes", folder, newPath)
+    folder: replaceFolderPath(version.folder || "Mis Documentos", folder, newPath)
   }));
   activeFolder = replaceFolderPath(activeFolder, folder, newPath);
   saveFolders();
@@ -4791,12 +4808,12 @@ function deleteFolder(folder) {
 async function askDestinationFolder(currentFolder, { title = "Elige carpeta destino", confirmLabel = "Seleccionar carpeta" } = {}) {
   const destination = await openSaveLocationDialog({
     title,
-    initialFolder: currentFolder || activeFolder || "Clientes",
+    initialFolder: currentFolder || activeFolder || "Mis Documentos",
     confirmLabel,
     requireName: false
   });
   if (!destination) return null;
-  return ensureFolderPath(destination.folder, (currentFolder || activeFolder || "Clientes").split("/")[0]);
+  return ensureFolderPath(destination.folder, (currentFolder || activeFolder || "Mis Documentos").split("/")[0]);
 }
 
 function renameSavedContract(contractId) {
@@ -5417,7 +5434,7 @@ contractFolderSelect?.addEventListener("change", () => {
 quickFolderButton?.addEventListener("click", async () => {
   const destination = await openSaveLocationDialog({
     title: "Elegir carpeta de trabajo",
-    initialFolder: activeFolder || "Clientes",
+    initialFolder: activeFolder || "Mis Documentos",
     confirmLabel: "Usar esta carpeta"
   });
   if (!destination) return;
@@ -5598,9 +5615,9 @@ async function saveContractToArchive({ saveAs = false } = {}) {
   if (!ensureEditableWorkspace("guardar contrato")) return;
   const defaultName = cleanWorkingTitle(templates[activeTemplate]?.title || editorTitle.textContent) || "Contrato";
   const destination = await openSaveLocationDialog({
-    title: saveAs ? "Guardar contrato como" : "Guardar contrato en expediente",
-    initialFolder: activeFolder || "Clientes",
-    confirmLabel: saveAs ? "Guardar como" : "Guardar contrato aquí",
+    title: saveAs ? "Guardar contrato como" : "Guardar contrato en Mis Documentos",
+    initialFolder: activeFolder || "Mis Documentos",
+    confirmLabel: saveAs ? "Guardar como" : "Guardar aquí",
     defaultName,
     requireName: true
   });
@@ -5608,7 +5625,7 @@ async function saveContractToArchive({ saveAs = false } = {}) {
     showToast("Guardado cancelado. El contrato sigue como borrador.");
     return;
   }
-  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || "Clientes");
+  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || "Mis Documentos");
   renderFolders();
   renderFolderSelector();
   if (destination.fileName) {
@@ -5865,7 +5882,7 @@ saveLocationBrowser?.addEventListener("dblclick", (event) => {
 
 saveLocationBrowser?.addEventListener("contextmenu", (event) => {
   const row = event.target.closest("[data-save-folder]");
-  const folder = row?.dataset.saveFolder || saveLocationState.folder || activeFolder || "Clientes";
+  const folder = row?.dataset.saveFolder || saveLocationState.folder || activeFolder || "Mis Documentos";
   showSaveLocationContextMenu(event, folder);
 });
 
@@ -5881,7 +5898,7 @@ saveLocationContextMenu?.addEventListener("click", (event) => {
 });
 
 saveLocationConfirm?.addEventListener("click", () => {
-  const folder = ensureFolderPath(saveLocationState.folder || activeFolder || "Clientes");
+  const folder = ensureFolderPath(saveLocationState.folder || activeFolder || "Mis Documentos");
   const fileName = saveLocationFileName?.value.trim() || saveLocationState.defaultName || "";
   if (saveLocationState.requireName && !fileName) {
     showToast("Escribe un nombre para guardar el contrato.");

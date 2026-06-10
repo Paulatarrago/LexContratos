@@ -352,34 +352,33 @@
         </div>
       </header>
 
-      <aside class="sidebar side-drawer" id="archive-drawer" aria-label="Expedientes de contratos">
-        <div class="drawer-heading">
+      <aside class="sidebar side-drawer" id="archive-drawer" aria-label="Mis Documentos">
+        <div class="drawer-heading finder-window-heading">
           <div>
-            <p class="eyebrow">Expedientes</p>
-            <h2>Archivo contractual <span class="info-tip" tabindex="0" data-tip="Explorador de carpetas para contratos, documentos soporte y expedientes. Puedes crear subcarpetas con Enter o clic derecho.">i</span></h2>
+            <div class="finder-window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
+            <p class="eyebrow">Archivo flexible</p>
+            <h2>Mis Documentos <span class="info-tip" tabindex="0" data-tip="Explorador de carpetas para contratos, documentos soporte y documentos personales. Puedes guardar directo en Mis Documentos, en una carpeta sugerida o en tantas subcarpetas como necesites.">i</span></h2>
           </div>
-          <button class="icon-button dark" id="close-archive" type="button" title="Cerrar expedientes" aria-label="Cerrar expedientes">×</button>
+          <button class="icon-button dark" id="close-archive" type="button" title="Cerrar Mis Documentos" aria-label="Cerrar Mis Documentos">×</button>
         </div>
 
-        <section class="sidebar-panel">
-          <p class="eyebrow">Explorador <span class="info-tip" tabindex="0" data-tip="Navega como en Finder: abre carpetas, crea subcarpetas y organiza contratos por cliente, proveedor, empresas del grupo, asunto o documentos de las partes.">i</span></p>
+        <section class="sidebar-panel finder-browser-panel">
+          <p class="eyebrow">Explorador <span class="info-tip" tabindex="0" data-tip="Navega como en Finder: abre carpetas con doble clic, crea subcarpetas con clic derecho y organiza contratos por cliente, proveedor, empresas del grupo, asunto o carpeta libre.">i</span></p>
           <div class="folder-create">
             <select id="folder-root" aria-label="Tipo de carpeta">
+              <option value="Mis Documentos">Mis Documentos</option>
               <option value="Clientes">Clientes</option>
               <option value="Proveedores">Proveedores</option>
               <option value="Empresas del Grupo">Empresas del Grupo</option>
               <option value="Personales">Personales</option>
               <option value="Documentos de las partes">Documentos de las partes</option>
             </select>
-            <input id="folder-name" type="text" placeholder="Nombre/Subcarpeta y Enter" />
+            <input id="folder-name" type="text" placeholder="Nueva carpeta o ruta/subcarpeta" />
+            <button class="secondary-action mini-action" id="create-folder" type="button">Nueva carpeta</button>
           </div>
-          <p class="folder-help">Presiona Enter para crear carpetas o subcarpetas. Da doble clic en una carpeta para abrirla.</p>
+          <p class="folder-help">Puedes guardar directo en Mis Documentos o entrar a cualquier carpeta. Da doble clic para abrir, clic derecho para crear, renombrar o eliminar carpetas.</p>
           <div class="finder-path" id="finder-path" aria-live="polite"></div>
           <div class="folder-list" id="folder-list" aria-label="Carpetas personalizadas"></div>
-        </section>
-
-        <section class="sidebar-panel">
-          <p class="eyebrow">Contenido de la carpeta <span class="info-tip" tabindex="0" data-tip="Aquí aparecen contratos y documentos guardados en la carpeta abierta. Da doble clic en una carpeta para entrar.">i</span></p>
           <div class="saved-contracts" id="saved-contracts" aria-live="polite"></div>
         </section>
 
@@ -419,7 +418,7 @@
 
           <section class="editor-pane document-focus">
             <div class="workspace-action-strip" aria-label="Acciones principales de contrato">
-              <button class="secondary-action" id="toggle-archive" type="button">Expedientes</button>
+              <button class="secondary-action" id="toggle-archive" type="button">Mis Documentos</button>
               <button class="primary-action" id="open-template-picker" type="button">Seleccionar formato</button>
               <label class="secondary-action file-action" for="template-import">
                 Importar draft propio
@@ -687,9 +686,9 @@
     <dialog class="save-location-dialog" id="save-location-dialog">
       <form method="dialog" class="dialog-close-row">
         <div>
-          <p class="eyebrow">Guardar en expediente</p>
-          <h2 id="save-location-title">Elige dónde guardar</h2>
-          <p class="dialog-copy">Selecciona una carpeta existente. Da doble clic para entrar y usa clic derecho dentro del explorador para crear, renombrar o eliminar carpetas.</p>
+          <p class="eyebrow">Mis Documentos</p>
+          <h2 id="save-location-title">Guardar en Mis Documentos</h2>
+          <p class="dialog-copy">Elige la carpeta y el nombre del documento. Puedes guardar directo en Mis Documentos, entrar a una carpeta existente o crear tantas subcarpetas como necesites con clic derecho.</p>
         </div>
         <div class="dialog-top-actions">
           <button class="secondary-action mini-action" id="save-location-expand" type="button">Ampliar</button>
@@ -703,7 +702,7 @@
         </label>
         <div>
           <span>Ruta</span>
-          <strong id="save-location-selected">Clientes</strong>
+          <strong id="save-location-selected">Mis Documentos</strong>
         </div>
       </div>
       <div class="save-location-browser" id="save-location-browser" aria-label="Explorador de carpetas para guardar"></div>
