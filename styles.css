@@ -2136,13 +2136,13 @@ button {
 .finder-search {
   min-width: 0;
   display: grid;
-  grid-template-columns: auto minmax(160px, 1fr);
+  grid-template-columns: auto minmax(120px, 168px);
   align-items: center;
-  gap: 8px;
+  gap: 6px;
   justify-self: end;
   margin-left: auto;
   color: #667085;
-  font-size: 12px;
+  font-size: 16px;
   font-weight: 820;
 }
 
@@ -2228,8 +2228,8 @@ button {
 .finder-row,
 .content-row {
   display: grid;
-  grid-template-columns: minmax(210px, 1fr) 132px 138px 72px 110px;
-  gap: 8px;
+  grid-template-columns: minmax(190px, 1fr) 112px 118px 66px 92px;
+  gap: 6px;
   align-items: center;
 }
 
@@ -2268,20 +2268,21 @@ button {
 .archive-context-actions {
   display: flex;
   align-items: center;
-  gap: 5px;
+  justify-content: center;
+  gap: 4px;
   text-transform: none;
 }
 
 .archive-context-button {
-  width: 26px;
-  height: 26px;
+  width: 24px;
+  height: 24px;
   display: grid;
   place-items: center;
   border: 1px solid #d4cbbd;
   border-radius: 7px;
   color: #3d4856;
   background: #fffdf9;
-  font-size: 13px;
+  font-size: 12px;
   font-weight: 900;
 }
 
@@ -2415,6 +2416,10 @@ button {
   width: 14px;
   height: 14px;
   accent-color: var(--blue);
+}
+
+.archive-select:disabled {
+  visibility: hidden;
 }
 
 .archive-row-action-space {

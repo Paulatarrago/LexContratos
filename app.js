@@ -4642,16 +4642,18 @@ function renderFolders() {
     .filter((document) => archiveMatches(document.name, document.type || "", document.size || "", document.date || "", document.roleLabel || "", document.party || ""));
   const parent = folderParent(activeFolder);
   const rowForFolder = (folder, { parentRow = false, root = false } = {}) => {
-    const label = parentRow ? ".." : folder.split("/").pop();
-    const description = parentRow ? folder : folderMetaText(folder);
+    const label = parentRow ? folder.split("/").pop() : folder.split("/").pop();
+    const description = parentRow ? "Carpeta superior" : folderMetaText(folder);
     const canSelect = !parentRow && !rootFolders.includes(folder);
     const rowType = parentRow ? "parent" : "folder";
+    const folderIcon = parentRow ? "←" : "▣";
+    const sizeText = parentRow ? "" : folderMetaText(folder);
     return `
       <article class="finder-row ${folder === activeFolder ? "active" : ""} ${root ? "root-row" : ""} ${isArchiveSelected("folder", folder) ? "is-selected" : ""}" data-folder="${escapeHtml(folder)}" data-archive-row="${rowType}" data-archive-id="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
         <span class="archive-name-cell">
           <input class="archive-select" type="checkbox" data-archive-type="folder" data-archive-id="${escapeHtml(folder)}" ${canSelect ? "" : "disabled"} ${isArchiveSelected("folder", folder) ? "checked" : ""} aria-label="Seleccionar carpeta ${escapeHtml(label)}" />
           <button class="folder-item finder-folder" type="button" data-folder="${escapeHtml(folder)}">
-            <span class="finder-icon" aria-hidden="true">▣</span>
+            <span class="finder-icon" aria-hidden="true">${folderIcon}</span>
             <span class="finder-name">
               <strong>${escapeHtml(label)}</strong>
               <small>${escapeHtml(description)}</small>
@@ -4660,7 +4662,7 @@ function renderFolders() {
         </span>
         <span class="archive-row-action-space"></span>
         <span>--</span>
-        <span>${escapeHtml(folderMetaText(folder))}</span>
+        <span>${escapeHtml(sizeText)}</span>
         <span>${parentRow ? "Carpeta superior" : "Carpeta"}</span>
       </article>
     `;
@@ -4753,7 +4755,7 @@ function renderFolders() {
           <button class="archive-context-button" type="button" data-archive-action="copy" title="Copiar">⧉</button>
           <button class="archive-context-button danger" type="button" data-archive-action="delete" title="Eliminar">⌫</button>
         </span>
-        <button class="archive-sort-button" type="button" data-archive-sort="date" data-sort-label="Fecha de modificación">Fecha de modificación</button>
+        <button class="archive-sort-button" type="button" data-archive-sort="date" data-sort-label="Modificación">Modificación</button>
         <button class="archive-sort-button" type="button" data-archive-sort="size" data-sort-label="Tamaño">Tamaño</button>
         <button class="archive-sort-button" type="button" data-archive-sort="class" data-sort-label="Clase">Clase</button>
       </div>
@@ -4950,9 +4952,19 @@ function hideFolderContextMenu() {
   folderContextMenu._onNew = null;
   folderContextMenu._onRename = null;
   folderContextMenu._onDelete = null;
+  folderContextMenu._mode = "folder";
+  folderContextMenu._target = null;
 }
 
-function showFolderContextMenu(event, folder = activeFolder, { onNew = null, onRename = null, onDelete = null } = {}) {
+function setContextButton(action, { text, hidden = false, disabled = false } = {}) {
+  const button = folderContextMenu?.querySelector(`[data-context-action="${action}"]`);
+  if (!button) return;
+  if (text) button.textContent = text;
+  button.hidden = hidden;
+  button.disabled = disabled;
+}
+
+function showFolderContextMenu(event, folder = activeFolder, { onNew = null, onRename = null, onDelete = null, mode = "folder", target = null } = {}) {
   if (!folderContextMenu) return;
   event.preventDefault();
   event.stopPropagation();
@@ -4960,12 +4972,27 @@ function showFolderContextMenu(event, folder = activeFolder, { onNew = null, onR
   folderContextMenu._onNew = onNew;
   folderContextMenu._onRename = onRename;
   folderContextMenu._onDelete = onDelete;
+  folderContextMenu._mode = mode;
+  folderContextMenu._target = target;
   const isRoot = rootFolders.includes(contextMenuFolder);
-  folderContextMenu.querySelector('[data-context-action="rename"]').disabled = isRoot;
-  folderContextMenu.querySelector('[data-context-action="delete"]').disabled = isRoot;
+  if (mode === "item") {
+    const targets = target ? [target] : currentArchiveTargets();
+    const capabilities = archiveActionCapabilities(targets);
+    setContextButton("new", { hidden: true });
+    setContextButton("rename", { text: "Renombrar", disabled: !capabilities.rename });
+    setContextButton("move", { text: "Mover", hidden: false, disabled: !capabilities.move });
+    setContextButton("copy", { text: "Copiar", hidden: false, disabled: !capabilities.copy });
+    setContextButton("delete", { text: "Eliminar", disabled: !capabilities.delete });
+  } else {
+    setContextButton("new", { text: "Nueva carpeta aquí", hidden: false, disabled: false });
+    setContextButton("rename", { text: "Renombrar carpeta", hidden: false, disabled: isRoot });
+    setContextButton("move", { hidden: true });
+    setContextButton("copy", { hidden: true });
+    setContextButton("delete", { text: "Eliminar carpeta", hidden: false, disabled: isRoot });
+  }
   folderContextMenu.classList.remove("is-hidden");
   const menuWidth = 210;
-  const menuHeight = 118;
+  const menuHeight = mode === "item" ? 156 : 118;
   folderContextMenu.style.left = `${Math.min(event.clientX, window.innerWidth - menuWidth - 10)}px`;
   folderContextMenu.style.top = `${Math.min(event.clientY, window.innerHeight - menuHeight - 10)}px`;
 }
@@ -6217,15 +6244,32 @@ folderList.addEventListener("pointerleave", () => {
 });
 
 folderList.addEventListener("contextmenu", (event) => {
-  const row = event.target.closest("[data-folder]");
-  showFolderContextMenu(event, row?.dataset.folder || activeFolder);
+  const archiveRow = event.target.closest("[data-archive-row]");
+  if (archiveRow) {
+    const type = archiveRow.dataset.archiveRow;
+    const id = archiveRow.dataset.archiveId || archiveRow.dataset.folder || archiveRow.dataset.id || archiveRow.dataset.documentId || "";
+    if (type === "contract" || type === "document") {
+      const target = { type, id };
+      hoveredArchiveItem = target;
+      const targetKey = archiveKey(type, id);
+      if (selectedArchiveItems.size && !selectedArchiveItems.has(targetKey)) selectedArchiveItems.clear();
+      renderArchiveToolbarState();
+      showFolderContextMenu(event, activeFolder, { mode: "item", target });
+      return;
+    }
+    if (type === "folder") {
+      showFolderContextMenu(event, archiveRow.dataset.folder || id || activeFolder);
+      return;
+    }
+  }
+  showFolderContextMenu(event, activeFolder);
 });
 
 savedContractsList.addEventListener("contextmenu", (event) => {
   showFolderContextMenu(event, activeFolder);
 });
 
-folderContextMenu?.addEventListener("click", (event) => {
+folderContextMenu?.addEventListener("click", async (event) => {
   event.stopPropagation();
   const action = event.target.closest("[data-context-action]")?.dataset.contextAction;
   if (!action || !contextMenuFolder) return;
@@ -6235,7 +6279,20 @@ folderContextMenu?.addEventListener("click", (event) => {
     onRename: folderContextMenu._onRename,
     onDelete: folderContextMenu._onDelete
   };
+  const mode = folderContextMenu._mode || "folder";
+  const target = folderContextMenu._target;
   hideFolderContextMenu();
+  if (mode === "item") {
+    const targetKey = target ? archiveKey(target.type, target.id) : "";
+    const targets = selectedArchiveItems.size && targetKey && selectedArchiveItems.has(targetKey)
+      ? currentArchiveTargets()
+      : (target ? [target] : currentArchiveTargets());
+    if (action === "rename") renameArchiveTargets(targets);
+    if (action === "move") await moveArchiveTargets(targets);
+    if (action === "copy") await copyArchiveTargets(targets);
+    if (action === "delete") deleteArchiveTargets(targets);
+    return;
+  }
   if (action === "new") {
     if (handlers.onNew) {
       handlers.onNew(folder);

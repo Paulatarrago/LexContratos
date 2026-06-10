@@ -376,8 +376,8 @@
               </div>
             </div>
             <label class="finder-search">
-              <span>Buscar</span>
-              <input id="archive-search" type="search" placeholder="Buscar en Mis Documentos" />
+              <span aria-hidden="true">⌕</span>
+              <input id="archive-search" type="search" placeholder="Buscar" aria-label="Buscar en Mis Documentos" />
             </label>
           </div>
           <p class="folder-help">Doble clic para abrir. Clic derecho para crear, renombrar o eliminar carpetas.</p>
@@ -391,6 +391,8 @@
         <div class="folder-context-menu is-hidden" id="folder-context-menu" role="menu" aria-label="Acciones de carpeta">
           <button type="button" data-context-action="new">Nueva carpeta aquí</button>
           <button type="button" data-context-action="rename">Renombrar carpeta</button>
+          <button type="button" data-context-action="move">Mover</button>
+          <button type="button" data-context-action="copy">Copiar</button>
           <button type="button" data-context-action="delete">Eliminar carpeta</button>
         </div>
       </aside>
