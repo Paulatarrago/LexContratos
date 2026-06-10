@@ -735,6 +735,8 @@ let archiveViewMode = localStorage.getItem("lexcontratos_archive_view") || "deta
 let archiveSearchTerm = "";
 let selectedArchiveItems = new Set();
 let hoveredArchiveItem = null;
+let archiveSortKey = localStorage.getItem("lexcontratos_archive_sort_key") || "name";
+let archiveSortDirection = localStorage.getItem("lexcontratos_archive_sort_direction") || "asc";
 let pendingCriticalReviewBody = "";
 let pendingCriticalChanges = [];
 let lastCriticalReviewFindings = [];
@@ -4329,6 +4331,32 @@ function archiveMatches(...values) {
   return haystack.includes(archiveSearchTerm);
 }
 
+function archiveDateValue(value) {
+  const parsed = Date.parse(String(value || ""));
+  return Number.isFinite(parsed) ? parsed : 0;
+}
+
+function archiveSizeValue(value) {
+  const match = String(value || "").match(/([\d.,]+)/);
+  if (!match) return 0;
+  return Number(match[1].replace(",", ".")) || 0;
+}
+
+function compareArchiveItems(left, right) {
+  const direction = archiveSortDirection === "desc" ? -1 : 1;
+  const a = left.sort?.[archiveSortKey] ?? "";
+  const b = right.sort?.[archiveSortKey] ?? "";
+  if (typeof a === "number" || typeof b === "number") {
+    return ((Number(a) || 0) - (Number(b) || 0)) * direction;
+  }
+  return String(a).localeCompare(String(b), "es", { sensitivity: "base", numeric: true }) * direction;
+}
+
+function archiveSortLabel(key) {
+  if (archiveSortKey !== key) return "";
+  return archiveSortDirection === "asc" ? " ↑" : " ↓";
+}
+
 function isArchiveSelected(type, id) {
   return selectedArchiveItems.has(archiveKey(type, id));
 }
@@ -4360,6 +4388,12 @@ function renderArchiveToolbarState() {
     const action = button.dataset.archiveAction;
     button.disabled = !capabilities[action];
     button.classList.toggle("has-target", Boolean(targets.length));
+  });
+  document.querySelectorAll("[data-archive-sort]").forEach((button) => {
+    const key = button.dataset.archiveSort;
+    button.classList.toggle("active", key === archiveSortKey);
+    const baseLabel = button.dataset.sortLabel || button.textContent.trim();
+    button.textContent = `${baseLabel}${archiveSortLabel(key)}`;
   });
 }
 
@@ -4667,11 +4701,38 @@ function renderFolders() {
       <span>${escapeHtml(document.type || "Documento")}</span>
     </article>
   `;
+  const contentItems = [
+    ...children.map((folder) => ({
+      html: rowForFolder(folder, { root: rootFolders.includes(folder) }),
+      sort: {
+        name: folder.split("/").pop(),
+        date: 0,
+        size: 0,
+        class: "Carpeta"
+      }
+    })),
+    ...visibleContracts.map((contract) => ({
+      html: rowForContract(contract),
+      sort: {
+        name: contract.title || "",
+        date: archiveDateValue(contract.date),
+        size: archiveSizeValue(contractFileSize(contract)),
+        class: "Contrato"
+      }
+    })),
+    ...visibleDocuments.map((document) => ({
+      html: rowForDocument(document),
+      sort: {
+        name: document.name || "",
+        date: archiveDateValue(document.date),
+        size: archiveSizeValue(document.size),
+        class: document.type || "Documento"
+      }
+    }))
+  ].sort(compareArchiveItems);
   const contentRows = [
     parent ? rowForFolder(parent, { parentRow: true }) : "",
-    ...children.map((folder) => rowForFolder(folder, { root: rootFolders.includes(folder) })),
-    ...visibleContracts.slice().reverse().map(rowForContract),
-    ...visibleDocuments.slice().reverse().map(rowForDocument)
+    ...contentItems.map((item) => item.html)
   ].filter(Boolean);
   folderList.innerHTML = `
     <div class="archive-finder view-${escapeHtml(archiveViewMode)}" role="list" data-context-folder="${escapeHtml(activeFolder)}">
@@ -4685,16 +4746,16 @@ function renderFolders() {
           .join("")}
       </div>
       <div class="archive-list-header">
-        <span>Nombre</span>
+        <button class="archive-sort-button" type="button" data-archive-sort="name" data-sort-label="Nombre">Nombre</button>
         <span class="archive-context-actions" aria-label="Acciones del elemento marcado">
           <button class="archive-context-button" type="button" data-archive-action="rename" title="Renombrar">✎</button>
           <button class="archive-context-button" type="button" data-archive-action="move" title="Mover">⇄</button>
           <button class="archive-context-button" type="button" data-archive-action="copy" title="Copiar">⧉</button>
           <button class="archive-context-button danger" type="button" data-archive-action="delete" title="Eliminar">⌫</button>
         </span>
-        <span>Fecha de modificación</span>
-        <span>Tamaño</span>
-        <span>Clase</span>
+        <button class="archive-sort-button" type="button" data-archive-sort="date" data-sort-label="Fecha de modificación">Fecha de modificación</button>
+        <button class="archive-sort-button" type="button" data-archive-sort="size" data-sort-label="Tamaño">Tamaño</button>
+        <button class="archive-sort-button" type="button" data-archive-sort="class" data-sort-label="Clase">Clase</button>
       </div>
       <div class="archive-list-body">
         ${contentRows.length ? contentRows.join("") : `<div class="finder-empty">${archiveSearchTerm ? `No hay resultados en ${escapeHtml(activeFolder)}.` : `Esta carpeta está vacía. Usa “Nueva carpeta” o guarda un documento aquí.`}</div>`}
@@ -4872,6 +4933,8 @@ function createFolderInsideArchive(folder = activeFolder) {
   const cleanName = name.trim().replace(/\//g, " ");
   const newPath = ensureFolderPath(`${baseFolder}/${cleanName}`, baseFolder.split("/")[0] || "Mis Documentos");
   activeFolder = newPath;
+  if (!folders.includes(activeFolder)) folders.push(activeFolder);
+  saveFolders();
   renderFolders();
   renderSavedContracts();
   renderVersions();
@@ -6099,6 +6162,20 @@ function handleArchiveSavedItemClick(event) {
 
 folderList.addEventListener("click", (event) => {
   hideFolderContextMenu();
+  const sortButton = event.target.closest("[data-archive-sort]");
+  if (sortButton) {
+    const key = sortButton.dataset.archiveSort;
+    if (archiveSortKey === key) {
+      archiveSortDirection = archiveSortDirection === "asc" ? "desc" : "asc";
+    } else {
+      archiveSortKey = key;
+      archiveSortDirection = key === "date" ? "desc" : "asc";
+    }
+    localStorage.setItem("lexcontratos_archive_sort_key", archiveSortKey);
+    localStorage.setItem("lexcontratos_archive_sort_direction", archiveSortDirection);
+    renderFolders();
+    return;
+  }
   const archiveActionButton = event.target.closest("[data-archive-action]");
   if (archiveActionButton) {
     event.stopPropagation();
@@ -6197,7 +6274,10 @@ finderPath?.addEventListener("click", (event) => {
   openArchiveFolder(crumb.dataset.folder);
 });
 
-archiveNewFolderButton?.addEventListener("click", () => createFolderInsideArchive(activeFolder));
+archiveNewFolderButton?.addEventListener("click", () => {
+  const visibleFolder = document.querySelector(".archive-finder")?.dataset.contextFolder || activeFolder;
+  createFolderInsideArchive(visibleFolder);
+});
 
 archiveDeleteSelectedButton?.addEventListener("click", deleteSelectedArchiveItems);
 

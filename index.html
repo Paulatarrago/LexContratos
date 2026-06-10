@@ -363,14 +363,17 @@
 
         <section class="sidebar-panel finder-browser-panel">
           <div class="finder-toolbar" aria-label="Acciones de Mis Documentos">
-            <div class="finder-toolbar-group">
-              <button class="finder-tool-button" id="archive-new-folder" type="button">Nueva carpeta</button>
-            </div>
-            <div class="finder-view-switch" aria-label="Cambiar vista">
-              <button class="finder-view-button active" type="button" data-archive-view="details" title="Vista de lista con detalles">Lista</button>
-              <button class="finder-view-button" type="button" data-archive-view="icons" title="Vista de iconos">Iconos</button>
-              <button class="finder-view-button" type="button" data-archive-view="names" title="Vista compacta por nombre">Nombres</button>
-              <button class="finder-view-button" type="button" data-archive-view="gallery" title="Vista de galería">Galería</button>
+            <div class="finder-toolbar-spacer" aria-hidden="true"></div>
+            <div class="finder-toolbar-center">
+              <button class="finder-tool-button icon-only" id="archive-new-folder" type="button" title="Crear nueva carpeta en la ubicación actual" aria-label="Crear nueva carpeta en la ubicación actual">
+                <span class="tool-icon folder-plus-icon" aria-hidden="true"></span>
+              </button>
+              <div class="finder-view-switch" aria-label="Cambiar vista">
+                <button class="finder-view-button active" type="button" data-archive-view="details" title="Vista de lista con detalles" aria-label="Vista de lista con detalles">☷</button>
+                <button class="finder-view-button" type="button" data-archive-view="icons" title="Vista de iconos" aria-label="Vista de iconos">▦</button>
+                <button class="finder-view-button" type="button" data-archive-view="names" title="Vista compacta por nombre" aria-label="Vista compacta por nombre">☰</button>
+                <button class="finder-view-button" type="button" data-archive-view="gallery" title="Vista de galería" aria-label="Vista de galería">▧</button>
+              </div>
             </div>
             <label class="finder-search">
               <span>Buscar</span>
