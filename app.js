@@ -4565,6 +4565,12 @@ function renderFolders() {
   if (!folders.includes(activeFolder)) activeFolder = "Mis Documentos";
   renderFinderPath();
   const children = directChildFolders(activeFolder).filter((folder) => archiveMatches(folder, folder.split("/").pop(), folderMetaText(folder)));
+  const visibleContracts = savedContracts
+    .filter((contract) => contract.folder === activeFolder)
+    .filter((contract) => archiveMatches(contract.title, contract.status || "", contract.date || "", contractFileSize(contract), "Contrato"));
+  const visibleDocuments = supportDocuments
+    .filter((document) => document.folder === activeFolder)
+    .filter((document) => archiveMatches(document.name, document.type || "", document.size || "", document.date || "", document.roleLabel || "", document.party || ""));
   const parent = folderParent(activeFolder);
   const rowForFolder = (folder, { parentRow = false, root = false } = {}) => {
     const label = parentRow ? ".." : folder.split("/").pop();
@@ -4592,6 +4598,58 @@ function renderFolders() {
       </article>
     `;
   };
+  const rowForContract = (contract) => `
+    <article class="finder-row content-row saved-contract" data-id="${contract.id}">
+      <span class="archive-name-cell">
+        <input class="archive-select" type="checkbox" data-archive-type="contract" data-archive-id="${contract.id}" ${isArchiveSelected("contract", contract.id) ? "checked" : ""} aria-label="Seleccionar contrato ${escapeHtml(contract.title)}" />
+        <button class="saved-contract-open open-saved-contract" type="button" data-id="${contract.id}">
+          <span class="finder-icon" aria-hidden="true">□</span>
+          <span>
+            <strong>${escapeHtml(contract.title)}</strong>
+            <small>${escapeHtml(contract.status || (contract.language || "es").toUpperCase())} · ${escapeHtml(contract.date || "")}</small>
+          </span>
+        </button>
+      </span>
+      <span>${escapeHtml(contract.date || "")}</span>
+      <span>${escapeHtml(contractFileSize(contract))}</span>
+      <span>Contrato</span>
+      <div class="saved-contract-actions">
+        <button class="folder-action rename-contract" type="button" data-id="${contract.id}">Renombrar</button>
+        <button class="folder-action move-contract" type="button" data-id="${contract.id}">Mover</button>
+        <button class="folder-action copy-contract" type="button" data-id="${contract.id}">Copiar</button>
+        <button class="folder-action danger delete-contract" type="button" data-id="${contract.id}">Eliminar</button>
+      </div>
+    </article>
+  `;
+  const rowForDocument = (document) => `
+    <article class="finder-row content-row saved-contract support-document" data-document-id="${document.id}">
+      <span class="archive-name-cell">
+        <input class="archive-select" type="checkbox" data-archive-type="document" data-archive-id="${document.id}" ${isArchiveSelected("document", document.id) ? "checked" : ""} aria-label="Seleccionar documento ${escapeHtml(document.name)}" />
+        <button class="saved-contract-open" type="button" disabled>
+          <span class="finder-icon" aria-hidden="true">□</span>
+          <span>
+            <strong>${escapeHtml(document.name)}</strong>
+            <small>${escapeHtml(document.type || "Documento soporte")} · ${escapeHtml(document.size || "")}</small>
+          </span>
+        </button>
+      </span>
+      <span>${escapeHtml(document.date || "")}</span>
+      <span>${escapeHtml(document.size || "")}</span>
+      <span>${escapeHtml(document.type || "Documento")}</span>
+      <div class="saved-contract-actions">
+        <button class="folder-action rename-document" type="button" data-id="${document.id}">Renombrar</button>
+        <button class="folder-action move-document" type="button" data-id="${document.id}">Mover</button>
+        <button class="folder-action copy-document" type="button" data-id="${document.id}">Copiar</button>
+        <button class="folder-action danger delete-document" type="button" data-id="${document.id}">Eliminar</button>
+      </div>
+    </article>
+  `;
+  const contentRows = [
+    parent ? rowForFolder(parent, { parentRow: true }) : "",
+    ...children.map((folder) => rowForFolder(folder, { root: rootFolders.includes(folder) })),
+    ...visibleContracts.slice().reverse().map(rowForContract),
+    ...visibleDocuments.slice().reverse().map(rowForDocument)
+  ].filter(Boolean);
   folderList.innerHTML = `
     <div class="archive-finder view-${escapeHtml(archiveViewMode)}" role="list" data-context-folder="${escapeHtml(activeFolder)}">
       <div class="archive-rootbar" aria-label="Carpetas raíz">
@@ -4611,85 +4669,19 @@ function renderFolders() {
         <span>Acciones</span>
       </div>
       <div class="archive-list-body">
-        ${parent ? rowForFolder(parent, { parentRow: true }) : ""}
-        ${children.length ? children.map((folder) => rowForFolder(folder, { root: rootFolders.includes(folder) })).join("") : `<div class="finder-empty">Sin subcarpetas. Haz clic derecho aquí para crear una carpeta dentro de ${escapeHtml(activeFolder)}.</div>`}
+        ${contentRows.length ? contentRows.join("") : `<div class="finder-empty">${archiveSearchTerm ? `No hay resultados en ${escapeHtml(activeFolder)}.` : `Esta carpeta está vacía. Usa “Nueva carpeta” o guarda un documento aquí.`}</div>`}
       </div>
     </div>
   `;
   renderFolderSelector();
+  savedContractsList.classList.add("is-hidden");
+  savedContractsList.innerHTML = "";
   renderArchiveToolbarState();
 }
 
 function renderSavedContracts() {
-  savedContractsList.classList.remove("view-details", "view-icons", "view-names", "view-gallery");
-  savedContractsList.classList.add(`view-${archiveViewMode}`);
-  const visible = savedContracts
-    .filter((contract) => contract.folder === activeFolder)
-    .filter((contract) => archiveMatches(contract.title, contract.status || "", contract.date || "", contractFileSize(contract), "Contrato"));
-  const documents = supportDocuments
-    .filter((document) => document.folder === activeFolder)
-    .filter((document) => archiveMatches(document.name, document.type || "", document.size || "", document.date || "", document.roleLabel || "", document.party || ""));
-  const contractHtml = visible.length
-    ? visible
-        .slice()
-        .reverse()
-        .map((contract) => `
-          <article class="saved-contract content-row" data-id="${contract.id}">
-            <span class="archive-name-cell">
-              <input class="archive-select" type="checkbox" data-archive-type="contract" data-archive-id="${contract.id}" ${isArchiveSelected("contract", contract.id) ? "checked" : ""} aria-label="Seleccionar contrato ${escapeHtml(contract.title)}" />
-              <button class="saved-contract-open open-saved-contract" type="button" data-id="${contract.id}">
-                <span class="finder-icon" aria-hidden="true">□</span>
-                <span>
-                  <strong>${contract.title}</strong>
-                  <small>${contract.status || (contract.language || "es").toUpperCase()} · ${contract.date}</small>
-                </span>
-              </button>
-            </span>
-            <span>${escapeHtml(contract.date || "")}</span>
-            <span>${escapeHtml(contractFileSize(contract))}</span>
-            <span>Contrato</span>
-            <div class="saved-contract-actions">
-              <button class="folder-action rename-contract" type="button" data-id="${contract.id}">Renombrar</button>
-              <button class="folder-action move-contract" type="button" data-id="${contract.id}">Mover</button>
-              <button class="folder-action copy-contract" type="button" data-id="${contract.id}">Copiar</button>
-              <button class="folder-action danger delete-contract" type="button" data-id="${contract.id}">Eliminar</button>
-            </div>
-          </article>
-        `)
-        .join("")
-    : "";
-  const documentHtml = documents.length
-    ? documents
-        .slice()
-        .reverse()
-        .map((document) => `
-          <article class="saved-contract content-row support-document" data-document-id="${document.id}">
-            <span class="archive-name-cell">
-              <input class="archive-select" type="checkbox" data-archive-type="document" data-archive-id="${document.id}" ${isArchiveSelected("document", document.id) ? "checked" : ""} aria-label="Seleccionar documento ${escapeHtml(document.name)}" />
-              <button class="saved-contract-open" type="button" disabled>
-                <span class="finder-icon" aria-hidden="true">□</span>
-                <span>
-                  <strong>${escapeHtml(document.name)}</strong>
-                  <small>${escapeHtml(document.type || "Documento soporte")} · ${escapeHtml(document.size || "")}</small>
-                </span>
-              </button>
-            </span>
-            <span>${escapeHtml(document.date || "")}</span>
-            <span>${escapeHtml(document.size || "")}</span>
-            <span>${escapeHtml(document.type || "Documento")}</span>
-            <div class="saved-contract-actions">
-              <button class="folder-action rename-document" type="button" data-id="${document.id}">Renombrar</button>
-              <button class="folder-action move-document" type="button" data-id="${document.id}">Mover</button>
-              <button class="folder-action copy-document" type="button" data-id="${document.id}">Copiar</button>
-              <button class="folder-action danger delete-document" type="button" data-id="${document.id}">Eliminar</button>
-            </div>
-          </article>
-        `)
-        .join("")
-    : "";
-  savedContractsList.innerHTML = contractHtml || documentHtml
-    ? `<div class="content-list-header" aria-hidden="true"><span>Nombre</span><span>Fecha de modificación</span><span>Tamaño</span><span>Clase</span><span>Acciones</span></div>${contractHtml}${documentHtml}`
-    : `<span>${archiveSearchTerm ? `No hay resultados en ${activeFolder}.` : `No hay contratos ni documentos guardados en ${activeFolder}. Selecciona un formato o carga documentos por parte.`}</span>`;
+  savedContractsList.classList.add("is-hidden");
+  savedContractsList.innerHTML = "";
   renderArchiveToolbarState();
 }
 
@@ -5867,6 +5859,96 @@ function openArchiveFolder(folder, { announce = true } = {}) {
   if (announce) showToast(`Expediente abierto: ${activeFolder}.`);
 }
 
+function handleArchiveSavedItemClick(event) {
+  const archiveAction = event.target.closest(".rename-contract, .move-contract, .copy-contract, .delete-contract, .rename-document, .move-document, .copy-document, .delete-document, .open-saved-contract");
+  if (!archiveAction) return false;
+
+  const renameButton = event.target.closest(".rename-contract");
+  if (renameButton) {
+    renameSavedContract(renameButton.dataset.id);
+    return true;
+  }
+  const moveButton = event.target.closest(".move-contract");
+  if (moveButton) {
+    moveContractToFolder(moveButton.dataset.id);
+    return true;
+  }
+  const copyButton = event.target.closest(".copy-contract");
+  if (copyButton) {
+    copyContractToFolder(copyButton.dataset.id);
+    return true;
+  }
+  const deleteButton = event.target.closest(".delete-contract");
+  if (deleteButton) {
+    deleteSavedContract(deleteButton.dataset.id);
+    return true;
+  }
+  const renameDocumentButton = event.target.closest(".rename-document");
+  if (renameDocumentButton) {
+    renameSupportDocument(renameDocumentButton.dataset.id);
+    return true;
+  }
+  const moveDocumentButton = event.target.closest(".move-document");
+  if (moveDocumentButton) {
+    moveSupportDocumentToFolder(moveDocumentButton.dataset.id);
+    return true;
+  }
+  const copyDocumentButton = event.target.closest(".copy-document");
+  if (copyDocumentButton) {
+    copySupportDocumentToFolder(copyDocumentButton.dataset.id);
+    return true;
+  }
+  const deleteDocumentButton = event.target.closest(".delete-document");
+  if (deleteDocumentButton) {
+    deleteSupportDocument(deleteDocumentButton.dataset.id);
+    return true;
+  }
+  const button = event.target.closest(".open-saved-contract");
+  if (!button) return false;
+  const contract = savedContracts.find((item) => item.id === button.dataset.id);
+  if (!contract) return true;
+  activeFolder = contract.folder || activeFolder;
+  activeTemplate = contract.template || activeTemplate;
+  if (activeTemplate && !templates[activeTemplate]) {
+    templates[activeTemplate] = {
+      title: contract.title,
+      category: "Contratos archivados",
+      description: "Contrato abierto desde expediente.",
+      body: contract.body,
+      customFields: [],
+      fields: 0,
+      master: false
+    };
+  }
+  isWorkingCopy = true;
+  activeSourceMaster = templates[activeTemplate]?.sourceMaster || activeSourceMaster;
+  editorTitle.textContent = contract.title;
+  editor.value = contract.body;
+  editor.readOnly = false;
+  activeLanguage = contract.language;
+  selectedLetterheadLogoId = contract.letterheadLogoId && letterheadLogos.some((logo) => logo.id === contract.letterheadLogoId) ? contract.letterheadLogoId : selectedLetterheadLogoId;
+  saveSelectedLetterheadLogoId();
+  renderLetterheadLogos();
+  if (contract.matter) {
+    activeMatterFolio = contract.matter.folio || null;
+    activeMatterDraftId = contract.matter.draftId || "";
+    matterHistoryEvents = contract.matter.history || [];
+    const roles = getRoles();
+    sourceTextsBySide = {
+      A: (contract.matter.roles?.[0]?.documents || []).map((doc) => ({ ...doc, text: "" })),
+      B: (contract.matter.roles?.[1]?.documents || []).map((doc) => ({ ...doc, text: "" }))
+    };
+    if (!roles.length) sourceTextsBySide = { A: [], B: [] };
+    renderRoleDrops();
+    renderMatterPanel();
+  }
+  renderFolders();
+  renderFolderSelector();
+  saveActiveDraft("Contrato archivado abierto");
+  showToast("Contrato archivado abierto en el editor.");
+  return true;
+}
+
 folderList.addEventListener("click", (event) => {
   hideFolderContextMenu();
   const renameButton = event.target.closest(".rename-folder");
@@ -5879,6 +5961,7 @@ folderList.addEventListener("click", (event) => {
     deleteFolder(deleteButton.dataset.folder);
     return;
   }
+  if (handleArchiveSavedItemClick(event)) return;
   const button = event.target.closest(".folder-item");
   if (!button) return;
   window.clearTimeout(folderClickTimer);

@@ -1970,12 +1970,19 @@ button {
 }
 
 .side-drawer {
-  width: 100vw;
+  width: min(980px, calc(100vw - 20px));
+  min-width: min(700px, calc(100vw - 20px));
+  max-width: calc(100vw - 8px);
+  height: min(760px, calc(100vh - 20px));
+  max-height: calc(100vh - 20px);
+  top: 10px;
   color: var(--ink);
   background: #f7f6f3;
   border-right: 1px solid #d4d0c9;
+  border-radius: 10px;
   padding: 10px 12px 12px;
   gap: 10px;
+  resize: both;
   box-shadow: 18px 0 46px rgba(16, 24, 32, 0.16);
 }
 
@@ -2010,7 +2017,7 @@ button {
 
 .finder-browser-panel {
   padding: 10px;
-  min-height: calc(100vh - 98px);
+  min-height: auto;
   background: #f6f5f2;
 }
 
@@ -2115,8 +2122,9 @@ button {
 
 .archive-finder {
   display: grid;
-  grid-template-columns: 260px minmax(0, 1fr);
-  min-height: min(560px, calc(100vh - 270px));
+  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-rows: auto minmax(260px, min(480px, calc(100vh - 260px)));
+  min-height: 0;
 }
 
 .archive-rootbar {
@@ -2155,7 +2163,7 @@ button {
 .finder-row,
 .content-row {
   display: grid;
-  grid-template-columns: minmax(220px, 1fr) 150px 76px 116px 150px;
+  grid-template-columns: minmax(210px, 1fr) 138px 72px 110px 132px;
   gap: 8px;
   align-items: center;
 }
@@ -2174,7 +2182,8 @@ button {
 
 .archive-list-body {
   grid-column: 2;
-  min-height: min(515px, calc(100vh - 315px));
+  min-height: 0;
+  overflow: auto;
   background: white;
 }
 
@@ -2236,10 +2245,14 @@ button {
 .saved-contracts {
   display: block;
   min-height: 72px;
-  margin-left: 260px;
+  margin-left: 220px;
   border-top: 0;
   border-top-left-radius: 0;
   border-top-right-radius: 0;
+}
+
+.saved-contracts.is-hidden {
+  display: none;
 }
 
 .saved-contracts > span {
