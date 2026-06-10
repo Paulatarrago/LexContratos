@@ -355,7 +355,6 @@
       <aside class="sidebar side-drawer" id="archive-drawer" aria-label="Mis Documentos">
         <div class="drawer-heading finder-window-heading">
           <div>
-            <div class="finder-window-controls" aria-hidden="true"><span></span><span></span><span></span></div>
             <p class="eyebrow">Archivo flexible</p>
             <h2>Mis Documentos <span class="info-tip" tabindex="0" data-tip="Explorador de carpetas para contratos, documentos soporte y documentos personales. Puedes guardar directo en Mis Documentos, en una carpeta sugerida o en tantas subcarpetas como necesites.">i</span></h2>
           </div>
@@ -363,18 +362,21 @@
         </div>
 
         <section class="sidebar-panel finder-browser-panel">
-          <p class="eyebrow">Explorador <span class="info-tip" tabindex="0" data-tip="Navega como en Finder: abre carpetas con doble clic, crea subcarpetas con clic derecho y organiza contratos por cliente, proveedor, empresas del grupo, asunto o carpeta libre.">i</span></p>
-          <div class="folder-create">
-            <select id="folder-root" aria-label="Tipo de carpeta">
-              <option value="Mis Documentos">Mis Documentos</option>
-              <option value="Clientes">Clientes</option>
-              <option value="Proveedores">Proveedores</option>
-              <option value="Empresas del Grupo">Empresas del Grupo</option>
-              <option value="Personales">Personales</option>
-              <option value="Documentos de las partes">Documentos de las partes</option>
-            </select>
-            <input id="folder-name" type="text" placeholder="Nueva carpeta o ruta/subcarpeta" />
-            <button class="secondary-action mini-action" id="create-folder" type="button">Nueva carpeta</button>
+          <div class="finder-toolbar" aria-label="Acciones de Mis Documentos">
+            <div class="finder-toolbar-group">
+              <button class="finder-tool-button" id="archive-new-folder" type="button">Nueva carpeta</button>
+              <button class="finder-tool-button danger" id="archive-delete-selected" type="button" disabled>Eliminar</button>
+            </div>
+            <div class="finder-view-switch" aria-label="Cambiar vista">
+              <button class="finder-view-button active" type="button" data-archive-view="details" title="Vista de lista con detalles">Lista</button>
+              <button class="finder-view-button" type="button" data-archive-view="icons" title="Vista de iconos">Iconos</button>
+              <button class="finder-view-button" type="button" data-archive-view="names" title="Vista compacta por nombre">Nombres</button>
+              <button class="finder-view-button" type="button" data-archive-view="gallery" title="Vista de galería">Galería</button>
+            </div>
+            <label class="finder-search">
+              <span>Buscar</span>
+              <input id="archive-search" type="search" placeholder="Buscar en Mis Documentos" />
+            </label>
           </div>
           <p class="folder-help">Puedes guardar directo en Mis Documentos o entrar a cualquier carpeta. Da doble clic para abrir, clic derecho para crear, renombrar o eliminar carpetas.</p>
           <div class="finder-path" id="finder-path" aria-live="polite"></div>

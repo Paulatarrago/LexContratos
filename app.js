@@ -634,10 +634,12 @@ const customFields = document.querySelector("#custom-fields");
 const dynamicFields = document.querySelector("#dynamic-fields");
 const roleDropGrid = document.querySelector("#role-drop-grid");
 const folderList = document.querySelector("#folder-list");
-const folderName = document.querySelector("#folder-name");
-const folderRoot = document.querySelector("#folder-root");
 const finderPath = document.querySelector("#finder-path");
 const folderContextMenu = document.querySelector("#folder-context-menu");
+const archiveNewFolderButton = document.querySelector("#archive-new-folder");
+const archiveDeleteSelectedButton = document.querySelector("#archive-delete-selected");
+const archiveSearch = document.querySelector("#archive-search");
+const archiveViewButtons = document.querySelectorAll("[data-archive-view]");
 const contractFolderSelect = document.querySelector("#contract-folder-select");
 const savedContractsList = document.querySelector("#saved-contracts");
 const versionList = document.querySelector("#version-list");
@@ -729,6 +731,9 @@ let contextMenuFolder = "";
 let saveLocationResolve = null;
 let saveLocationState = { folder: "Mis Documentos", confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
 let saveContextFolder = "";
+let archiveViewMode = localStorage.getItem("lexcontratos_archive_view") || "details";
+let archiveSearchTerm = "";
+let selectedArchiveItems = new Set();
 let pendingCriticalReviewBody = "";
 let pendingCriticalChanges = [];
 let lastCriticalReviewFindings = [];
@@ -4304,6 +4309,25 @@ function folderMetaText(folder) {
   return parts.join(" · ") || "Vacía";
 }
 
+function archiveKey(type, id) {
+  return `${type}::${id}`;
+}
+
+function archiveMatches(...values) {
+  if (!archiveSearchTerm) return true;
+  const haystack = removeAccents(values.join(" ")).toLowerCase();
+  return haystack.includes(archiveSearchTerm);
+}
+
+function isArchiveSelected(type, id) {
+  return selectedArchiveItems.has(archiveKey(type, id));
+}
+
+function renderArchiveToolbarState() {
+  archiveViewButtons.forEach((button) => button.classList.toggle("active", button.dataset.archiveView === archiveViewMode));
+  if (archiveDeleteSelectedButton) archiveDeleteSelectedButton.disabled = selectedArchiveItems.size === 0;
+}
+
 function contractFileSize(contract) {
   const characters = String(contract?.body || "").length;
   const kb = Math.max(1, Math.ceil(characters / 1024));
@@ -4502,6 +4526,37 @@ function safeFolderName(value, fallback = "Parte") {
     .slice(0, 90) || fallback;
 }
 
+function supportFolderNameForRole(role, values = getPartyData()) {
+  const roleName = safeFolderName(role?.label || "Parte");
+  const partyName = String(values?.[role?.part] || "").trim();
+  const readableParty = partyName ? safeFolderName(partyName) : "Sin identificar";
+  return safeFolderName(`${roleName} - ${readableParty}`, roleName);
+}
+
+function supportFolderForRole(role, values = getPartyData()) {
+  return ensureFolderPath(`Documentos de las partes/${supportFolderNameForRole(role, values)}`, "Documentos de las partes");
+}
+
+function reconcileSupportDocumentFolders(values = getPartyData()) {
+  const draftId = activeMatterDraftId;
+  let changed = false;
+  getRoles().forEach((role) => {
+    const targetFolder = supportFolderForRole(role, values);
+    const partyName = values[role.part] || role.label || "Parte";
+    const activeEntries = new Set((sourceTextsBySide[role.side] || []).map((entry) => `${entry.name}-${entry.size}`));
+    supportDocuments = supportDocuments.map((document) => {
+      const belongsToActiveDraft = (draftId && document.draftId === draftId) || (activeMatterFolio && document.folio === activeMatterFolio);
+      const belongsToVisibleUploads = activeEntries.has(`${document.name}-${document.size}`);
+      if (document.roleLabel !== role.label || (!belongsToActiveDraft && !belongsToVisibleUploads)) return document;
+      if (document.folder === targetFolder && document.party === partyName) return document;
+      changed = true;
+      return { ...document, folder: targetFolder, party: partyName };
+    });
+  });
+  if (changed) saveSupportDocuments();
+  return changed;
+}
+
 function renderFolders() {
   folders = Array.from(new Set([...rootFolders, ...folders])).sort((a, b) => a.localeCompare(b, "es"));
   while (!folders.includes(activeFolder) && folderParent(activeFolder)) {
@@ -4509,20 +4564,24 @@ function renderFolders() {
   }
   if (!folders.includes(activeFolder)) activeFolder = "Mis Documentos";
   renderFinderPath();
-  const children = directChildFolders(activeFolder);
+  const children = directChildFolders(activeFolder).filter((folder) => archiveMatches(folder, folder.split("/").pop(), folderMetaText(folder)));
   const parent = folderParent(activeFolder);
   const rowForFolder = (folder, { parentRow = false, root = false } = {}) => {
     const label = parentRow ? ".." : folder.split("/").pop();
     const description = parentRow ? folder : folderMetaText(folder);
+    const canSelect = !parentRow && !rootFolders.includes(folder);
     return `
       <article class="finder-row ${folder === activeFolder ? "active" : ""} ${root ? "root-row" : ""}" data-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
-        <button class="folder-item finder-folder" type="button" data-folder="${escapeHtml(folder)}">
-          <span class="finder-icon" aria-hidden="true">▣</span>
-          <span class="finder-name">
-            <strong>${escapeHtml(label)}</strong>
-            <small>${escapeHtml(description)}</small>
-          </span>
-        </button>
+        <span class="archive-name-cell">
+          <input class="archive-select" type="checkbox" data-archive-type="folder" data-archive-id="${escapeHtml(folder)}" ${canSelect ? "" : "disabled"} ${isArchiveSelected("folder", folder) ? "checked" : ""} aria-label="Seleccionar carpeta ${escapeHtml(label)}" />
+          <button class="folder-item finder-folder" type="button" data-folder="${escapeHtml(folder)}">
+            <span class="finder-icon" aria-hidden="true">▣</span>
+            <span class="finder-name">
+              <strong>${escapeHtml(label)}</strong>
+              <small>${escapeHtml(description)}</small>
+            </span>
+          </button>
+        </span>
         <span>--</span>
         <span>${escapeHtml(folderMetaText(folder))}</span>
         <span>${parentRow ? "Carpeta superior" : "Carpeta"}</span>
@@ -4534,7 +4593,7 @@ function renderFolders() {
     `;
   };
   folderList.innerHTML = `
-    <div class="archive-finder" role="list" data-context-folder="${escapeHtml(activeFolder)}">
+    <div class="archive-finder view-${escapeHtml(archiveViewMode)}" role="list" data-context-folder="${escapeHtml(activeFolder)}">
       <div class="archive-rootbar" aria-label="Carpetas raíz">
         ${rootFolders
           .map((root) => `
@@ -4558,24 +4617,34 @@ function renderFolders() {
     </div>
   `;
   renderFolderSelector();
+  renderArchiveToolbarState();
 }
 
 function renderSavedContracts() {
-  const visible = savedContracts.filter((contract) => contract.folder === activeFolder);
-  const documents = supportDocuments.filter((document) => document.folder === activeFolder);
+  savedContractsList.classList.remove("view-details", "view-icons", "view-names", "view-gallery");
+  savedContractsList.classList.add(`view-${archiveViewMode}`);
+  const visible = savedContracts
+    .filter((contract) => contract.folder === activeFolder)
+    .filter((contract) => archiveMatches(contract.title, contract.status || "", contract.date || "", contractFileSize(contract), "Contrato"));
+  const documents = supportDocuments
+    .filter((document) => document.folder === activeFolder)
+    .filter((document) => archiveMatches(document.name, document.type || "", document.size || "", document.date || "", document.roleLabel || "", document.party || ""));
   const contractHtml = visible.length
     ? visible
         .slice()
         .reverse()
         .map((contract) => `
           <article class="saved-contract content-row" data-id="${contract.id}">
-            <button class="saved-contract-open open-saved-contract" type="button" data-id="${contract.id}">
-              <span class="finder-icon" aria-hidden="true">□</span>
-              <span>
-                <strong>${contract.title}</strong>
-                <small>${contract.status || (contract.language || "es").toUpperCase()} · ${contract.date}</small>
-              </span>
-            </button>
+            <span class="archive-name-cell">
+              <input class="archive-select" type="checkbox" data-archive-type="contract" data-archive-id="${contract.id}" ${isArchiveSelected("contract", contract.id) ? "checked" : ""} aria-label="Seleccionar contrato ${escapeHtml(contract.title)}" />
+              <button class="saved-contract-open open-saved-contract" type="button" data-id="${contract.id}">
+                <span class="finder-icon" aria-hidden="true">□</span>
+                <span>
+                  <strong>${contract.title}</strong>
+                  <small>${contract.status || (contract.language || "es").toUpperCase()} · ${contract.date}</small>
+                </span>
+              </button>
+            </span>
             <span>${escapeHtml(contract.date || "")}</span>
             <span>${escapeHtml(contractFileSize(contract))}</span>
             <span>Contrato</span>
@@ -4595,13 +4664,16 @@ function renderSavedContracts() {
         .reverse()
         .map((document) => `
           <article class="saved-contract content-row support-document" data-document-id="${document.id}">
-            <button class="saved-contract-open" type="button" disabled>
-              <span class="finder-icon" aria-hidden="true">□</span>
-              <span>
-                <strong>${escapeHtml(document.name)}</strong>
-                <small>${escapeHtml(document.type || "Documento soporte")} · ${escapeHtml(document.size || "")}</small>
-              </span>
-            </button>
+            <span class="archive-name-cell">
+              <input class="archive-select" type="checkbox" data-archive-type="document" data-archive-id="${document.id}" ${isArchiveSelected("document", document.id) ? "checked" : ""} aria-label="Seleccionar documento ${escapeHtml(document.name)}" />
+              <button class="saved-contract-open" type="button" disabled>
+                <span class="finder-icon" aria-hidden="true">□</span>
+                <span>
+                  <strong>${escapeHtml(document.name)}</strong>
+                  <small>${escapeHtml(document.type || "Documento soporte")} · ${escapeHtml(document.size || "")}</small>
+                </span>
+              </button>
+            </span>
             <span>${escapeHtml(document.date || "")}</span>
             <span>${escapeHtml(document.size || "")}</span>
             <span>${escapeHtml(document.type || "Documento")}</span>
@@ -4617,34 +4689,40 @@ function renderSavedContracts() {
     : "";
   savedContractsList.innerHTML = contractHtml || documentHtml
     ? `<div class="content-list-header" aria-hidden="true"><span>Nombre</span><span>Fecha de modificación</span><span>Tamaño</span><span>Clase</span><span>Acciones</span></div>${contractHtml}${documentHtml}`
-    : `<span>No hay contratos ni documentos guardados en ${activeFolder}. Selecciona un formato o carga documentos por parte.</span>`;
+    : `<span>${archiveSearchTerm ? `No hay resultados en ${activeFolder}.` : `No hay contratos ni documentos guardados en ${activeFolder}. Selecciona un formato o carga documentos por parte.`}</span>`;
+  renderArchiveToolbarState();
 }
 
-function createFolderFromInput() {
-  const root = folderRoot.value || "Mis Documentos";
-  const parts = folderName.value
-    .split("/")
-    .map((part) => part.trim())
-    .filter(Boolean);
-  if (!parts.length) return;
+function updateArchiveSelection(event) {
+  const checkbox = event.target.closest(".archive-select");
+  if (!checkbox) return;
+  const key = archiveKey(checkbox.dataset.archiveType, checkbox.dataset.archiveId);
+  if (checkbox.checked) selectedArchiveItems.add(key);
+  else selectedArchiveItems.delete(key);
+  renderArchiveToolbarState();
+}
 
-  if (parts[0]?.toLowerCase() === root.toLowerCase()) parts.shift();
-  if (!folders.includes(root)) folders.push(root);
+function deleteSelectedArchiveItems() {
+  const items = Array.from(selectedArchiveItems);
+  if (!items.length) {
+    showToast("Selecciona un documento, contrato o carpeta para eliminar.");
+    return;
+  }
+  const confirmed = window.confirm(`¿Seguro que quieres eliminar ${items.length} elemento${items.length === 1 ? "" : "s"} seleccionado${items.length === 1 ? "" : "s"}?\n\nLas carpetas raíz no se eliminan.`);
+  if (!confirmed) return;
 
-  let path = root;
-  parts.forEach((part) => {
-    path = path ? `${path}/${part}` : part;
-    if (!folders.includes(path)) folders.push(path);
+  items.forEach((key) => {
+    const [type, id] = key.split("::");
+    if (type === "folder") deleteFolder(id, { skipConfirm: true });
+    if (type === "contract") deleteSavedContract(id, { skipConfirm: true });
+    if (type === "document") deleteSupportDocument(id, { skipConfirm: true });
   });
-
-  activeFolder = path;
-  folderName.value = "";
-  saveFolders();
+  selectedArchiveItems.clear();
   renderFolders();
   renderSavedContracts();
   renderVersions();
-  saveActiveDraft("Carpeta creada");
-  showToast(`Carpeta ${activeFolder} lista para archivar contratos.`);
+  renderArchiveToolbarState();
+  showToast("Selección eliminada.");
 }
 
 function createFolderInsideArchive(folder = activeFolder) {
@@ -4768,17 +4846,17 @@ function renameFolder(folder) {
   return newPath;
 }
 
-function deleteFolder(folder) {
+function deleteFolder(folder, { skipConfirm = false } = {}) {
   if (rootFolders.includes(folder)) {
     showToast("Las carpetas raíz no se eliminan.");
-    return;
+    return false;
   }
 
   const affectedContracts = savedContracts.filter((contract) => pathInFolder(contract.folder || "", folder)).length;
   const affectedVersions = versions.filter((version) => pathInFolder(version.folder || "", folder)).length;
   const affectedDocuments = supportDocuments.filter((document) => pathInFolder(document.folder || "", folder)).length;
   const childFolders = folders.filter((path) => pathInFolder(path, folder)).length;
-  const confirmed = window.confirm(`¿Seguro que quieres eliminar "${folder}" y ${childFolders - 1} subcarpeta(s)?\n\nNo se borrarán contratos ni versiones: se moverán a Personales.`);
+  const confirmed = skipConfirm || window.confirm(`¿Seguro que quieres eliminar "${folder}" y ${childFolders - 1} subcarpeta(s)?\n\nNo se borrarán contratos ni versiones: se moverán a Personales.`);
   if (!confirmed) return;
 
   folders = folders.filter((path) => !pathInFolder(path, folder));
@@ -4886,12 +4964,12 @@ async function copyContractToFolder(contractId) {
   showToast("Contrato copiado a la carpeta seleccionada.");
 }
 
-function deleteSavedContract(contractId) {
+function deleteSavedContract(contractId, { skipConfirm = false } = {}) {
   const contract = savedContracts.find((item) => item.id === contractId);
   if (!contract) return;
   const folio = contract.matter?.folio || contract.folio || "";
   const relatedVersions = folio ? versions.filter((version) => version.matter?.folio === folio).length : 0;
-  const confirmed = window.confirm(
+  const confirmed = skipConfirm || window.confirm(
     `¿Seguro que quieres eliminar este contrato guardado?\n\n${contract.title}\n\n${relatedVersions ? `También se eliminarán ${relatedVersions} versión(es) guardada(s) del mismo expediente.` : "Esta acción no elimina formatos base."}`
   );
   if (!confirmed) return;
@@ -4973,10 +5051,10 @@ async function copySupportDocumentToFolder(documentId) {
   showToast("Documento copiado a la carpeta seleccionada.");
 }
 
-function deleteSupportDocument(documentId) {
+function deleteSupportDocument(documentId, { skipConfirm = false } = {}) {
   const document = supportDocuments.find((item) => item.id === documentId);
   if (!document) return;
-  const confirmed = window.confirm(`¿Seguro que quieres eliminar este documento del expediente?\n\n${document.name}`);
+  const confirmed = skipConfirm || window.confirm(`¿Seguro que quieres eliminar este documento del expediente?\n\n${document.name}`);
   if (!confirmed) return;
   supportDocuments = supportDocuments.filter((item) => item.id !== documentId);
   Object.keys(sourceTextsBySide).forEach((side) => {
@@ -5105,8 +5183,13 @@ function applyDetectedData(updates, options = {}) {
     const input = partyForm.elements[name];
     if (input && value) input.value = value;
   });
+  const movedSupportDocuments = reconcileSupportDocumentFolders(partyDataStore);
   renderRoleDrops();
   renderRequirements();
+  if (movedSupportDocuments) {
+    renderFolders();
+    renderSavedContracts();
+  }
   renderMatterPanel();
   saveActiveDraft("Datos extraídos");
   return { appliedCount: Object.keys(applied).length, skipped };
@@ -5217,8 +5300,7 @@ async function addFilesToRole(side, fileList) {
   sourceTextsBySide[side] = [...current, ...entries];
   const role = getRoles().find((item) => item.side === side);
   const values = getPartyData();
-  const partyFolderName = safeFolderName(values[role?.part] || role?.label || "Parte");
-  const supportFolder = ensureFolderPath(`Documentos de las partes/${partyFolderName}`, "Documentos de las partes");
+  const supportFolder = supportFolderForRole(role, values);
   supportDocuments.push(
     ...entries.map((entry) => ({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -5344,6 +5426,14 @@ document.addEventListener("click", () => {
   hideSaveLocationContextMenu();
   if (archiveDrawer.classList.contains("open")) archiveDrawer.classList.remove("open");
   if (assistantPane.classList.contains("open")) assistantPane.classList.remove("open");
+});
+document.addEventListener("keydown", (event) => {
+  const target = event.target;
+  const isTextInput = target?.matches?.("input, textarea, select, [contenteditable='true']");
+  if (!archiveDrawer.classList.contains("open") || !selectedArchiveItems.size || isTextInput) return;
+  if (event.key !== "Backspace" && event.key !== "Delete") return;
+  event.preventDefault();
+  deleteSelectedArchiveItems();
 });
 document.querySelector("#close-fields").addEventListener("click", () => assistantPane.classList.remove("open"));
 assistantPane.addEventListener("click", (event) => event.stopPropagation());
@@ -5855,6 +5945,28 @@ finderPath?.addEventListener("click", (event) => {
   openArchiveFolder(crumb.dataset.folder);
 });
 
+archiveNewFolderButton?.addEventListener("click", () => createFolderInsideArchive(activeFolder));
+
+archiveDeleteSelectedButton?.addEventListener("click", deleteSelectedArchiveItems);
+
+archiveSearch?.addEventListener("input", (event) => {
+  archiveSearchTerm = removeAccents(event.target.value || "").toLowerCase().trim();
+  renderFolders();
+  renderSavedContracts();
+});
+
+archiveViewButtons.forEach((button) => {
+  button.addEventListener("click", () => {
+    archiveViewMode = button.dataset.archiveView || "details";
+    localStorage.setItem("lexcontratos_archive_view", archiveViewMode);
+    renderFolders();
+    renderSavedContracts();
+  });
+});
+
+folderList.addEventListener("change", updateArchiveSelection);
+savedContractsList.addEventListener("change", updateArchiveSelection);
+
 saveLocationBrowser?.addEventListener("click", (event) => {
   hideSaveLocationContextMenu();
   const actionButton = event.target.closest(".save-folder-action");
@@ -5918,14 +6030,6 @@ saveLocationExpandButton?.addEventListener("click", () => {
 saveLocationDialog?.addEventListener("close", () => {
   hideSaveLocationContextMenu();
   if (saveLocationResolve) resolveSaveLocation(null);
-});
-
-document.querySelector("#create-folder")?.addEventListener("click", createFolderFromInput);
-
-folderName.addEventListener("keydown", (event) => {
-  if (event.key !== "Enter") return;
-  event.preventDefault();
-  createFolderFromInput();
 });
 
 savedContractsList.addEventListener("click", (event) => {
@@ -6094,6 +6198,13 @@ partyForm.addEventListener("input", (event) => {
 });
 
 partyForm.addEventListener("change", (event) => {
+  if (event.target?.name === "parteA" || event.target?.name === "parteB") {
+    const moved = reconcileSupportDocumentFolders(getPartyData());
+    if (moved) {
+      renderFolders();
+      renderSavedContracts();
+    }
+  }
   if (event.target?.matches("[data-service-mode], [data-service-catalog]")) {
     criticalReviewDone = false;
     syncServiceContractedField(event.target);
