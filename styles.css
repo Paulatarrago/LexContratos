@@ -2254,7 +2254,7 @@ button {
 
 .archive-finder {
   display: grid;
-  grid-template-columns: 220px minmax(0, 1fr);
+  grid-template-columns: 238px minmax(0, 1fr);
   grid-template-rows: auto minmax(260px, min(480px, calc(100vh - 260px)));
   min-height: 0;
 }
@@ -2295,8 +2295,8 @@ button {
 .finder-row,
 .content-row {
   display: grid;
-  grid-template-columns: minmax(190px, 1fr) 112px 118px 66px 92px;
-  gap: 6px;
+  grid-template-columns: minmax(340px, 1fr) 124px 156px 112px 108px;
+  gap: 8px;
   align-items: center;
 }
 
@@ -2324,6 +2324,7 @@ button {
   font: inherit;
   font-weight: 720;
   text-align: left;
+  white-space: nowrap;
 }
 
 .archive-sort-button:hover,
@@ -2388,12 +2389,18 @@ button {
 
 .finder-row,
 .content-row {
-  min-height: 38px;
-  padding: 6px 10px;
+  min-height: 46px;
+  padding: 7px 10px;
   border-bottom: 1px solid #f0ebe2;
   color: var(--ink);
   background: white;
   font-size: 13px;
+}
+
+.finder-row > span:not(.archive-name-cell),
+.content-row > span:not(.archive-name-cell) {
+  color: #586273;
+  white-space: nowrap;
 }
 
 .finder-row:nth-child(even),

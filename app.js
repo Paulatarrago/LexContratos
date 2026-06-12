@@ -4775,8 +4775,15 @@ function safeFolderName(value, fallback = "Parte") {
     .slice(0, 90) || fallback;
 }
 
+function roleFolderLabel(role) {
+  return String(role?.label || "Parte")
+    .replace(/\s*\/\s*/g, " o ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function supportFolderNameForRole(role, values = getPartyData()) {
-  const roleName = safeFolderName(role?.label || "Parte");
+  const roleName = safeFolderName(roleFolderLabel(role));
   const partyName = String(values?.[role?.part] || "").trim();
   const readableParty = partyName ? safeFolderName(partyName) : "Sin identificar";
   return safeFolderName(`${roleName} - ${readableParty}`, roleName);
@@ -4810,7 +4817,9 @@ function normalizeLegacySupportFolders() {
   const roles = getRoles();
   const replacements = [
     ["Documentos de las partes/Parte A", `Documentos de las partes/${safeFolderName(roles[0]?.label || "Contratante")} - Sin identificar`],
-    ["Documentos de las partes/Parte B", `Documentos de las partes/${safeFolderName(roles[1]?.label || "Contraparte")} - Sin identificar`]
+    ["Documentos de las partes/Parte B", `Documentos de las partes/${safeFolderName(roles[1]?.label || "Contraparte")} - Sin identificar`],
+    [`Documentos de las partes/${safeFolderName(roles[0]?.label || "Contratante")} - Sin identificar`, `Documentos de las partes/${supportFolderNameForRole(roles[0], {})}`],
+    [`Documentos de las partes/${safeFolderName(roles[1]?.label || "Contraparte")} - Sin identificar`, `Documentos de las partes/${supportFolderNameForRole(roles[1], {})}`]
   ];
   let changed = false;
   replacements.forEach(([oldPath, newPath]) => {
