@@ -2254,7 +2254,7 @@ button {
 
 .archive-finder {
   display: grid;
-  grid-template-columns: 238px minmax(0, 1fr);
+  grid-template-columns: clamp(180px, 16%, 238px) minmax(0, 1fr);
   grid-template-rows: auto minmax(260px, min(480px, calc(100vh - 260px)));
   min-height: 0;
 }
@@ -2295,9 +2295,16 @@ button {
 .finder-row,
 .content-row {
   display: grid;
-  grid-template-columns: minmax(340px, 1fr) 124px 156px 112px 108px;
-  gap: 8px;
+  grid-template-columns: minmax(0, 3fr) minmax(118px, 0.72fr) minmax(0, 1.25fr) minmax(0, 0.85fr) minmax(0, 0.75fr);
+  gap: clamp(4px, 0.55vw, 10px);
   align-items: center;
+}
+
+.archive-list-header > *,
+.content-list-header > *,
+.finder-row > *,
+.content-row > * {
+  min-width: 0;
 }
 
 .archive-list-header,
@@ -2324,6 +2331,8 @@ button {
   font: inherit;
   font-weight: 720;
   text-align: left;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
@@ -2337,19 +2346,20 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  justify-self: start;
-  gap: 5px;
-  min-width: 122px;
+  justify-self: center;
+  gap: 4px;
+  width: fit-content;
+  max-width: 100%;
   border: 1px solid #e1d8ca;
   border-radius: 9px;
-  padding: 2px 4px;
+  padding: 2px 3px;
   background: #f3efe7;
   text-transform: none;
 }
 
 .archive-context-button {
-  width: 30px;
-  height: 28px;
+  width: clamp(24px, 2vw, 30px);
+  height: 26px;
   display: grid;
   place-items: center;
   border: 1px solid #d4cbbd;
@@ -2400,6 +2410,8 @@ button {
 .finder-row > span:not(.archive-name-cell),
 .content-row > span:not(.archive-name-cell) {
   color: #586273;
+  overflow: hidden;
+  text-overflow: ellipsis;
   white-space: nowrap;
 }
 
