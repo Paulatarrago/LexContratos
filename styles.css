@@ -2098,8 +2098,8 @@ button {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(31, 41, 55, 0.08);
 }
 
-.finder-tool-button[title],
-.finder-view-button[title],
+.finder-tool-button[data-tip],
+.finder-view-button[data-tip],
 .archive-context-button[data-tip] {
   position: relative;
 }
@@ -2115,7 +2115,7 @@ button {
 .finder-tool-button:hover::after,
 .finder-view-button:hover::after,
 .archive-context-button:hover::after {
-  content: attr(title);
+  content: attr(data-tip);
   position: absolute;
   left: 50%;
   top: calc(100% + 8px);
@@ -2336,13 +2336,19 @@ button {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  justify-self: start;
+  gap: 5px;
+  min-width: 122px;
+  border: 1px solid #e1d8ca;
+  border-radius: 9px;
+  padding: 2px 4px;
+  background: #f3efe7;
   text-transform: none;
 }
 
 .archive-context-button {
-  width: 28px;
-  height: 26px;
+  width: 30px;
+  height: 28px;
   display: grid;
   place-items: center;
   border: 1px solid #d4cbbd;
@@ -2369,7 +2375,7 @@ button {
 }
 
 .archive-context-button:disabled {
-  opacity: 0.55;
+  opacity: 0.5;
   cursor: not-allowed;
 }
 
@@ -2401,9 +2407,19 @@ button {
   background: #edf5ff;
 }
 
+.finder-row:focus-within {
+  background: #e6f1ff;
+  box-shadow: inset 3px 0 0 var(--blue);
+}
+
 .finder-row.is-selected {
   background: #e6f1ff;
   box-shadow: inset 3px 0 0 var(--blue);
+}
+
+.finder-folder:focus-visible,
+.saved-contract-open:focus-visible {
+  outline: none;
 }
 
 .finder-folder,

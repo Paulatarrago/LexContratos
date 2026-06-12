@@ -4955,10 +4955,10 @@ function renderFolders() {
       <div class="archive-list-header">
         <button class="archive-sort-button" type="button" data-archive-sort="name" data-sort-label="Nombre">Nombre</button>
         <span class="archive-context-actions" aria-label="Acciones del elemento marcado">
-          <button class="archive-context-button" type="button" data-archive-action="rename" data-tip="Renombrar seleccionado" title="Renombrar seleccionado" aria-label="Renombrar seleccionado">✎</button>
-          <button class="archive-context-button" type="button" data-archive-action="move" data-tip="Mover seleccionado" title="Mover seleccionado" aria-label="Mover seleccionado">⇄</button>
-          <button class="archive-context-button" type="button" data-archive-action="copy" data-tip="Copiar seleccionado" title="Copiar seleccionado" aria-label="Copiar seleccionado">⧉</button>
-          <button class="archive-context-button danger" type="button" data-archive-action="delete" data-tip="Eliminar seleccionado" title="Eliminar seleccionado" aria-label="Eliminar seleccionado">⌫</button>
+          <button class="archive-context-button" type="button" data-archive-action="rename" data-tip="Renombrar seleccionado" aria-label="Renombrar seleccionado">✎</button>
+          <button class="archive-context-button" type="button" data-archive-action="move" data-tip="Mover seleccionado" aria-label="Mover seleccionado">⇄</button>
+          <button class="archive-context-button" type="button" data-archive-action="copy" data-tip="Copiar seleccionado" aria-label="Copiar seleccionado">⧉</button>
+          <button class="archive-context-button danger" type="button" data-archive-action="delete" data-tip="Eliminar seleccionado" aria-label="Eliminar seleccionado">⌫</button>
         </span>
         <button class="archive-sort-button" type="button" data-archive-sort="date" data-sort-label="Modificación">Modificación</button>
         <button class="archive-sort-button" type="button" data-archive-sort="size" data-sort-label="Tamaño">Tamaño</button>
