@@ -726,7 +726,6 @@ let activeMatterDraftId = "";
 let matterHistoryEvents = [];
 let toastTimer;
 let autosaveTimer;
-let folderClickTimer;
 let contextMenuFolder = "";
 let saveLocationResolve = null;
 let saveLocationState = { folder: "Mis Documentos", confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
@@ -1893,8 +1892,8 @@ function typeCodeForTemplate(key = activeTemplate) {
 function matterBaseCode() {
   const values = getPartyData();
   const roles = getRoles();
-  const partA = codeFromParty(values.parteA, roles[0]?.label || "Parte A");
-  const partB = codeFromParty(values.parteB, roles[1]?.label || "Parte B");
+  const partA = codeFromParty(values.parteA, roles[0]?.label || "Contratante");
+  const partB = codeFromParty(values.parteB, roles[1]?.label || "Contraparte");
   const year = new Date().getFullYear();
   return `${partA}-${partB}-${year}-${typeCodeForTemplate()}`;
 }
@@ -2070,8 +2069,78 @@ function integrateKnownDataIntoContract(reason = "Datos integrados al contrato")
   return filledKeys.size;
 }
 
+function roleLabelIsGeneric(label) {
+  const clean = removeAccents(String(label || ""))
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, " ")
+    .trim();
+  return !clean || /^parte\s*[ab]$/.test(clean) || clean === "parte";
+}
+
+function roleLabelFromAlias(alias) {
+  const clean = String(alias || "")
+    .replace(/[“”"']/g, "")
+    .replace(/\b(el|la|los|las)\b/gi, "")
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!clean) return "";
+  return clean.charAt(0).toUpperCase() + clean.slice(1).toLowerCase();
+}
+
+function contractSearchText(key) {
+  const template = templates[key] || baseTemplates[key] || {};
+  return [template.title, template.category, template.description, template.body].filter(Boolean).join("\n");
+}
+
+function aliasForSide(text, marker) {
+  const patterns = [
+    new RegExp(`\\{\\{${marker}\\}\\}[\\s\\S]{0,220}?COMO\\s+[“"']?\\s*(?:EL|LA|LOS|LAS)?\\s*([A-ZÁÉÍÓÚÑa-záéíóúñ ]{3,60})`, "i"),
+    new RegExp(`\\{\\{${marker}\\}\\}[\\s\\S]{0,260}?DENOMINAR(?:A|Á)\\s+[“"']?\\s*(?:EL|LA|LOS|LAS)?\\s*([A-ZÁÉÍÓÚÑa-záéíóúñ ]{3,60})`, "i")
+  ];
+  for (const pattern of patterns) {
+    const match = text.match(pattern);
+    const label = roleLabelFromAlias(match?.[1] || "");
+    if (label && !/representada|representante|caracter|sucesivo|conjunto|parte/i.test(label)) return label;
+  }
+  return "";
+}
+
+function inferredRoleLabels(key) {
+  const text = contractSearchText(key);
+  const aliasA = aliasForSide(text, "parteA");
+  const aliasB = aliasForSide(text, "parteB");
+  if (aliasA && aliasB) return [aliasA, aliasB];
+
+  const clean = removeAccents(text).toLowerCase();
+  if (/prestacion de servicios|servicios profesionales|servicio bajo demanda|logistica|almacenamiento|garantia de servicios/.test(clean)) {
+    return ["Cliente", "Prestador de servicios"];
+  }
+  if (/compraventa|compra venta|venta de bienes|venta de mercancia|automovil|medicamento/.test(clean)) {
+    return ["Vendedor", "Comprador"];
+  }
+  if (/arrendamiento|renta/.test(clean)) return ["Arrendador", "Arrendatario"];
+  if (/comodato/.test(clean)) return ["Comodante", "Comodatario"];
+  if (/mandato/.test(clean)) return ["Mandante", "Mandatario"];
+  if (/mutuo|prestamo/.test(clean)) return ["Mutuante", "Mutuario"];
+  if (/reconocimiento de adeudo|adeudo|cesion de derechos de cobro/.test(clean)) return ["Acreedor", "Deudor"];
+  if (/suministro/.test(clean)) return ["Comprador", "Proveedor"];
+  if (/distribucion/.test(clean)) return ["Fabricante", "Distribuidor"];
+  if (/comision mercantil/.test(clean)) return ["Comitente", "Comisionista"];
+  if (/confidencialidad|nda/.test(clean)) return ["Parte reveladora", "Parte receptora"];
+  if (/franquicia/.test(clean)) return ["Franquiciante", "Franquiciatario"];
+  if (/licencia de uso/.test(clean)) return ["Licenciante", "Licenciatario"];
+  if (/obra/.test(clean)) return ["Contratante", "Contratista"];
+  return ["Cliente / Contratante", "Proveedor / Contraparte"];
+}
+
+function roleLabelsForTemplate(key) {
+  const configured = roleLabels[key] || [];
+  if (configured.length >= 2 && !configured.some(roleLabelIsGeneric)) return configured;
+  return inferredRoleLabels(key);
+}
+
 function getRoles(key = activeTemplate) {
-  const [labelA, labelB] = roleLabels[key] || ["Cliente o contratante", "Proveedor o prestador"];
+  const [labelA, labelB] = roleLabelsForTemplate(key);
   return [
     { side: "A", label: labelA, part: "parteA" },
     { side: "B", label: labelB, part: "parteB" }
@@ -2081,12 +2150,12 @@ function getRoles(key = activeTemplate) {
 function roleUploadPriority(role) {
   const label = removeAccents(role?.label || "").toLowerCase();
   if (
-    /cliente|comprador|arrendatario|contratante|comitente|mandante|principal|responsable|fideicomitente|mutuario|distribuidor|licenciatario|franquiciatario|cesionario|deudor|parte receptora|promitente comprador|socio inversionista/.test(label)
+    /cliente|comprador|arrendatario|contratante|comitente|mandante|principal|responsable|fideicomitente|mutuario|distribuidor|licenciatario|franquiciatario|cesionario|deudor|comodatario|parte receptora|promitente comprador|socio inversionista/.test(label)
   ) {
     return 0;
   }
   if (
-    /prestador|proveedor|vendedor|desarrollador|profesionista|arrendador|contratista|comisionista|mandatario|encargado|fiduciario|fabricante|agente|licenciante|franquiciante|cedente|acreedor|parte reveladora|promitente vendedor|socio operativo/.test(label)
+    /prestador|proveedor|vendedor|desarrollador|profesionista|arrendador|contratista|comisionista|mandatario|encargado|fiduciario|fabricante|agente|licenciante|franquiciante|cedente|acreedor|comodante|parte reveladora|promitente vendedor|socio operativo/.test(label)
   ) {
     return 1;
   }
@@ -3437,12 +3506,10 @@ function buildLocalLegalReview(country = "México") {
       recommendation: "Usa la revisión avanzada en producción y valida con un abogado local del país aplicable."
     });
   }
-  [
-    ["A", "constitutivo", "Constitución de la parte A"],
-    ["A", "Poder", "Poderes de la parte A"],
-    ["B", "constitutivo", "Constitución de la parte B"],
-    ["B", "Poder", "Poderes de la parte B"]
-  ].forEach(([side, scope, section]) => {
+  getRoles().flatMap((role) => [
+    [role.side, "constitutivo", `Constitución de ${role.label}`],
+    [role.side, "Poder", `Poderes de ${role.label}`]
+  ]).forEach(([side, scope, section]) => {
     const fieldScope = scope === "Poder" ? "Poder" : "Constitutivo";
     const fedatario = removeAccents(partyData[`tipoFedatario${fieldScope}${side}`] || "").toLowerCase();
     const instrumento = removeAccents(partyData[`tipoInstrumento${fieldScope}${side}`] || "").toLowerCase();
@@ -4640,20 +4707,17 @@ function renderFolders() {
   const visibleDocuments = supportDocuments
     .filter((document) => document.folder === activeFolder)
     .filter((document) => archiveMatches(document.name, document.type || "", document.size || "", document.date || "", document.roleLabel || "", document.party || ""));
-  const parent = folderParent(activeFolder);
-  const rowForFolder = (folder, { parentRow = false, root = false } = {}) => {
-    const label = parentRow ? folder.split("/").pop() : folder.split("/").pop();
-    const description = parentRow ? "Carpeta superior" : folderMetaText(folder);
-    const canSelect = !parentRow && !rootFolders.includes(folder);
-    const rowType = parentRow ? "parent" : "folder";
-    const folderIcon = parentRow ? "←" : "▣";
-    const sizeText = parentRow ? "" : folderMetaText(folder);
+  const rowForFolder = (folder, { root = false } = {}) => {
+    const label = folder.split("/").pop();
+    const description = folderMetaText(folder);
+    const canSelect = !rootFolders.includes(folder);
+    const sizeText = folderMetaText(folder);
     return `
-      <article class="finder-row ${folder === activeFolder ? "active" : ""} ${root ? "root-row" : ""} ${isArchiveSelected("folder", folder) ? "is-selected" : ""}" data-folder="${escapeHtml(folder)}" data-archive-row="${rowType}" data-archive-id="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
+      <article class="finder-row ${folder === activeFolder ? "active" : ""} ${root ? "root-row" : ""} ${isArchiveSelected("folder", folder) ? "is-selected" : ""}" data-folder="${escapeHtml(folder)}" data-archive-row="folder" data-archive-id="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
         <span class="archive-name-cell">
           <input class="archive-select" type="checkbox" data-archive-type="folder" data-archive-id="${escapeHtml(folder)}" ${canSelect ? "" : "disabled"} ${isArchiveSelected("folder", folder) ? "checked" : ""} aria-label="Seleccionar carpeta ${escapeHtml(label)}" />
           <button class="folder-item finder-folder" type="button" data-folder="${escapeHtml(folder)}">
-            <span class="finder-icon" aria-hidden="true">${folderIcon}</span>
+            <span class="finder-icon" aria-hidden="true">▣</span>
             <span class="finder-name">
               <strong>${escapeHtml(label)}</strong>
               <small>${escapeHtml(description)}</small>
@@ -4663,7 +4727,7 @@ function renderFolders() {
         <span class="archive-row-action-space"></span>
         <span>--</span>
         <span>${escapeHtml(sizeText)}</span>
-        <span>${parentRow ? "Carpeta superior" : "Carpeta"}</span>
+        <span>Carpeta</span>
       </article>
     `;
   };
@@ -4732,17 +4796,14 @@ function renderFolders() {
       }
     }))
   ].sort(compareArchiveItems);
-  const contentRows = [
-    parent ? rowForFolder(parent, { parentRow: true }) : "",
-    ...contentItems.map((item) => item.html)
-  ].filter(Boolean);
+  const contentRows = contentItems.map((item) => item.html);
   folderList.innerHTML = `
     <div class="archive-finder view-${escapeHtml(archiveViewMode)}" role="list" data-context-folder="${escapeHtml(activeFolder)}">
       <div class="archive-rootbar" aria-label="Carpetas raíz">
         ${rootFolders
           .map((root) => `
             <button class="folder-item archive-root ${activeFolder === root || activeFolder.startsWith(`${root}/`) ? "active" : ""}" type="button" data-folder="${escapeHtml(root)}">
-              <span class="finder-icon" aria-hidden="true">▣</span>${escapeHtml(root)}
+              ${escapeHtml(root)}
             </button>
           `)
           .join("")}
@@ -6222,10 +6283,9 @@ folderList.addEventListener("click", (event) => {
   if (handleArchiveSavedItemClick(event)) return;
   const button = event.target.closest(".folder-item");
   if (!button) return;
-  window.clearTimeout(folderClickTimer);
-  folderClickTimer = window.setTimeout(() => {
+  if (button.classList.contains("archive-root")) {
     openArchiveFolder(button.dataset.folder, { announce: false });
-  }, 220);
+  }
 });
 
 folderList.addEventListener("pointerover", (event) => {
@@ -6321,7 +6381,6 @@ folderContextMenu?.addEventListener("click", async (event) => {
 folderList.addEventListener("dblclick", (event) => {
   const button = event.target.closest(".folder-item");
   if (!button) return;
-  window.clearTimeout(folderClickTimer);
   openArchiveFolder(button.dataset.folder);
 });
 
