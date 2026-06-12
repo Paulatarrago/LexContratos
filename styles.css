@@ -1983,7 +1983,38 @@ button {
   padding: 10px 12px 12px;
   gap: 10px;
   resize: both;
+  overflow: auto;
   box-shadow: 18px 0 46px rgba(16, 24, 32, 0.16);
+}
+
+.drawer-resize-handle {
+  position: absolute;
+  z-index: 5;
+  background: transparent;
+}
+
+.drawer-resize-right {
+  top: 48px;
+  right: 0;
+  width: 10px;
+  bottom: 24px;
+  cursor: ew-resize;
+}
+
+.drawer-resize-bottom {
+  left: 24px;
+  right: 48px;
+  bottom: 0;
+  height: 10px;
+  cursor: ns-resize;
+}
+
+.drawer-resize-corner {
+  right: 0;
+  bottom: 0;
+  width: 28px;
+  height: 28px;
+  cursor: nwse-resize;
 }
 
 .side-drawer .drawer-heading {
@@ -2067,12 +2098,42 @@ button {
   box-shadow: 0 1px 0 rgba(255, 255, 255, 0.8), 0 1px 2px rgba(31, 41, 55, 0.08);
 }
 
+.finder-tool-button[title],
+.finder-view-button[title],
+.archive-context-button[data-tip] {
+  position: relative;
+}
+
 .finder-tool-button:hover,
 .finder-view-button:hover,
 .finder-view-button.active {
   color: var(--blue);
   border-color: #b9cce6;
   background: #f2f7ff;
+}
+
+.finder-tool-button:hover::after,
+.finder-view-button:hover::after,
+.archive-context-button:hover::after {
+  content: attr(title);
+  position: absolute;
+  left: 50%;
+  top: calc(100% + 8px);
+  z-index: 30;
+  min-width: max-content;
+  max-width: 220px;
+  transform: translateX(-50%);
+  border: 1px solid #cfc6b9;
+  border-radius: 8px;
+  padding: 6px 8px;
+  color: var(--ink);
+  background: #fffdf9;
+  font-size: 11px;
+  font-weight: 800;
+  line-height: 1.2;
+  box-shadow: 0 10px 24px rgba(16, 24, 32, 0.16);
+  pointer-events: none;
+  white-space: normal;
 }
 
 .finder-tool-button.icon-only {
@@ -2177,6 +2238,12 @@ button {
   overflow: auto;
 }
 
+.folder-list.is-dragging {
+  outline: 2px dashed var(--blue);
+  outline-offset: -6px;
+  background: #f1f7ff;
+}
+
 .archive-finder,
 .saved-contracts {
   border: 1px solid #e6dfd4;
@@ -2274,16 +2341,17 @@ button {
 }
 
 .archive-context-button {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 26px;
   display: grid;
   place-items: center;
   border: 1px solid #d4cbbd;
   border-radius: 7px;
-  color: #3d4856;
-  background: #fffdf9;
-  font-size: 12px;
+  color: #233044;
+  background: linear-gradient(180deg, #ffffff, #f2eee6);
+  font-size: 13px;
   font-weight: 900;
+  opacity: 1;
 }
 
 .archive-context-button:hover:not(:disabled),
@@ -2301,7 +2369,7 @@ button {
 }
 
 .archive-context-button:disabled {
-  opacity: 0.34;
+  opacity: 0.55;
   cursor: not-allowed;
 }
 

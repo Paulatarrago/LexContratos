@@ -629,6 +629,8 @@ const templateImport = document.querySelector("#template-import");
 const templateGrid = document.querySelector("#template-grid");
 const templateSearch = document.querySelector("#template-search");
 const templateCount = document.querySelector("#template-count");
+const templateFolderFilter = document.querySelector("#template-folder-filter");
+const templateNewFolderButton = document.querySelector("#template-new-folder");
 const requirementsList = document.querySelector("#requirements-list");
 const customFields = document.querySelector("#custom-fields");
 const dynamicFields = document.querySelector("#dynamic-fields");
@@ -637,6 +639,10 @@ const folderList = document.querySelector("#folder-list");
 const finderPath = document.querySelector("#finder-path");
 const folderContextMenu = document.querySelector("#folder-context-menu");
 const archiveNewFolderButton = document.querySelector("#archive-new-folder");
+const archiveUploadDocumentsButton = document.querySelector("#archive-upload-documents");
+const archiveUploadFolderButton = document.querySelector("#archive-upload-folder");
+const archiveDocumentUpload = document.querySelector("#archive-document-upload");
+const archiveFolderUpload = document.querySelector("#archive-folder-upload");
 const archiveDeleteSelectedButton = document.querySelector("#archive-delete-selected");
 const archiveSearch = document.querySelector("#archive-search");
 const archiveViewButtons = document.querySelectorAll("[data-archive-view]");
@@ -704,6 +710,8 @@ const matterHistory = document.querySelector("#matter-history");
 
 let activeUser = loadCurrentUser();
 let templates = loadMasterTemplates();
+let templateCatalogFolders = loadTemplateCatalogFolders();
+let activeTemplateCatalogFolder = "Todos";
 let activeTemplate = null;
 let activeSourceMaster = null;
 let isWorkingCopy = false;
@@ -2294,22 +2302,120 @@ function prepareTemplateFields(body, existingFields = []) {
   return { body: preparedBody, fields };
 }
 
+function normalizeTemplateCatalogPath(value, fallback = "Formatos generales") {
+  const clean = String(value || "")
+    .split("/")
+    .map((part) => part.replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .join(" / ");
+  return clean || fallback;
+}
+
+function templateCatalogPath(template = {}) {
+  return normalizeTemplateCatalogPath(template.catalogPath || template.folder || template.category || "Formatos generales");
+}
+
+function loadTemplateCatalogFolders() {
+  const saved = readJson(userStorageKey("template_catalog_folders"), []);
+  const existing = Object.values(templates || {})
+    .filter((template) => template?.master)
+    .map(templateCatalogPath);
+  return Array.from(new Set([...saved, ...existing, "Arrendamientos", "NDA", "Prestación de servicios"]))
+    .filter(Boolean)
+    .sort((a, b) => a.localeCompare(b, "es"));
+}
+
+function saveTemplateCatalogFolders() {
+  localStorage.setItem(userStorageKey("template_catalog_folders"), JSON.stringify(templateCatalogFolders));
+}
+
+function ensureTemplateCatalogFolder(path) {
+  const clean = normalizeTemplateCatalogPath(path);
+  if (!templateCatalogFolders.includes(clean)) {
+    templateCatalogFolders.push(clean);
+    templateCatalogFolders.sort((a, b) => a.localeCompare(b, "es"));
+    saveTemplateCatalogFolders();
+  }
+  return clean;
+}
+
+function promptTemplateCatalogPath(defaultPath = "Formatos generales") {
+  const examples = "Ejemplos: Arrendamientos / Maquinaria, NDA / Proveedores, Prestación de servicios / Persona moral";
+  const path = window.prompt(`Carpeta del catálogo de formatos.\n\n${examples}`, defaultPath);
+  if (!path || !path.trim()) return null;
+  return ensureTemplateCatalogFolder(path);
+}
+
+function renderTemplateFolderFilter() {
+  if (!templateFolderFilter) return;
+  templateCatalogFolders = loadTemplateCatalogFolders();
+  if (activeTemplateCatalogFolder !== "Todos" && !templateCatalogFolders.includes(activeTemplateCatalogFolder)) {
+    activeTemplateCatalogFolder = "Todos";
+  }
+  templateFolderFilter.innerHTML = `
+    <option value="Todos">Todos</option>
+    ${templateCatalogFolders.map((folder) => `<option value="${escapeHtml(folder)}">${escapeHtml(folder)}</option>`).join("")}
+  `;
+  templateFolderFilter.value = activeTemplateCatalogFolder;
+}
+
+function createTemplateCatalogFolder() {
+  const path = promptTemplateCatalogPath(activeTemplateCatalogFolder === "Todos" ? "Arrendamientos / Maquinaria" : `${activeTemplateCatalogFolder} / Nueva subcarpeta`);
+  if (!path) return;
+  activeTemplateCatalogFolder = path;
+  renderTemplates();
+  showToast(`Carpeta de formatos creada: ${path}.`);
+}
+
+function renameMasterTemplate(templateKey) {
+  const template = templates[templateKey];
+  if (!template?.master) return;
+  const name = window.prompt("Nuevo nombre del formato", template.title || "Formato");
+  if (!name || !name.trim()) return;
+  template.title = name.trim();
+  template.personal = template.personal || !baseTemplates[templateKey];
+  saveMasterTemplates();
+  renderTemplates();
+  showToast("Nombre del formato actualizado en tu catálogo.");
+}
+
+function moveMasterTemplate(templateKey) {
+  const template = templates[templateKey];
+  if (!template?.master) return;
+  const path = promptTemplateCatalogPath(templateCatalogPath(template));
+  if (!path) return;
+  template.catalogPath = path;
+  template.category = path;
+  template.personal = template.personal || !baseTemplates[templateKey];
+  saveMasterTemplates();
+  activeTemplateCatalogFolder = path;
+  renderTemplates();
+  showToast(`Formato movido a ${path}.`);
+}
+
 function renderTemplates() {
   const query = templateSearch.value.trim().toLowerCase();
+  renderTemplateFolderFilter();
   const filtered = Object.entries(templates).filter(([, template]) => {
     if (!template.master) return false;
-    const haystack = `${template.title} ${template.description} ${template.category}`.toLowerCase();
-    return haystack.includes(query);
+    const path = templateCatalogPath(template);
+    const haystack = `${template.title} ${template.description} ${template.category} ${path}`.toLowerCase();
+    const matchesFolder = activeTemplateCatalogFolder === "Todos" || path === activeTemplateCatalogFolder || path.startsWith(`${activeTemplateCatalogFolder} /`);
+    return matchesFolder && haystack.includes(query);
   });
 
   templateGrid.innerHTML = filtered
     .map(([key, template]) => `
       <article class="template-card ${key === activeTemplate ? "selected" : ""}" data-template="${key}">
         <h2>${template.title}</h2>
-        <p>${template.category} · ${template.fields} campos</p>
+        <p>${templateCatalogPath(template)} · ${template.fields} campos</p>
         <footer>
           <span>${template.validatedLabel ? `Formato validado · ${escapeHtml(template.validatedLabel)}` : template.personal ? "Documento base propio" : "Formato base protegido"}</span>
-          <button class="ghost-button use-template" type="button">Usar formato</button>
+          <div class="template-card-actions">
+            <button class="ghost-button use-template" type="button" data-template-action="use">Usar</button>
+            <button class="ghost-button" type="button" data-template-action="rename">Renombrar</button>
+            <button class="ghost-button" type="button" data-template-action="move">Mover</button>
+          </div>
         </footer>
       </article>
     `)
@@ -2439,6 +2545,11 @@ function saveAsPersonalBaseTemplate() {
     showToast("Guardado cancelado. La copia sigue editable.");
     return;
   }
+  const catalogPath = promptTemplateCatalogPath(templateCatalogPath(templates[activeSourceMaster] || templates[activeTemplate] || {}));
+  if (!catalogPath) {
+    showToast("Guardado cancelado. La copia sigue editable.");
+    return;
+  }
 
   const key = `personal-base-${Date.now()}`;
   const cleanBody = scrubKnownPartyData(editor.value);
@@ -2446,7 +2557,8 @@ function saveAsPersonalBaseTemplate() {
   templates[key] = {
     ...(templates[activeSourceMaster] || templates[activeTemplate] || {}),
     title: name.trim(),
-    category: "Documentos base propios",
+    category: catalogPath,
+    catalogPath,
     description: "Formato propio guardado en tu biblioteca personal de documentos base.",
     fields: prepared.fields.length,
     body: prepared.body,
@@ -2455,6 +2567,7 @@ function saveAsPersonalBaseTemplate() {
     customFields: prepared.fields
   };
   saveMasterTemplates();
+  activeTemplateCatalogFolder = catalogPath;
   renderTemplates();
   autoSaveVersion("manual");
   showToast("Versión limpia guardada como formato base. La copia actual sigue editable con sus datos.");
@@ -4693,7 +4806,38 @@ function reconcileSupportDocumentFolders(values = getPartyData()) {
   return changed;
 }
 
+function normalizeLegacySupportFolders() {
+  const roles = getRoles();
+  const replacements = [
+    ["Documentos de las partes/Parte A", `Documentos de las partes/${safeFolderName(roles[0]?.label || "Contratante")} - Sin identificar`],
+    ["Documentos de las partes/Parte B", `Documentos de las partes/${safeFolderName(roles[1]?.label || "Contraparte")} - Sin identificar`]
+  ];
+  let changed = false;
+  replacements.forEach(([oldPath, newPath]) => {
+    if (oldPath === newPath) return;
+    if (folders.some((folder) => pathInFolder(folder, oldPath))) {
+      folders = folders.map((folder) => replaceFolderPath(folder, oldPath, newPath));
+      changed = true;
+    }
+    supportDocuments = supportDocuments.map((document) => {
+      if (!pathInFolder(document.folder || "", oldPath)) return document;
+      changed = true;
+      return {
+        ...document,
+        folder: replaceFolderPath(document.folder || "", oldPath, newPath),
+        party: document.party && !/^Parte [AB]$/i.test(document.party) ? document.party : newPath.split("/").pop()
+      };
+    });
+  });
+  if (!changed) return;
+  folders = Array.from(new Set([...rootFolders, ...folders]));
+  saveFolders();
+  saveSupportDocuments();
+}
+
 function renderFolders() {
+  folders = Array.from(new Set([...rootFolders, ...folders])).sort((a, b) => a.localeCompare(b, "es"));
+  normalizeLegacySupportFolders();
   folders = Array.from(new Set([...rootFolders, ...folders])).sort((a, b) => a.localeCompare(b, "es"));
   while (!folders.includes(activeFolder) && folderParent(activeFolder)) {
     activeFolder = folderParent(activeFolder);
@@ -4811,10 +4955,10 @@ function renderFolders() {
       <div class="archive-list-header">
         <button class="archive-sort-button" type="button" data-archive-sort="name" data-sort-label="Nombre">Nombre</button>
         <span class="archive-context-actions" aria-label="Acciones del elemento marcado">
-          <button class="archive-context-button" type="button" data-archive-action="rename" title="Renombrar">✎</button>
-          <button class="archive-context-button" type="button" data-archive-action="move" title="Mover">⇄</button>
-          <button class="archive-context-button" type="button" data-archive-action="copy" title="Copiar">⧉</button>
-          <button class="archive-context-button danger" type="button" data-archive-action="delete" title="Eliminar">⌫</button>
+          <button class="archive-context-button" type="button" data-archive-action="rename" data-tip="Renombrar seleccionado" title="Renombrar seleccionado" aria-label="Renombrar seleccionado">✎</button>
+          <button class="archive-context-button" type="button" data-archive-action="move" data-tip="Mover seleccionado" title="Mover seleccionado" aria-label="Mover seleccionado">⇄</button>
+          <button class="archive-context-button" type="button" data-archive-action="copy" data-tip="Copiar seleccionado" title="Copiar seleccionado" aria-label="Copiar seleccionado">⧉</button>
+          <button class="archive-context-button danger" type="button" data-archive-action="delete" data-tip="Eliminar seleccionado" title="Eliminar seleccionado" aria-label="Eliminar seleccionado">⌫</button>
         </span>
         <button class="archive-sort-button" type="button" data-archive-sort="date" data-sort-label="Modificación">Modificación</button>
         <button class="archive-sort-button" type="button" data-archive-sort="size" data-sort-label="Tamaño">Tamaño</button>
@@ -5566,6 +5710,55 @@ async function filesFromDrop(dataTransfer) {
   return files.flat();
 }
 
+async function addFilesToArchiveFolder(fileList, folder = activeFolder) {
+  const files = Array.from(fileList || []);
+  if (!files.length) return;
+  const targetFolder = ensureFolderPath(folder || activeFolder || "Mis Documentos");
+  const existing = new Set(
+    supportDocuments
+      .filter((document) => document.folder === targetFolder)
+      .map((document) => `${document.name}-${document.size}`)
+  );
+  const entries = [];
+  for (const file of files) {
+    const displayName = file.webkitRelativePath || file.relativePath || file.name;
+    const size = `${Math.ceil(file.size / 1024)} KB`;
+    const key = `${displayName}-${size}`;
+    if (existing.has(key)) continue;
+    entries.push({
+      id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+      folder: targetFolder,
+      roleLabel: "Archivo",
+      party: targetFolder.split("/").pop() || "Mis Documentos",
+      folio: "",
+      draftId: "",
+      name: displayName,
+      size,
+      type: classifySupportDocument(displayName),
+      date: new Date().toLocaleString("es-MX")
+    });
+  }
+  if (!entries.length) {
+    showToast("Esos documentos ya estaban en esta carpeta.");
+    return;
+  }
+  supportDocuments.push(...entries);
+  activeFolder = targetFolder;
+  saveSupportDocuments();
+  const backend = productionBackend();
+  if (backend?.uploadSupportDocuments) {
+    backend.uploadSupportDocuments({
+      folio: targetFolder,
+      roleLabel: "archivo",
+      files
+    }).catch((error) => reportBackendError("subir documentos a carpeta", error));
+  }
+  renderFolders();
+  renderSavedContracts();
+  saveActiveDraft("Documentos cargados en archivo");
+  showToast(`${entries.length} documento${entries.length === 1 ? "" : "s"} cargado${entries.length === 1 ? "" : "s"} en ${targetFolder}.`);
+}
+
 async function addFilesToRole(side, fileList) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
@@ -5634,6 +5827,17 @@ async function addFilesToRole(side, fileList) {
 templateGrid.addEventListener("click", async (event) => {
   const card = event.target.closest(".template-card");
   if (!card) return;
+  const action = event.target.closest("[data-template-action]")?.dataset.templateAction || "use";
+  if (action === "rename") {
+    event.stopPropagation();
+    renameMasterTemplate(card.dataset.template);
+    return;
+  }
+  if (action === "move") {
+    event.stopPropagation();
+    moveMasterTemplate(card.dataset.template);
+    return;
+  }
   if (templatePicker.open) templatePicker.close();
   await startContractFromTemplate(card.dataset.template);
 });
@@ -5695,6 +5899,11 @@ document.querySelectorAll(".language-toggle button").forEach((button) => {
 });
 
 templateSearch.addEventListener("input", renderTemplates);
+templateFolderFilter?.addEventListener("change", () => {
+  activeTemplateCatalogFolder = templateFolderFilter.value || "Todos";
+  renderTemplates();
+});
+templateNewFolderButton?.addEventListener("click", createTemplateCatalogFolder);
 
 openTemplatePicker.addEventListener("click", () => {
   templateSearch.value = "";
@@ -5711,6 +5920,34 @@ document.querySelector("#close-archive").addEventListener("click", () => archive
 archiveDrawer.addEventListener("click", (event) => {
   if (!event.target.closest("#folder-context-menu")) hideFolderContextMenu();
   event.stopPropagation();
+});
+archiveDrawer.addEventListener("pointerdown", (event) => {
+  const handle = event.target.closest("[data-drawer-resize]");
+  if (!handle) return;
+  event.preventDefault();
+  event.stopPropagation();
+  const mode = handle.dataset.drawerResize || "xy";
+  const startX = event.clientX;
+  const startY = event.clientY;
+  const startWidth = archiveDrawer.offsetWidth;
+  const startHeight = archiveDrawer.offsetHeight;
+  handle.setPointerCapture?.(event.pointerId);
+  const resize = (moveEvent) => {
+    if (mode.includes("x")) {
+      const width = Math.min(window.innerWidth - 8, Math.max(620, startWidth + moveEvent.clientX - startX));
+      archiveDrawer.style.width = `${width}px`;
+    }
+    if (mode.includes("y")) {
+      const height = Math.min(window.innerHeight - 8, Math.max(420, startHeight + moveEvent.clientY - startY));
+      archiveDrawer.style.height = `${height}px`;
+    }
+  };
+  const stop = () => {
+    document.removeEventListener("pointermove", resize);
+    document.removeEventListener("pointerup", stop);
+  };
+  document.addEventListener("pointermove", resize);
+  document.addEventListener("pointerup", stop, { once: true });
 });
 document.addEventListener("click", () => {
   hideFolderContextMenu();
@@ -6118,12 +6355,21 @@ templateImport.addEventListener("change", async () => {
   if (!file) return;
 
   const addToMaster = window.confirm("¿Quieres guardar este contrato como formato del catálogo?\n\nAceptar: revisa campos, limpia marcadores y lo guarda como formato base.\nCancelar: solo lo abre como copia de trabajo para este contrato.");
+  const catalogPath = addToMaster
+    ? promptTemplateCatalogPath(activeTemplateCatalogFolder === "Todos" ? "Documentos base propios" : activeTemplateCatalogFolder)
+    : "";
+  if (addToMaster && !catalogPath) {
+    templateImport.value = "";
+    showToast("Importación cancelada. No se guardó el formato.");
+    return;
+  }
   const keyPrefix = addToMaster ? "custom-master" : "work";
   activeTemplate = `custom-${Date.now()}`;
   activeTemplate = `${keyPrefix}-${Date.now()}`;
 
   templates[activeTemplate] = {
-    category: "Operación",
+    category: catalogPath || "Operación",
+    catalogPath: catalogPath || "",
     title: file.name.replace(/\.[^.]+$/, ""),
     description: addToMaster ? "Formato importado, revisado y guardado como formato base." : "Contrato importado como copia de trabajo temporal.",
     fields: 0,
@@ -6139,11 +6385,14 @@ templateImport.addEventListener("change", async () => {
     templates[activeTemplate].fields = prepared.fields.length;
     showToast(addToMaster ? `Formato guardado con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} limpio${prepared.fields.length === 1 ? "" : "s"}. Crea una copia para trabajarlo.` : `Copia de trabajo importada con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"}.`);
   } else {
-    templates[activeTemplate].body = `MACHOTE IMPORTADO: ${file.name}\n\nEn la versión completa, LexContratos extraería el texto de PDF o Word, conservaría su estructura y detectaría campos rellenables para cada parte.`;
+    templates[activeTemplate].body = `FORMATO IMPORTADO: ${file.name}\n\nEn la versión completa, LexContratos extraería el texto de PDF o Word, conservaría su estructura y detectaría campos rellenables para cada parte.`;
     showToast(addToMaster ? "Formato creado. PDF y Word requieren extracción documental en backend para limpiar campos con precisión." : "Contrato abierto como trabajo temporal. PDF y Word requieren extracción documental en backend.");
   }
 
-  if (addToMaster) saveMasterTemplates();
+  if (addToMaster) {
+    activeTemplateCatalogFolder = catalogPath;
+    saveMasterTemplates();
+  }
   loadTemplate(activeTemplate);
   templateImport.value = "";
 });
@@ -6395,6 +6644,17 @@ archiveNewFolderButton?.addEventListener("click", () => {
   createFolderInsideArchive(visibleFolder);
 });
 
+archiveUploadDocumentsButton?.addEventListener("click", () => archiveDocumentUpload?.click());
+archiveUploadFolderButton?.addEventListener("click", () => archiveFolderUpload?.click());
+archiveDocumentUpload?.addEventListener("change", async () => {
+  await addFilesToArchiveFolder(archiveDocumentUpload.files, activeFolder);
+  archiveDocumentUpload.value = "";
+});
+archiveFolderUpload?.addEventListener("change", async () => {
+  await addFilesToArchiveFolder(archiveFolderUpload.files, activeFolder);
+  archiveFolderUpload.value = "";
+});
+
 archiveDeleteSelectedButton?.addEventListener("click", deleteSelectedArchiveItems);
 
 archiveSearch?.addEventListener("input", (event) => {
@@ -6410,6 +6670,23 @@ archiveViewButtons.forEach((button) => {
     renderFolders();
     renderSavedContracts();
   });
+});
+
+folderList.addEventListener("dragover", (event) => {
+  if (!event.dataTransfer?.types?.includes("Files")) return;
+  event.preventDefault();
+  folderList.classList.add("is-dragging");
+});
+
+folderList.addEventListener("dragleave", () => {
+  folderList.classList.remove("is-dragging");
+});
+
+folderList.addEventListener("drop", async (event) => {
+  if (!event.dataTransfer?.types?.includes("Files")) return;
+  event.preventDefault();
+  folderList.classList.remove("is-dragging");
+  await addFilesToArchiveFolder(await filesFromDrop(event.dataTransfer), activeFolder);
 });
 
 folderList.addEventListener("change", updateArchiveSelection);

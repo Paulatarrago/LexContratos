@@ -368,6 +368,8 @@
               <button class="finder-tool-button icon-only" id="archive-new-folder" type="button" title="Crear nueva carpeta en la ubicación actual" aria-label="Crear nueva carpeta en la ubicación actual">
                 <span class="tool-icon folder-plus-icon" aria-hidden="true"></span>
               </button>
+              <button class="finder-tool-button icon-only" id="archive-upload-documents" type="button" title="Subir documentos a la carpeta abierta" aria-label="Subir documentos a la carpeta abierta">↑</button>
+              <button class="finder-tool-button icon-only" id="archive-upload-folder" type="button" title="Subir una carpeta completa aquí" aria-label="Subir una carpeta completa aquí">⇧</button>
               <div class="finder-view-switch" aria-label="Cambiar vista">
                 <button class="finder-view-button active" type="button" data-archive-view="details" title="Vista de lista con detalles" aria-label="Vista de lista con detalles">☷</button>
                 <button class="finder-view-button" type="button" data-archive-view="icons" title="Vista de iconos" aria-label="Vista de iconos">▦</button>
@@ -375,6 +377,8 @@
                 <button class="finder-view-button" type="button" data-archive-view="gallery" title="Vista de galería" aria-label="Vista de galería">▧</button>
               </div>
             </div>
+            <input id="archive-document-upload" type="file" multiple accept=".csv,.txt,.eml,.pdf,.xlsx,.xls,.docx,.doc,.jpg,.jpeg,.png,.webp" hidden />
+            <input id="archive-folder-upload" type="file" multiple webkitdirectory directory hidden />
             <label class="finder-search">
               <span aria-hidden="true">⌕</span>
               <input id="archive-search" type="search" placeholder="Buscar" aria-label="Buscar en Mis Documentos" />
@@ -395,6 +399,9 @@
           <button type="button" data-context-action="copy">Copiar</button>
           <button type="button" data-context-action="delete">Eliminar carpeta</button>
         </div>
+        <div class="drawer-resize-handle drawer-resize-right" data-drawer-resize="x" aria-hidden="true"></div>
+        <div class="drawer-resize-handle drawer-resize-bottom" data-drawer-resize="y" aria-hidden="true"></div>
+        <div class="drawer-resize-handle drawer-resize-corner" data-drawer-resize="xy" aria-hidden="true"></div>
       </aside>
 
       <section class="workspace">
@@ -686,6 +693,15 @@
         Buscar formato
         <input id="template-search" type="search" placeholder="Arrendamiento, renta, prestación de servicios, fideicomiso..." />
       </label>
+      <div class="template-catalog-controls" aria-label="Organización del catálogo de formatos">
+        <label>
+          Carpeta del catálogo
+          <select id="template-folder-filter">
+            <option value="Todos">Todos</option>
+          </select>
+        </label>
+        <button class="secondary-action mini-action" id="template-new-folder" type="button">Nueva carpeta</button>
+      </div>
       <div class="template-list" id="template-grid" aria-label="Lista compacta de formatos"></div>
     </dialog>
 
