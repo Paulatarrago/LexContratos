@@ -680,6 +680,7 @@ const openUserGuide = document.querySelector("#open-user-guide");
 const openAdminUsers = document.querySelector("#open-admin-users");
 const adminUsersDialog = document.querySelector("#admin-users-dialog");
 const adminUsersSummary = document.querySelector("#admin-users-summary");
+const adminPermissionNote = document.querySelector("#admin-permission-note");
 const adminUsersList = document.querySelector("#admin-users-list");
 const adminBackupStatus = document.querySelector("#admin-backup-status");
 const downloadAdminBackupButton = document.querySelector("#download-admin-backup");
@@ -1728,8 +1729,15 @@ function renderAdminUsers(users = []) {
   const active = users.filter((user) => ["active", "trial"].includes(user.license_status) || isAdminBackendRole(user.role)).length;
   const currentEmail = String(currentAccount()?.email || activeUser || "").toLowerCase();
   const currentIsSuperAdmin = isCurrentSuperAdmin();
+  const currentRole = currentIsSuperAdmin ? "Super administradora" : isLocalAdminAccount(currentAccount()) ? "Administradora" : "Usuario";
   if (adminUsersSummary) {
-    adminUsersSummary.textContent = `${users.length} usuario${users.length === 1 ? "" : "s"} registrado${users.length === 1 ? "" : "s"} · ${pending} pendiente${pending === 1 ? "" : "s"} · ${active} activo${active === 1 ? "" : "s"}`;
+    adminUsersSummary.textContent = `${users.length} usuario${users.length === 1 ? "" : "s"} registrado${users.length === 1 ? "" : "s"} · ${pending} pendiente${pending === 1 ? "" : "s"} · ${active} activo${active === 1 ? "" : "s"} · Tu rol: ${currentRole}`;
+  }
+  if (adminPermissionNote) {
+    adminPermissionNote.textContent = currentIsSuperAdmin
+      ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, catálogo, configuración y respaldos."
+      : "Estás entrando como administradora. Para ver y asignar el permiso de super administradora, primero tu cuenta debe activarse con ese rol desde Supabase.";
+    adminPermissionNote.classList.toggle("is-superadmin", currentIsSuperAdmin);
   }
   if (!adminUsersList) return;
   adminUsersList.innerHTML = users.length
@@ -1759,7 +1767,7 @@ function renderAdminUsers(users = []) {
                 <button class="secondary-action mini-action" type="button" data-admin-action="notify_access" ${payload} ${hasAccess ? "" : "disabled title=\"Activa primero la licencia\""}>Reenviar correo de acceso</button>
                 <button class="secondary-action mini-action" type="button" data-admin-action="suspend" ${payload} ${isSuperAdminTarget && !currentIsSuperAdmin ? "disabled title=\"Solo super administración puede suspender otra super administradora\"" : ""}>Suspender</button>
                 <button class="secondary-action mini-action" type="button" data-admin-action="make_admin" ${payload}>Hacer admin</button>
-                ${currentIsSuperAdmin ? `<button class="secondary-action mini-action" type="button" data-admin-action="make_superadmin" ${payload}>Hacer superadmin</button>` : ""}
+                ${currentIsSuperAdmin ? `<button class="secondary-action mini-action" type="button" data-admin-action="make_superadmin" ${payload}>Hacer super administradora</button>` : ""}
                 ${currentIsSuperAdmin ? `<button class="secondary-action mini-action" type="button" data-admin-action="make_user" ${payload} ${isCurrentUser ? "disabled title=\"No puedes quitarte permisos desde aquí\"" : ""}>Hacer usuario</button>` : ""}
                 <button class="secondary-action mini-action danger-action" type="button" data-admin-action="delete_user" ${payload} ${isCurrentUser || (isSuperAdminTarget && !currentIsSuperAdmin) ? "disabled title=\"No puedes eliminar esta cuenta desde aquí\"" : ""}>Eliminar</button>
               </div>
