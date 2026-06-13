@@ -83,7 +83,7 @@ if (!config.url || !config.publishableKey) {
     const status = license?.status || profile?.license_status || "inactive";
     const expiresAt = license?.ends_at ? Date.parse(license.ends_at) : null;
     const licenseCurrent = !expiresAt || Number.isNaN(expiresAt) || expiresAt >= Date.now();
-    const hasAccess = profile?.account_status === "active" && (profile?.role === "admin" || (["active", "trial"].includes(status) && licenseCurrent));
+    const hasAccess = profile?.account_status === "active" && (["admin", "superadmin"].includes(profile?.role) || (["active", "trial"].includes(status) && licenseCurrent));
     return { user, profile, license, hasAccess, status };
   }
 
@@ -353,6 +353,33 @@ if (!config.url || !config.publishableKey) {
     };
   }
 
+  async function listSharedTemplates() {
+    const response = await fetch("/api/admin-templates", {
+      headers: await authHeaders()
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "No se pudo cargar el catálogo general.");
+    }
+    return response.json();
+  }
+
+  async function updateSharedTemplate(payload) {
+    const response = await fetch("/api/admin-templates", {
+      method: "POST",
+      headers: {
+        "content-type": "application/json",
+        ...(await authHeaders())
+      },
+      body: JSON.stringify(payload)
+    });
+    if (!response.ok) {
+      const data = await response.json().catch(() => ({}));
+      throw new Error(data.error || "No se pudo actualizar el catálogo general.");
+    }
+    return response.json();
+  }
+
   announceBackend({
     enabled: true,
     supabase,
@@ -370,6 +397,8 @@ if (!config.url || !config.publishableKey) {
     extractPartyData,
     listAdminUsers,
     updateAdminUser,
-    downloadAdminBackup
+    downloadAdminBackup,
+    listSharedTemplates,
+    updateSharedTemplate
   });
 }

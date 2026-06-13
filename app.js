@@ -616,9 +616,6 @@ const commonProtectionsEs = `\n\nCLÁUSULAS DE PROTECCIÓN REFORZADA\n\nPRIMERA.
 
 const commonProtectionsEn = `\n\nENHANCED PROTECTIVE CLAUSES\n\nFIRST. Compliance. The parties shall comply with applicable Mexican law, including civil, commercial, tax, labor, social security, personal data protection, anti-corruption and anti-money laundering provisions, to the extent applicable to the transaction.\n\nSECOND. Independent parties. Nothing in this agreement creates a partnership, joint venture, employment relationship, general agency or representation other than what is expressly agreed in writing.\n\nTHIRD. Corporate authority. Each party represents that its existence, authority, powers of attorney, internal approvals and capacity to execute this agreement are valid and sufficient, and shall notify any relevant revocation or limitation.\n\nFOURTH. Information and documents. Each party is responsible for the truthfulness, completeness, lawfulness and timely delivery of all information, documents, instructions, access credentials and materials it provides.\n\nFIFTH. Confidentiality. Technical, commercial, financial, tax, operational, legal, strategic, methodological and business information shall be treated as confidential and used solely to perform this agreement.\n\nSIXTH. Personal data. If a party accesses personal data controlled by the other party, it shall process such data only under lawful documented instructions and apply reasonable administrative, technical and physical safeguards.\n\nSEVENTH. Liability and indemnity. The breaching party shall hold the non-breaching party harmless from claims, fines, damages, costs, expenses and liabilities directly arising from its breach, willful misconduct, gross negligence or acts of its personnel, suppliers or subcontractors.\n\nEIGHTH. Anti-corruption. No party shall offer, promise, request, receive or deliver any undue benefit to obtain an advantage related to this agreement. Breach of this clause shall be cause for immediate termination.\n\nNINTH. Survival. Termination shall not release pending payment, confidentiality, personal data, intellectual property, indemnity, tax, governing law or dispute resolution obligations that by their nature should survive.\n\nTENTH. Mexican law. This agreement shall be interpreted under the applicable laws of Mexico, without prejudice to local formalities or mandatory rules that may apply due to domicile, real estate, subject matter or transaction type.`;
 
-// La firma se prepara como paquete externo: LexContratos no envía correos por API en esta fase.
-const SIGNATURE_FEATURE_ENABLED = true;
-
 const editor = document.querySelector("#contract-editor");
 const editorTitle = document.querySelector("#editor-title");
 const selectedCategory = document.querySelector("#selected-category");
@@ -683,6 +680,8 @@ const adminUsersList = document.querySelector("#admin-users-list");
 const adminBackupStatus = document.querySelector("#admin-backup-status");
 const downloadAdminBackupButton = document.querySelector("#download-admin-backup");
 const reviewFieldsButton = document.querySelector("#review-fields");
+const partyDocumentsButton = document.querySelector("#party-documents");
+const partyDocumentsDialog = document.querySelector("#party-documents-dialog");
 const archiveDrawer = document.querySelector("#archive-drawer");
 const assistantPane = document.querySelector("#assistant-pane");
 const saveLocationDialog = document.querySelector("#save-location-dialog");
@@ -694,12 +693,6 @@ const saveLocationContextMenu = document.querySelector("#save-location-context-m
 const saveLocationCancel = document.querySelector("#save-location-cancel");
 const saveLocationConfirm = document.querySelector("#save-location-confirm");
 const saveLocationExpandButton = document.querySelector("#save-location-expand");
-const signatureDialog = document.querySelector("#signature-dialog");
-const signatureForm = document.querySelector("#signature-form");
-const signerList = document.querySelector("#signer-list");
-const signatureDialogCopy = document.querySelector("#signature-dialog-copy");
-const signatureStatusLabel = document.querySelector("#signature-status-label");
-const signatureSubmitButton = document.querySelector("#signature-submit");
 const criticalReviewDialog = document.querySelector("#critical-review-dialog");
 const criticalReviewOutput = document.querySelector("#critical-review-output");
 const applyCriticalReviewButton = document.querySelector("#apply-critical-review");
@@ -719,6 +712,7 @@ let activeCategory = "Todos";
 let activeLanguage = "es";
 let partyDataStore = {};
 let sourceTextsBySide = { A: [], B: [] };
+let partyDocumentsStepVisited = false;
 const rootFolders = ["Mis Documentos", "Clientes", "Proveedores", "Empresas del Grupo", "Personales", "Documentos de las partes"];
 let folders = loadFolders();
 let activeFolder = folders[0] || "Mis Documentos";
@@ -751,6 +745,20 @@ let restoringDraft = false;
 let draftRestoredForUser = "";
 let fieldsReviewed = false;
 let criticalReviewDone = false;
+
+const backendRoleLabels = {
+  user: "Usuario",
+  admin: "Administradora",
+  superadmin: "Super administradora"
+};
+
+function isAdminBackendRole(role) {
+  return role === "admin" || role === "superadmin";
+}
+
+function accountRoleLabel(role) {
+  return backendRoleLabels[role] || "Usuario";
+}
 
 const demoAccount = {
   email: "usuario.demo@lexcontratos.local",
@@ -842,11 +850,12 @@ function loadMasterTemplates() {
   const keys = new Set([...Object.keys(availableTemplates), ...Object.keys(combined)]);
 
   return Object.fromEntries(
-    Array.from(keys).map((key) => {
+    Array.from(keys).flatMap((key) => {
       const template = availableTemplates[key] || combined[key] || {};
       const merged = { ...template, ...(combined[key] || {}), master: true };
+      if (merged.hidden) return [];
       const prepared = prepareTemplateFields(merged.body || "", merged.customFields || []);
-      return [
+      return [[
         key,
         {
           ...merged,
@@ -855,7 +864,7 @@ function loadMasterTemplates() {
           fields: prepared.fields.length || merged.fields || 0,
           master: true
         }
-      ];
+      ]];
     })
   );
 }
@@ -863,9 +872,46 @@ function loadMasterTemplates() {
 function saveMasterTemplates() {
   const masters = {};
   Object.entries(templates).forEach(([key, template]) => {
-    if (template.master) masters[key] = template;
+    if (template.master && !template.shared) masters[key] = template;
   });
   localStorage.setItem(userStorageKey("master_templates"), JSON.stringify(masters));
+}
+
+function saveSharedMasterTemplate(templateKey, template, action = "save") {
+  const shared = readJson("lexcontratos_shared_master_templates", {});
+  shared[templateKey] = {
+    ...template,
+    master: true,
+    shared: true,
+    catalogPath: templateCatalogPath(template),
+    updatedAt: new Date().toISOString()
+  };
+  localStorage.setItem("lexcontratos_shared_master_templates", JSON.stringify(shared));
+  const backend = productionBackend();
+  if (backend?.updateSharedTemplate) {
+    backend
+      .updateSharedTemplate({ action, key: templateKey, template: shared[templateKey] })
+      .then((data) => {
+        if (data?.templates) localStorage.setItem("lexcontratos_shared_master_templates", JSON.stringify(data.templates));
+      })
+      .catch((error) => reportBackendError("actualizar catálogo general", error));
+  }
+}
+
+async function syncSharedTemplatesFromBackend() {
+  const backend = productionBackend();
+  if (!backend?.listSharedTemplates) return;
+  try {
+    const data = await backend.listSharedTemplates();
+    if (data?.templates) {
+      localStorage.setItem("lexcontratos_shared_master_templates", JSON.stringify(data.templates));
+      templates = loadMasterTemplates();
+      templateCatalogFolders = loadTemplateCatalogFolders();
+      renderTemplates();
+    }
+  } catch (error) {
+    reportBackendError("leer catálogo general", error);
+  }
 }
 
 function loadFolders() {
@@ -954,6 +1000,7 @@ function saveActiveDraft(reason = "Borrador en curso") {
     body: editor.value,
     partyData: getPartyData(),
     sourceTextsBySide: serializableSourceFiles(),
+    partyDocumentsStepVisited,
     draftId: ensureDraftMatterId(),
     matter: matterSnapshot(reason, false),
     history: matterHistoryEvents.slice(),
@@ -1002,6 +1049,7 @@ function restoreActiveDraft({ silent = false } = {}) {
   editor.readOnly = false;
   setPartyData(draft.partyData || {});
   sourceTextsBySide = draft.sourceTextsBySide || { A: [], B: [] };
+  partyDocumentsStepVisited = Boolean(draft.partyDocumentsStepVisited || Object.values(sourceTextsBySide).some((files) => files?.length));
   activeMatterFolio = draft.matter?.folio || null;
   activeMatterDraftId = draft.draftId || draft.matter?.draftId || "";
   matterHistoryEvents = draft.history || draft.matter?.history || [];
@@ -1100,9 +1148,16 @@ function renderLetterheadLogos() {
     selectedLetterheadLogoId = "";
     saveSelectedLetterheadLogoId();
   }
+  const catalog = letterheadLogos.filter((logo) => logo.source === "catalog");
+  const personal = letterheadLogos.filter((logo) => logo.source !== "catalog");
+  const optionMarkup = (logo) => {
+    const detail = logo.companyName && logo.companyName !== logo.name ? ` · ${logo.companyName}` : "";
+    return `<option value="${escapeHtml(logo.id)}">${escapeHtml(`${logo.name}${detail}`)}</option>`;
+  };
   letterheadLogoSelect.innerHTML = `
     <option value="">Sin membrete</option>
-    ${letterheadLogos.map((logo) => `<option value="${escapeHtml(logo.id)}">${escapeHtml(logo.name)}</option>`).join("")}
+    ${catalog.length ? `<optgroup label="Membretes precargados">${catalog.map(optionMarkup).join("")}</optgroup>` : ""}
+    ${personal.length ? `<optgroup label="Membretes propios">${personal.map(optionMarkup).join("")}</optgroup>` : ""}
   `;
   letterheadLogoSelect.value = selectedLetterheadLogoId || "";
   if (addLetterheadLogoButton) addLetterheadLogoButton.hidden = letterheadCatalogLocked();
@@ -1134,9 +1189,20 @@ function addLetterheadLogo(file) {
   }
   const reader = new FileReader();
   reader.onload = () => {
+    const defaultName = cleanLogoName(file);
+    const companyName = window.prompt("Empresa o razón social para este membrete", defaultName);
+    if (!companyName || !companyName.trim()) {
+      showToast("Membrete cancelado. No se guardó sin nombre de empresa.");
+      return;
+    }
+    const footer = window.prompt("Domicilio, sitio web o pie de página que debe aparecer en el documento. Puedes separar líneas con punto y coma.", "");
+    const addressLines = normalizeLetterheadLines(String(footer || "").split(";"));
     const logo = {
       id: `logo-${Date.now()}`,
-      name: cleanLogoName(file),
+      name: companyName.trim(),
+      companyName: companyName.trim(),
+      addressLines,
+      footerLines: addressLines,
       dataUrl: String(reader.result || ""),
       type: file.type,
       source: "personal",
@@ -1218,7 +1284,13 @@ function saveMasterInsights() {
 function renderUserSession() {
   const account = loadUsers()[activeUser];
   currentUserLabel.textContent = account?.name || activeUser;
-  if (licensePill) licensePill.textContent = account?.role === "Administrador" ? "Administrador" : account?.licenseStatus === "active" ? "Licencia activa" : "Licencia pendiente";
+  if (licensePill) {
+    licensePill.textContent = isLocalAdminAccount(account)
+      ? account.role
+      : account?.licenseStatus === "active"
+        ? "Licencia activa"
+        : "Licencia pendiente";
+  }
 }
 
 function renderMasterInsights() {
@@ -1241,6 +1313,7 @@ function clearWorkspaceState() {
   isWorkingCopy = false;
   partyDataStore = {};
   sourceTextsBySide = { A: [], B: [] };
+  partyDocumentsStepVisited = false;
   activeMatterFolio = null;
   activeMatterDraftId = "";
   matterHistoryEvents = [];
@@ -1316,6 +1389,7 @@ function switchActiveUser(user, announce = true) {
   activeSourceMaster = null;
   isWorkingCopy = false;
   sourceTextsBySide = { A: [], B: [] };
+  partyDocumentsStepVisited = false;
   activeMatterFolio = null;
   activeMatterDraftId = "";
   folders = loadFolders();
@@ -1361,20 +1435,29 @@ function currentUserInitials() {
   return initialsFromName(account?.name || label || activeUser);
 }
 
+function isLocalAdminAccount(account = currentAccount()) {
+  return ["Administrador", "Administradora", "Super administradora", "Superadministradora"].includes(account?.role);
+}
+
+function isCurrentSuperAdmin() {
+  return currentAccount()?.role === "Super administradora" || currentAccount()?.role === "Superadministradora";
+}
+
 function hasActiveAccess(account) {
-  return Boolean(account && account.accountStatus === "active" && (account.licenseStatus === "active" || account.role === "Administrador"));
+  return Boolean(account && account.accountStatus === "active" && (account.licenseStatus === "active" || isLocalAdminAccount(account)));
 }
 
 function syncBackendAccount(access) {
   if (!access?.user?.email) return;
+  const backendRole = access.profile?.role || "user";
   const users = loadUsers();
   users[access.user.email] = {
     email: access.user.email,
     password: "",
     name: access.profile?.full_name || access.user.email,
-    role: access.profile?.role === "admin" ? "Administrador" : "Usuario",
+    role: accountRoleLabel(backendRole),
     accountStatus: access.profile?.account_status || "active",
-    licenseStatus: ["active", "trial"].includes(access.status) || access.profile?.role === "admin" ? "active" : access.status || "inactive",
+    licenseStatus: ["active", "trial"].includes(access.status) || isAdminBackendRole(backendRole) ? "active" : access.status || "inactive",
     licenseEndsAt: access.license?.ends_at || ""
   };
   saveUsers(users);
@@ -1498,10 +1581,11 @@ async function renderAccessState() {
       appShell.classList.remove("is-hidden");
       syncBackendAccount(access);
       switchActiveUser(access.user.email, false);
-      const isAdmin = access.profile?.role === "admin";
+      const isAdmin = isAdminBackendRole(access.profile?.role);
       setAdminAccessVisible(isAdmin);
-      licensePill.textContent = isAdmin ? "Administrador" : "Licencia activa";
+      licensePill.textContent = isAdmin ? accountRoleLabel(access.profile?.role) : "Licencia activa";
       currentUserLabel.textContent = access.profile?.full_name || access.user.email;
+      syncSharedTemplatesFromBackend();
       return;
     } catch (error) {
       reportBackendError("validar el acceso", error);
@@ -1535,8 +1619,8 @@ async function renderAccessState() {
   applyRouteShell("app");
   authShell.classList.add("is-hidden");
   appShell.classList.remove("is-hidden");
-  setAdminAccessVisible(account.role === "Administrador" && Boolean(productionBackend()));
-  licensePill.textContent = account.role === "Administrador" ? "Administrador" : "Licencia activa";
+  setAdminAccessVisible(isLocalAdminAccount(account) && Boolean(productionBackend()));
+  licensePill.textContent = isLocalAdminAccount(account) ? account.role : "Licencia activa";
   currentUserLabel.textContent = account.name || account.email;
   switchActiveUser(account.email, false);
 }
@@ -1589,6 +1673,7 @@ function setAdminAccessVisible(isAdmin) {
 }
 
 function adminStatusText(user) {
+  if (user.role === "superadmin") return "Super administradora";
   if (user.role === "admin") return "Administrador";
   if (user.account_status === "inactive") return "Suspendido";
   if (user.license_status === "active" || user.license_status === "trial") return "Licencia activa";
@@ -1596,9 +1681,10 @@ function adminStatusText(user) {
 }
 
 function renderAdminUsers(users = []) {
-  const pending = users.filter((user) => !["active", "trial"].includes(user.license_status) && user.role !== "admin").length;
-  const active = users.filter((user) => ["active", "trial"].includes(user.license_status) || user.role === "admin").length;
+  const pending = users.filter((user) => !["active", "trial"].includes(user.license_status) && !isAdminBackendRole(user.role)).length;
+  const active = users.filter((user) => ["active", "trial"].includes(user.license_status) || isAdminBackendRole(user.role)).length;
   const currentEmail = String(currentAccount()?.email || activeUser || "").toLowerCase();
+  const currentIsSuperAdmin = isCurrentSuperAdmin();
   if (adminUsersSummary) {
     adminUsersSummary.textContent = `${users.length} usuario${users.length === 1 ? "" : "s"} registrado${users.length === 1 ? "" : "s"} · ${pending} pendiente${pending === 1 ? "" : "s"} · ${active} activo${active === 1 ? "" : "s"}`;
   }
@@ -1611,7 +1697,8 @@ function renderAdminUsers(users = []) {
           const lastSignIn = user.last_sign_in_at ? new Date(user.last_sign_in_at).toLocaleDateString("es-MX") : "Sin ingreso";
           const payload = `data-user-id="${escapeHtml(user.id)}" data-email="${escapeHtml(user.email)}" data-full-name="${escapeHtml(user.full_name || user.email)}" data-current-role="${escapeHtml(user.role || "user")}"`;
           const isCurrentUser = currentEmail && String(user.email || "").toLowerCase() === currentEmail;
-          const hasAccess = ["active", "trial"].includes(user.license_status) || user.role === "admin";
+          const hasAccess = ["active", "trial"].includes(user.license_status) || isAdminBackendRole(user.role);
+          const isSuperAdminTarget = user.role === "superadmin";
           return `
             <article class="admin-user-card">
               <div>
@@ -1627,9 +1714,11 @@ function renderAdminUsers(users = []) {
               <div class="admin-user-actions">
                 <button class="secondary-action mini-action" type="button" data-admin-action="activate" ${payload}>Activar licencia</button>
                 <button class="secondary-action mini-action" type="button" data-admin-action="notify_access" ${payload} ${hasAccess ? "" : "disabled title=\"Activa primero la licencia\""}>Reenviar correo de acceso</button>
-                <button class="secondary-action mini-action" type="button" data-admin-action="suspend" ${payload}>Suspender</button>
+                <button class="secondary-action mini-action" type="button" data-admin-action="suspend" ${payload} ${isSuperAdminTarget && !currentIsSuperAdmin ? "disabled title=\"Solo super administración puede suspender otra super administradora\"" : ""}>Suspender</button>
                 <button class="secondary-action mini-action" type="button" data-admin-action="make_admin" ${payload}>Hacer admin</button>
-                <button class="secondary-action mini-action danger-action" type="button" data-admin-action="delete_user" ${payload} ${isCurrentUser ? "disabled title=\"No puedes eliminar tu propia cuenta desde aquí\"" : ""}>Eliminar</button>
+                ${currentIsSuperAdmin ? `<button class="secondary-action mini-action" type="button" data-admin-action="make_superadmin" ${payload}>Hacer superadmin</button>` : ""}
+                ${currentIsSuperAdmin ? `<button class="secondary-action mini-action" type="button" data-admin-action="make_user" ${payload} ${isCurrentUser ? "disabled title=\"No puedes quitarte permisos desde aquí\"" : ""}>Hacer usuario</button>` : ""}
+                <button class="secondary-action mini-action danger-action" type="button" data-admin-action="delete_user" ${payload} ${isCurrentUser || (isSuperAdminTarget && !currentIsSuperAdmin) ? "disabled title=\"No puedes eliminar esta cuenta desde aquí\"" : ""}>Eliminar</button>
               </div>
             </article>
           `;
@@ -1713,11 +1802,15 @@ async function runAdminUserAction(button) {
     activate: "activar la licencia de",
     suspend: "suspender el acceso de",
     make_admin: "hacer administrador a",
+    make_superadmin: "hacer superadministradora a",
+    make_user: "cambiar a usuario a",
     delete_user: "eliminar a",
     notify_access: "reenviar el correo de acceso a"
   };
   if (action === "suspend" && !window.confirm(`¿Seguro que quieres suspender el acceso de ${payload.email}?`)) return;
   if (action === "make_admin" && !window.confirm(`¿Seguro que quieres hacer administrador a ${payload.email}?`)) return;
+  if (action === "make_superadmin" && !window.confirm(`¿Seguro que quieres dar permisos de super administración a ${payload.email}? Tendrá control total de usuarios y configuración.`)) return;
+  if (action === "make_user" && !window.confirm(`¿Seguro que quieres dejar a ${payload.email} como usuario estándar?`)) return;
   if (action === "delete_user") {
     const confirmation = window.prompt(`Eliminar a ${payload.email} borrará su cuenta, licencia y datos asociados.\n\nPara confirmar, escribe ELIMINAR:`);
     if (confirmation !== "ELIMINAR") return;
@@ -1760,18 +1853,16 @@ function updateWorkflowStepState() {
   const fillButton = document.querySelector("#fill-contract");
   const criticalButton = document.querySelector("#critical-review");
   const exportButton = document.querySelector("#export-word");
-  const signatureButton = document.querySelector("#send-signature");
+  const pdfButton = document.querySelector("#export-pdf-signature");
   const missingCount = fieldsReviewed ? missingFieldsForActiveTemplate().length : 0;
   const dataComplete = fieldsReviewed && missingCount === 0;
 
   setWorkflowButtonState(reviewFieldsButton, fieldsReviewed ? "step-done" : "step-current");
-  setWorkflowButtonState(fillButton, !fieldsReviewed ? "step-locked" : dataComplete ? "step-done" : "step-current");
+  setWorkflowButtonState(partyDocumentsButton, !fieldsReviewed ? "step-locked" : dataComplete || partyDocumentsStepVisited ? "step-done" : "step-current");
+  setWorkflowButtonState(fillButton, !fieldsReviewed || (!partyDocumentsStepVisited && !dataComplete) ? "step-locked" : dataComplete ? "step-done" : "step-current");
   setWorkflowButtonState(criticalButton, !dataComplete ? "step-locked" : criticalReviewDone ? "step-done" : "step-current");
   setWorkflowButtonState(exportButton, criticalReviewDone ? "step-ready" : "");
-  if (signatureButton) {
-    signatureButton.classList.toggle("is-hidden", !SIGNATURE_FEATURE_ENABLED);
-    setWorkflowButtonState(signatureButton, SIGNATURE_FEATURE_ENABLED && criticalReviewDone ? "step-ready" : "");
-  }
+  setWorkflowButtonState(pdfButton, criticalReviewDone ? "step-ready" : "");
 }
 
 function productionBackend() {
@@ -2183,10 +2274,18 @@ function documentRoleHint(role) {
     : "Proveedor, prestador, vendedor o quien entrega y cobra.";
 }
 
+function domicileFieldForRole(role) {
+  return roleUploadPriority(role) === 0 ? "domicilioCliente" : "domicilioPrestador";
+}
+
+function domicileFieldForSide(side) {
+  const role = getRoles().find((item) => item.side === side);
+  return domicileFieldForRole(role || { side });
+}
+
 function fieldsForRole(role) {
   const side = role.side;
-  const isA = side === "A";
-  const domicileField = isA ? "domicilioPrestador" : "domicilioCliente";
+  const domicileField = domicileFieldForRole(role);
   const fields = [
     [`parte${side}`, `Razón social o nombre de ${role.label}`],
     [`tipo${side}`, `Tipo societario de ${role.label}`],
@@ -2346,6 +2445,32 @@ function promptTemplateCatalogPath(defaultPath = "Formatos generales") {
   return ensureTemplateCatalogFolder(path);
 }
 
+function isCatalogBaseTemplate(templateKey) {
+  return Boolean(baseTemplates[templateKey] || extendedTemplates[templateKey] || (window.lexImportedTemplates || {})[templateKey]);
+}
+
+function canManageSharedCatalog() {
+  return isLocalAdminAccount();
+}
+
+function canManageTemplateCatalog(templateKey) {
+  const template = templates[templateKey];
+  if (!template?.master) return false;
+  return Boolean(template.personal || template.shared || !isCatalogBaseTemplate(templateKey) || canManageSharedCatalog());
+}
+
+function persistManagedTemplate(templateKey, action = "save") {
+  const template = templates[templateKey];
+  if (!template) return;
+  if (canManageSharedCatalog() && (template.shared || isCatalogBaseTemplate(templateKey))) {
+    template.shared = true;
+    template.personal = false;
+    saveSharedMasterTemplate(templateKey, template, action);
+    return;
+  }
+  saveMasterTemplates();
+}
+
 function renderTemplateFolderFilter() {
   if (!templateFolderFilter) return;
   templateCatalogFolders = loadTemplateCatalogFolders();
@@ -2370,11 +2495,15 @@ function createTemplateCatalogFolder() {
 function renameMasterTemplate(templateKey) {
   const template = templates[templateKey];
   if (!template?.master) return;
+  if (!canManageTemplateCatalog(templateKey)) {
+    showToast("Solo una administradora puede renombrar formatos del catálogo general.");
+    return;
+  }
   const name = window.prompt("Nuevo nombre del formato", template.title || "Formato");
   if (!name || !name.trim()) return;
   template.title = name.trim();
   template.personal = template.personal || !baseTemplates[templateKey];
-  saveMasterTemplates();
+  persistManagedTemplate(templateKey);
   renderTemplates();
   showToast("Nombre del formato actualizado en tu catálogo.");
 }
@@ -2382,15 +2511,40 @@ function renameMasterTemplate(templateKey) {
 function moveMasterTemplate(templateKey) {
   const template = templates[templateKey];
   if (!template?.master) return;
+  if (!canManageTemplateCatalog(templateKey)) {
+    showToast("Solo una administradora puede mover formatos del catálogo general.");
+    return;
+  }
   const path = promptTemplateCatalogPath(templateCatalogPath(template));
   if (!path) return;
   template.catalogPath = path;
   template.category = path;
   template.personal = template.personal || !baseTemplates[templateKey];
-  saveMasterTemplates();
+  persistManagedTemplate(templateKey);
   activeTemplateCatalogFolder = path;
   renderTemplates();
   showToast(`Formato movido a ${path}.`);
+}
+
+function deleteMasterTemplate(templateKey) {
+  const template = templates[templateKey];
+  if (!template?.master) return;
+  if (!canManageTemplateCatalog(templateKey)) {
+    showToast("Solo una administradora puede quitar formatos del catálogo general.");
+    return;
+  }
+  const confirmed = window.confirm(`¿Seguro que quieres quitar este formato del catálogo?\n\n${template.title}\n\nNo se borran contratos ya guardados con base en este formato.`);
+  if (!confirmed) return;
+  if (canManageSharedCatalog() && isCatalogBaseTemplate(templateKey)) {
+    templates[templateKey] = { ...template, hidden: true, shared: true };
+    saveSharedMasterTemplate(templateKey, templates[templateKey], "hide");
+  } else {
+    delete templates[templateKey];
+    saveMasterTemplates();
+  }
+  if (activeTemplate === templateKey) clearWorkspaceState();
+  renderTemplates();
+  showToast("Formato quitado del catálogo.");
 }
 
 function renderTemplates() {
@@ -2405,20 +2559,33 @@ function renderTemplates() {
   });
 
   templateGrid.innerHTML = filtered
-    .map(([key, template]) => `
+    .map(([key, template]) => {
+      const canManage = canManageTemplateCatalog(key);
+      const catalogLabel = template.validatedLabel
+        ? `Formato validado · ${escapeHtml(template.validatedLabel)}`
+        : template.shared
+          ? "Catálogo general editable"
+          : template.personal
+            ? "Documento base propio"
+            : canManageSharedCatalog()
+              ? "Formato del catálogo general"
+              : "Formato base del catálogo";
+      return `
       <article class="template-card ${key === activeTemplate ? "selected" : ""}" data-template="${key}">
         <h2>${template.title}</h2>
         <p>${templateCatalogPath(template)} · ${template.fields} campos</p>
         <footer>
-          <span>${template.validatedLabel ? `Formato validado · ${escapeHtml(template.validatedLabel)}` : template.personal ? "Documento base propio" : "Formato base protegido"}</span>
+          <span>${catalogLabel}</span>
           <div class="template-card-actions">
             <button class="ghost-button use-template" type="button" data-template-action="use">Usar</button>
-            <button class="ghost-button" type="button" data-template-action="rename">Renombrar</button>
-            <button class="ghost-button" type="button" data-template-action="move">Mover</button>
+            ${canManage ? `<button class="ghost-button" type="button" data-template-action="rename">Renombrar</button>` : ""}
+            ${canManage ? `<button class="ghost-button" type="button" data-template-action="move">Mover</button>` : ""}
+            ${canManage ? `<button class="ghost-button danger-action" type="button" data-template-action="delete">Quitar</button>` : ""}
           </div>
         </footer>
       </article>
-    `)
+    `;
+    })
     .join("");
 
   templateCount.textContent = `${Object.values(templates).filter((template) => template.master).length} formatos`;
@@ -2674,6 +2841,7 @@ function loadTemplate(key) {
   setFieldsReviewedState(false);
   autosaveStatus.classList.remove("autosave-highlight");
   sourceTextsBySide = { A: [], B: [] };
+  partyDocumentsStepVisited = false;
   activeMatterFolio = null;
   activeMatterDraftId = "";
   matterHistoryEvents = [];
@@ -3302,9 +3470,7 @@ function formattedContractHtml(text) {
   return output.join("");
 }
 
-function exportWordDocument() {
-  const title = cleanWorkingTitle(editorTitle.textContent);
-  const folio = ensureMatterFolio();
+function confirmExportReadiness(actionLabel) {
   const missing = missingFieldsForActiveTemplate();
   if (missing.length) {
     const list = missing.slice(0, 12).map(([, label]) => `- ${label}`).join("\n");
@@ -3312,13 +3478,20 @@ function exportWordDocument() {
     const proceed = window.confirm(`Antes de exportar faltan estos datos generales:\n\n${list}${extra}\n\n¿Quieres exportar de todos modos?`);
     if (!proceed) {
       showToast("Exportación detenida para completar datos de partes.");
-      return;
+      return false;
     }
   }
-  if (!confirmCriticalFindingsBefore("exportar a Word")) {
+  if (!confirmCriticalFindingsBefore(actionLabel)) {
     showToast("Exportación detenida para revisar observaciones.");
-    return;
+    return false;
   }
+  return true;
+}
+
+function exportWordDocument() {
+  if (!confirmExportReadiness("exportar a Word")) return;
+  const title = cleanWorkingTitle(editorTitle.textContent);
+  const folio = ensureMatterFolio();
   readFormatControls();
   const documentBody = formattedContractHtml(editor.value);
   const footerInitials = currentUserInitials();
@@ -3376,138 +3549,90 @@ function exportWordDocument() {
   showToast("Contrato exportado en formato compatible con Word.");
 }
 
-function signerRowTemplate(index, values = {}) {
-  return `
-    <div class="signer-row" data-signer-row>
-      <label>Nombre<input name="signerName" value="${escapeHtml(values.name || "")}" required /></label>
-      <label>Correo<input name="signerEmail" type="email" value="${escapeHtml(values.email || "")}" required /></label>
-      <label>Rol<input name="signerRole" value="${escapeHtml(values.role || "")}" required /></label>
-      <label>Orden<input name="signerOrder" type="number" min="1" value="${escapeHtml(values.order || index + 1)}" /></label>
-      <button class="icon-button remove-signer" type="button" title="Quitar firmante" aria-label="Quitar firmante">×</button>
-    </div>
-  `;
+function printContractHtml(printTitle) {
+  const title = cleanWorkingTitle(printTitle || editorTitle.textContent);
+  const documentBody = formattedContractHtml(editor.value) || `<h1>${escapeHtml(title)}</h1>`;
+  const logo = selectedLetterheadLogo();
+  const footerLines = letterheadFooterLines();
+  const headerHtml = logo?.dataUrl
+    ? `<div class="print-letterhead"><img src="${logo.dataUrl}" alt="${escapeHtml(logo.name)}" /></div>`
+    : "";
+  const footerHtml = footerLines.length || currentUserInitials()
+    ? `<footer class="print-footer">${footerLines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}<p class="footer-initials">${escapeHtml(currentUserInitials())}</p></footer>`
+    : "";
+
+  return `<!doctype html>
+  <html>
+    <head>
+      <meta charset="utf-8" />
+      <title>${escapeHtml(title)}</title>
+      <style>
+        @page { margin: ${legalFormat.margin}; }
+        * { box-sizing: border-box; }
+        body {
+          font-family: "${legalFormat.font}", ${["Georgia", "Times New Roman"].includes(legalFormat.font) ? "serif" : "sans-serif"};
+          color: #111827;
+          line-height: ${legalFormat.lineHeight};
+          margin: 0;
+          font-size: ${legalFormat.size}pt;
+          background: white;
+        }
+        .print-letterhead { margin: 0 0 22pt; text-align: left; }
+        .print-letterhead img { max-width: 180pt; max-height: 52pt; width: auto; height: auto; }
+        h1 { font-size: ${Number(legalFormat.size) + 2}pt; text-align: center; font-weight: 700; margin: 0 0 24pt; text-transform: uppercase; }
+        h2 { font-size: ${legalFormat.size}pt; text-align: justify; font-weight: 700; margin: 18pt 0 10pt; text-transform: uppercase; }
+        h2.annex-title { text-align: center; margin-top: 0; page-break-before: always; break-before: page; }
+        p { margin: 0 0 10pt; text-align: justify; }
+        a.email-link { color: #1155cc; text-decoration: underline; }
+        ol.legal-list, ul.legal-list { margin: 0 0 10pt 24pt; padding-left: 18pt; text-align: justify; }
+        ol.legal-list li, ul.legal-list li { margin: 0 0 8pt; padding-left: 4pt; }
+        .signature-table { width: 100%; border-collapse: collapse; border: 0; table-layout: fixed; margin: 34pt 0 18pt; page-break-inside: avoid; }
+        .signature-table td { width: 50%; border: 0; padding: 0 22pt 0; text-align: center; vertical-align: top; }
+        .signature-table p { margin: 0 0 5pt; text-align: center; line-height: 1.25; }
+        .signature-role { font-weight: 700; text-transform: uppercase; min-height: 16pt; }
+        .signature-space { height: 46pt; line-height: 46pt; }
+        .signature-line { border-top: 1pt solid #111827; height: 1pt; line-height: 1pt; margin: 0 0 10pt; }
+        .signature-entity, .signature-representative { text-transform: uppercase; }
+        .signature-label { color: #111827; }
+        .signature-empty { visibility: hidden; }
+        .print-footer { margin-top: 24pt; padding-top: 7pt; border-top: 0.5pt solid #d1d5db; color: #374151; font-size: 7.5pt; line-height: 1.2; page-break-inside: avoid; }
+        .print-footer p { margin: 0; text-align: center; }
+        .print-footer .footer-initials { text-align: right; margin-top: 3pt; color: #6b7280; }
+        strong { font-weight: 700; }
+      </style>
+    </head>
+    <body>
+      ${headerHtml}
+      <main>${documentBody}</main>
+      ${footerHtml}
+      <script>
+        window.addEventListener("load", () => {
+          setTimeout(() => {
+            window.focus();
+            window.print();
+          }, 250);
+        });
+      </script>
+    </body>
+  </html>`;
 }
 
-function defaultSigners() {
-  const values = getPartyData();
-  return getRoles().map((role, index) => ({
-    name: representativeForSide(role.side, values),
-    email: signatureEmailForSide(role.side, values),
-    role: `Representante legal de ${role.label}`,
-    order: index + 1
-  }));
-}
-
-function renderSignatureRows(signers = defaultSigners()) {
-  signerList.innerHTML = signers.map((signer, index) => signerRowTemplate(index, signer)).join("");
-}
-
-function hydrateMissingSignerRowsFromDefaults() {
-  const defaults = defaultSigners();
-  Array.from(signerList.querySelectorAll("[data-signer-row]")).forEach((row, index) => {
-    const fallback = defaults[index] || {};
-    const nameInput = row.querySelector('[name="signerName"]');
-    const emailInput = row.querySelector('[name="signerEmail"]');
-    const roleInput = row.querySelector('[name="signerRole"]');
-    if (nameInput && !nameInput.value.trim() && fallback.name) nameInput.value = fallback.name;
-    if (emailInput && !emailInput.value.trim() && fallback.email) emailInput.value = fallback.email;
-    if (roleInput && !roleInput.value.trim() && fallback.role) roleInput.value = fallback.role;
-  });
-}
-
-function getSignatureRequestSigners() {
-  return Array.from(signerList.querySelectorAll("[data-signer-row]")).map((row, index) => ({
-    name: row.querySelector('[name="signerName"]').value.trim(),
-    email: row.querySelector('[name="signerEmail"]').value.trim(),
-    role: row.querySelector('[name="signerRole"]').value.trim(),
-    order: Number(row.querySelector('[name="signerOrder"]').value || index + 1)
-  }));
-}
-
-function isValidEmailAddress(value) {
-  return /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/i.test(String(value || "").trim());
-}
-
-function validateSignatureSigners(signers) {
-  const missingRows = [];
-  const invalidEmails = [];
-  signers.forEach((signer, index) => {
-    const row = index + 1;
-    if (!signer.name || !signer.email || !signer.role) missingRows.push(row);
-    if (signer.email && !isValidEmailAddress(signer.email)) invalidEmails.push(row);
-  });
-  if (missingRows.length) {
-    return `Para preparar el paquete de firma necesitas completar nombre, correo y rol del firmante ${missingRows.join(", ")}.`;
-  }
-  if (invalidEmails.length) {
-    return `Revisa el correo del firmante ${invalidEmails.join(", ")}; se necesita un correo válido para circular el documento a firma.`;
-  }
-  return "";
-}
-
-async function refreshSignatureStatus() {
-  if (!signatureStatusLabel || !signatureSubmitButton) return;
-  signatureStatusLabel.textContent = "Firma externa: paquete listo para guardar";
-  signatureSubmitButton.textContent = "Guardar paquete de firma";
-  if (signatureDialogCopy) {
-    signatureDialogCopy.textContent = "Captura los firmantes y su orden. LexContratos guardará el paquete en el expediente; después exporta el contrato y envíalo desde tu cuenta de Dropbox Sign, MiFiel u otro proveedor externo.";
-  }
-}
-
-function prepareSignaturePacket() {
-  if (!SIGNATURE_FEATURE_ENABLED) {
-    showToast("Firma electrónica desactivada por ahora. Exporta el Word y envíalo por la vía de firma que decidas.");
-    return;
-  }
-  if (!ensureEditableWorkspace("preparar firma")) return;
-  renderSignatureRows();
-  signatureDialog.showModal();
-  refreshSignatureStatus();
-}
-
-async function submitSignaturePacket(event) {
-  event.preventDefault();
+function exportPdfForSignature() {
+  if (!confirmExportReadiness("exportar PDF para firma")) return;
   const title = cleanWorkingTitle(editorTitle.textContent);
-  hydrateMissingSignerRowsFromDefaults();
-  const signers = getSignatureRequestSigners();
-  const signerValidationMessage = validateSignatureSigners(signers);
-  if (signerValidationMessage) {
-    showToast(signerValidationMessage);
-    return;
-  }
-  if (!confirmCriticalFindingsBefore("preparar paquete de firma")) {
-    showToast("Preparación detenida para revisar observaciones.");
-    return;
-  }
   ensureMatterFolio();
-  const status = "Paquete preparado para firma";
-  const signatureState = "external_ready";
-
-  addMatterEvent("Paquete preparado para firma externa");
-  const contract = {
-    id: Date.now().toString(),
-    title: `${previewMatterFolio()} · ${status} · ${title}`,
-    folder: activeFolder,
-    template: activeTemplate,
-    language: activeLanguage,
-    userInitials: currentUserInitials(),
-    letterheadLogoId: selectedLetterheadLogoId,
-    date: new Date().toLocaleString("es-MX"),
-    body: fillPlaceholders(editor.value),
-    status,
-    signatureProvider: "Firma externa",
-    signatureState,
-    signatureRequestId: "",
-    signatureDetailsUrl: "",
-    signers,
-    matter: matterSnapshot(status, true)
-  };
-  savedContracts.push(contract);
-  saveSavedContracts(contract);
-  renderSavedContracts();
+  readFormatControls();
+  const printWindow = window.open("", "_blank");
+  if (!printWindow) {
+    showToast("No se pudo abrir la ventana de PDF. Permite ventanas emergentes e intenta de nuevo.");
+    return;
+  }
+  printWindow.document.open();
+  printWindow.document.write(printContractHtml(title));
+  printWindow.document.close();
+  addMatterEvent("Versión exportada a PDF para firma");
   autoSaveVersion("manual");
-  signatureDialog.close();
-  showToast("Paquete de firma guardado. Exporta el contrato y envíalo desde tu cuenta externa de firma; después sube el firmado al expediente.");
+  showToast("PDF listo: usa Guardar como PDF en la ventana de impresión y envíalo a firma externa.");
 }
 
 function comparisonDocumentsForCriticalReview() {
@@ -4088,10 +4213,12 @@ function clearGeneralData(event) {
     field.setAttribute("value", "");
   });
   sourceTextsBySide = { A: [], B: [] };
+  partyDocumentsStepVisited = false;
   renderDynamicFields();
   renderCustomFields();
   renderRoleDrops();
   renderRequirements();
+  updateWorkflowStepState();
   autosaveStatus.textContent = "Datos de partes borrados";
   autosaveStatus.classList.remove("autosave-highlight");
   saveActiveDraft("Datos de partes borrados");
@@ -5571,15 +5698,29 @@ function inferDataFromText(text, side) {
   const cleanText = text.replace(/\s+/g, " ");
   const updates = {};
   const rfcs = cleanText.match(/\b[A-Z&Ñ]{3,4}\d{6}[A-Z0-9]{3}\b/gi) || [];
-  const companies = cleanText.match(/[A-ZÁÉÍÓÚÑ][\wÁÉÍÓÚÑ&.,\s-]{3,90}S\.?\s*(?:A\.?|DE|C\.?V\.?|R\.?L\.?)[\wÁÉÍÓÚÑ&.,\s-]{0,45}/gi) || [];
-  const escrituras = cleanText.match(/(?:escritura|instrumento|p[oó]liza|acta)\s+(?:p[uú]blica\s+)?(?:n[uú]mero\s+)?[\w,.-]+/gi) || [];
+  const companyPatterns = [
+    /(?:raz[oó]n\s+social|denominaci[oó]n\s+social|nombre\s+de\s+la\s+sociedad)\s*[:\-]?\s*([A-ZÁÉÍÓÚÑ&.,\s-]{3,120}?(?:S\.?\s*A\.?\s*DE\s*C\.?\s*V\.?|S\.?\s*DE\s*R\.?\s*L\.?\s*DE\s*C\.?\s*V\.?|S\.?\s*A\.?\s*P\.?\s*I\.?\s*DE\s*C\.?\s*V\.?))/i,
+    /\b([A-ZÁÉÍÓÚÑ&][A-ZÁÉÍÓÚÑ&.,\s-]{3,110}?(?:S\.?\s*A\.?\s*DE\s*C\.?\s*V\.?|S\.?\s*DE\s*R\.?\s*L\.?\s*DE\s*C\.?\s*V\.?|S\.?\s*A\.?\s*P\.?\s*I\.?\s*DE\s*C\.?\s*V\.?))/i
+  ];
+  const instrumentMatch =
+    cleanText.match(/escritura\s+p[uú]blica\s+(?:n[uú]mero\s+)?[\w,.-]+/i) ||
+    cleanText.match(/p[oó]liza\s+(?:n[uú]mero\s+)?[\w,.-]+/i) ||
+    cleanText.match(/instrumento\s+(?:p[uú]blico\s+)?(?:n[uú]mero\s+)?[\w,.-]+/i) ||
+    cleanText.match(/acta\s+(?:n[uú]mero\s+)?[\w,.-]+/i);
+  const escrituras = instrumentMatch ? [instrumentMatch[0]] : [];
   const folios = cleanText.match(/folio\s+mercantil\s+(?:electrónico\s+)?[\w-]+/gi) || [];
   const fedatarios = cleanText.match(/(?:notari[oa]|corredor[ae]?)\s+p[uú]blic[oa]\s+(?:n[uú]mero\s+)?[\w\s,.#-]{3,70}/gi) || [];
-  const reps = cleanText.match(/(?:representad[ao]\s+por|representante\s+legal)\s+([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑ\s.]{6,70})/g) || [];
+  const representativePatterns = [
+    /(?:representad[ao]\s+por|representante\s+legal)\s*[:\-]?\s+([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑ\s.]{6,70}?)(?=,|\.|\s+con\s+facultades|\s+en\s+su\s+car[aá]cter|$)/i,
+    /(?:apoderad[ao]\s+legal)\s*[:\-]?\s+([A-ZÁÉÍÓÚÑ][A-Za-zÁÉÍÓÚÑ\s.]{6,70}?)(?=,|\.|$)/i
+  ];
   const dates = cleanText.match(/\b\d{1,2}\s+de\s+[a-záéíóúñ]+\s+de\s+\d{4}\b/gi) || [];
   const domicile = cleanText.match(/domicilio(?:\s+fiscal)?(?:\s+en)?\s+([A-ZÁÉÍÓÚÑ0-9][\wÁÉÍÓÚÑ\s.,#-]{12,120})/i);
 
-  if (companies[0]) updates[`parte${side}`] = companies[0].trim();
+  const company = companyPatterns.map((pattern) => cleanText.match(pattern)?.[1]).find(Boolean);
+  const representative = representativePatterns.map((pattern) => cleanText.match(pattern)?.[1]).find(Boolean);
+
+  if (company) updates[`parte${side}`] = company.trim().replace(/\s+/g, " ");
   if (rfcs[0]) updates[`rfc${side}`] = rfcs[0].toUpperCase();
   if (escrituras[0]) {
     updates[`escritura${side}`] = escrituras[0].trim();
@@ -5588,15 +5729,18 @@ function inferDataFromText(text, side) {
     else if (instrumentClean.includes("acta")) updates[`tipoInstrumentoConstitutivo${side}`] = "Acta";
     else if (instrumentClean.includes("escritura")) updates[`tipoInstrumentoConstitutivo${side}`] = "Escritura pública";
   }
-  if (folios[0]) updates[`folio${side}`] = folios[0].replace(/folio mercantil electrónico?/i, "").trim();
+  if (folios[0]) updates[`folio${side}`] = folios[0].replace(/folio\s+mercantil(?:\s+electr[oó]nico)?\s*/i, "").trim();
   if (fedatarios[0]) {
     updates[`notario${side}`] = fedatarios[0].trim();
-    updates[`tipoFedatarioPoder${side}`] = removeAccents(fedatarios[0]).toLowerCase().includes("corredor") ? "Corredor Público" : "Notario Público";
-    updates[`tipoInstrumentoPoder${side}`] = removeAccents(fedatarios[0]).toLowerCase().includes("corredor") ? "Póliza" : "Escritura pública";
+    const fedatarioType = removeAccents(fedatarios[0]).toLowerCase().includes("corredor") ? "Corredor Público" : "Notario Público";
+    const instrumentType = fedatarioType === "Corredor Público" ? "Póliza" : "Escritura pública";
+    updates[`tipoFedatarioConstitutivo${side}`] = fedatarioType;
+    updates[`tipoFedatarioPoder${side}`] = fedatarioType;
+    updates[`tipoInstrumentoPoder${side}`] = instrumentType;
   }
   if (dates[0]) updates[`fechaConstitucion${side}`] = dates[0].trim();
-  if (reps[0]) updates[`rep${side}`] = reps[0].replace(/representad[ao]\s+por|representante\s+legal/i, "").trim();
-  if (domicile) updates[side === "A" ? "domicilioPrestador" : "domicilioCliente"] = domicile[1].trim();
+  if (representative) updates[`rep${side}`] = representative.trim().replace(/\s+/g, " ");
+  if (domicile) updates[domicileFieldForSide(side)] = domicile[1].trim().replace(/\s+/g, " ");
 
   return updates;
 }
@@ -5791,6 +5935,7 @@ async function addFilesToRole(side, fileList) {
   }
 
   sourceTextsBySide[side] = [...current, ...entries];
+  partyDocumentsStepVisited = true;
   const role = getRoles().find((item) => item.side === side);
   const values = getPartyData();
   const supportFolder = supportFolderForRole(role, values);
@@ -5821,6 +5966,7 @@ async function addFilesToRole(side, fileList) {
   }
 
   renderRoleDrops();
+  updateWorkflowStepState();
   renderFolders();
   renderSavedContracts();
   renderMatterPanel();
@@ -5845,6 +5991,11 @@ templateGrid.addEventListener("click", async (event) => {
   if (action === "move") {
     event.stopPropagation();
     moveMasterTemplate(card.dataset.template);
+    return;
+  }
+  if (action === "delete") {
+    event.stopPropagation();
+    deleteMasterTemplate(card.dataset.template);
     return;
   }
   if (templatePicker.open) templatePicker.close();
@@ -5916,6 +6067,7 @@ templateNewFolderButton?.addEventListener("click", createTemplateCatalogFolder);
 
 openTemplatePicker.addEventListener("click", () => {
   templateSearch.value = "";
+  syncSharedTemplatesFromBackend();
   renderTemplates();
   templatePicker.showModal();
   templateSearch.focus();
@@ -5994,6 +6146,10 @@ downloadAdminBackupButton?.addEventListener("click", runAdminBackup);
 document.querySelector("#fill-contract").addEventListener("click", (event) => {
   event.stopPropagation();
   if (!requireFieldsReviewed("integrar datos faltantes")) return;
+  if (!partyDocumentsStepVisited && missingFieldsForActiveTemplate().length) {
+    showToast("Primero abre “2. Datos y documentos” para cargar o confirmar los documentos de cada parte.");
+    return;
+  }
   if (assistantPane.classList.contains("open")) {
     assistantPane.classList.remove("open");
     return;
@@ -6005,9 +6161,23 @@ document.querySelector("#fill-contract").addEventListener("click", (event) => {
   assistantPane.querySelector(".manual-field input")?.focus({ preventScroll: true });
 });
 
+partyDocumentsButton?.addEventListener("click", (event) => {
+  event.stopPropagation();
+  if (!requireFieldsReviewed("abrir datos y documentos")) return;
+  partyDocumentsStepVisited = true;
+  renderRoleDrops();
+  updateWorkflowStepState();
+  saveActiveDraft("Datos y documentos revisados");
+  partyDocumentsDialog?.showModal();
+});
+
+partyDocumentsDialog?.addEventListener("click", (event) => {
+  if (event.target === partyDocumentsDialog) partyDocumentsDialog.close();
+});
+
 document.querySelector("#export-word").addEventListener("click", exportWordDocument);
 
-document.querySelector("#send-signature")?.addEventListener("click", prepareSignaturePacket);
+document.querySelector("#export-pdf-signature")?.addEventListener("click", exportPdfForSignature);
 
 document.querySelector("#critical-review")?.addEventListener("click", () => {
   criticalReviewDialog.showModal();
@@ -6221,23 +6391,6 @@ document.querySelector("#activate-demo-license")?.addEventListener("click", () =
 
 document.querySelector("#license-logout").addEventListener("click", signOut);
 
-document.querySelector("#add-signer").addEventListener("click", () => {
-  signerList.insertAdjacentHTML("beforeend", signerRowTemplate(signerList.querySelectorAll("[data-signer-row]").length));
-});
-
-signerList.addEventListener("click", (event) => {
-  const button = event.target.closest(".remove-signer");
-  if (!button) return;
-  const rows = signerList.querySelectorAll("[data-signer-row]");
-  if (rows.length <= 1) {
-    showToast("Debe quedar al menos un firmante.");
-    return;
-  }
-  button.closest("[data-signer-row]").remove();
-});
-
-signatureForm.addEventListener("submit", submitSignaturePacket);
-
 async function saveContractToArchive({ saveAs = false } = {}) {
   if (!ensureEditableWorkspace("guardar contrato")) return;
   const defaultName = cleanWorkingTitle(templates[activeTemplate]?.title || editorTitle.textContent) || "Contrato";
@@ -6311,6 +6464,8 @@ document.querySelector("#new-template").addEventListener("click", () => {
 document.querySelector("#extract-data").addEventListener("click", async () => {
   if (!ensureEditableWorkspace("extraer datos")) return;
   if (!requireFieldsReviewed("extraer e integrar datos")) return;
+  partyDocumentsStepVisited = true;
+  updateWorkflowStepState();
   let detected = {};
   let aiWasTried = false;
   const aiOnlyDocuments = uploadedDocumentsNeedingAi();
@@ -6399,8 +6554,16 @@ templateImport.addEventListener("change", async () => {
   }
 
   if (addToMaster) {
+    const saveAsSharedCatalog = canManageSharedCatalog() && window.confirm("¿Quieres publicarlo en el catálogo general para el equipo?\n\nAceptar: catálogo general.\nCancelar: solo biblioteca personal.");
+    if (saveAsSharedCatalog) {
+      templates[activeTemplate].shared = true;
+      templates[activeTemplate].personal = false;
+      saveSharedMasterTemplate(activeTemplate, templates[activeTemplate]);
+    } else {
+      templates[activeTemplate].personal = true;
+      saveMasterTemplates();
+    }
     activeTemplateCatalogFolder = catalogPath;
-    saveMasterTemplates();
   }
   loadTemplate(activeTemplate);
   templateImport.value = "";

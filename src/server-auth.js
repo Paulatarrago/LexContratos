@@ -91,7 +91,7 @@ export async function requireActiveAccess(request, env) {
   const expiresAt = license?.ends_at ? Date.parse(license.ends_at) : null;
   const licenseCurrent = !expiresAt || Number.isNaN(expiresAt) || expiresAt >= Date.now();
   const hasLicense = ["active", "trial"].includes(status) && licenseCurrent;
-  const isAdmin = profile?.role === "admin";
+  const isAdmin = profile?.role === "admin" || profile?.role === "superadmin";
 
   if (!profile || !accountActive || (!isAdmin && !hasLicense)) {
     return {

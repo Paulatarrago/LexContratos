@@ -6,7 +6,7 @@ La extracción real de PDF, Word, Excel e imágenes necesita un backend seguro. 
 
 ## Flujo productivo
 
-1. El abogado selecciona o duplica un machote.
+1. El usuario selecciona o duplica un formato o draft.
 2. Sube documentos en la caja de cada parte.
 3. LexContratos manda esos documentos al endpoint seguro `/api/extract-party-data`.
 4. El backend consulta OpenAI con los documentos y los campos esperados para esa parte.

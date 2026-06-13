@@ -2,7 +2,7 @@ Bienvenida a LexContratos. Esta guía acompaña la primera prueba piloto de la a
 
 Para usar la app, entra a lexcontratos.com diagonal login. Si todavía no tienes cuenta, selecciona Crear usuario, captura tu nombre, correo y contraseña, y envía el registro. Tu cuenta quedará pendiente hasta que la administradora active tu licencia. Cuando la licencia esté activa, recibirás un correo de acceso. Si no llega, revisa spam o pide que te reenvíen el correo desde el panel de administración.
 
-El primer paso es seleccionar un machote. Puedes usar una plantilla precargada o importar un machote propio. Al seleccionar un machote, LexContratos trabaja sobre una copia editable para no alterar la plantilla base. Si importas un machote propio y quieres guardarlo como base, debe quedar limpio, sin datos específicos de una operación.
+El primer paso es seleccionar un formato. Puedes usar una plantilla precargada o importar un formato propio. Al seleccionar un formato, LexContratos trabaja sobre una copia editable para no alterar la plantilla base. Si importas un formato propio y quieres guardarlo como base, debe quedar limpio, sin datos específicos de una operación.
 
 Antes de avanzar, usa Guardar como. Elige dónde quedará el contrato: Clientes, Proveedores, Personales o Documentos de las partes. Puedes crear carpetas y subcarpetas. La idea es que el contrato quede ubicado desde el inicio y sea fácil encontrarlo después. Usa nombres claros, por ejemplo: Cliente Demo, prestación de servicios, mayo dos mil veintiséis.
 
@@ -16,7 +16,7 @@ Si quedan datos faltantes, abre Integrar manualmente datos faltantes. Captura to
 
 El contrato sigue siendo editable. Puedes modificar cláusulas, ajustar redacción, agregar condiciones o eliminar texto que no aplique. Cuando tengas una versión avanzada, usa Revisión crítica IA. La revisión puede señalar datos faltantes, contradicciones, ambigüedades, errores de forma u ortografía. Si hay cambios sugeridos, puedes aceptar solo los que tengan sentido y descartar los demás.
 
-Al terminar, exporta a Word. Si hay datos pendientes u observaciones importantes, la app puede avisarte antes de exportar. Puedes corregir o continuar bajo tu criterio. Por ahora, la firma electrónica integrada está desactivada. Exporta el Word y envíalo por la vía de firma que la empresa decida: correo, firma tradicional, Dropbox Sign personal, MiFiel u otro proceso autorizado.
+Al terminar, exporta a Word o a PDF. Si hay datos pendientes u observaciones importantes, la app puede avisarte antes de exportar. Puedes corregir o continuar bajo tu criterio. Envía el archivo por la vía de firma que la empresa decida: correo, firma tradicional, cuenta personal de firma electrónica u otro proceso autorizado.
 
 Durante la prueba, reporta cualquier punto confuso: acceso, guardado, carga de documentos, extracción, campos pendientes, edición o formato del Word. Si puedes, incluye captura de pantalla y una breve explicación. Tu retroalimentación ayudará a que LexContratos sea más claro, más seguro y más útil para el trabajo diario.
 

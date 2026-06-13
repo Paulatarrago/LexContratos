@@ -8,7 +8,7 @@ Entra a lexcontratos.com/login. Crea usuario con nombre, correo y contraseña. T
 
 3
 00:00:52,000 --> 00:01:21,000
-Selecciona un machote precargado o importa uno propio. LexContratos trabaja sobre una copia editable para no alterar la plantilla base.
+Selecciona un formato precargado o importa uno propio. LexContratos trabaja sobre una copia editable para no alterar la plantilla base.
 
 4
 00:01:21,000 --> 00:01:52,000

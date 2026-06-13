@@ -832,9 +832,7 @@ button {
 .search-field input,
 .party-form input,
 .party-form textarea,
-.party-form select,
-.signature-form input,
-.signature-form select {
+.party-form select {
   width: 100%;
   min-height: 38px;
   border: 1px solid var(--line);
@@ -851,8 +849,6 @@ button {
 .party-form input:focus,
 .party-form textarea:focus,
 .party-form select:focus,
-.signature-form input:focus,
-.signature-form select:focus,
 #contract-editor:focus {
   outline: 2px solid rgba(8, 47, 111, 0.22);
   border-color: rgba(8, 47, 111, 0.64);
@@ -1123,7 +1119,7 @@ button {
 }
 
 .editor-actions #export-word,
-.editor-actions #send-signature {
+.editor-actions #export-pdf-signature {
   border-color: rgba(211, 154, 67, 0.38);
 }
 
@@ -1158,7 +1154,7 @@ button {
 }
 
 .editor-actions #export-word.step-ready,
-.editor-actions #send-signature.step-ready {
+.editor-actions #export-pdf-signature.step-ready {
   color: var(--accent-ink);
   border-color: rgba(211, 154, 67, 0.52);
   background: var(--accent-soft);
@@ -1299,8 +1295,8 @@ button {
 .assistant-pane,
 .contract-picker,
 .save-location-dialog,
-.signature-dialog,
 .admin-users-dialog,
+.party-documents-dialog,
 .critical-review-dialog {
   border: 1px solid var(--line);
   border-radius: 8px;
@@ -3014,6 +3010,15 @@ dialog {
   width: min(980px, calc(100vw - 28px));
 }
 
+.party-documents-dialog {
+  width: min(980px, calc(100vw - 28px));
+}
+
+.party-documents-dialog .party-upload-section {
+  margin-top: 12px;
+  box-shadow: none;
+}
+
 .admin-users-summary {
   margin: 10px 0;
   padding: 10px 12px;
@@ -3555,6 +3560,12 @@ dialog::backdrop {
   font-size: 12px;
 }
 
+.template-card .ghost-button.danger-action {
+  color: #9f1239;
+  border-color: rgba(159, 18, 57, 0.24);
+  background: #fff5f7;
+}
+
 .user-guide {
   display: grid;
   gap: 14px;
@@ -3631,43 +3642,6 @@ dialog::backdrop {
 .guide-alert {
   border-color: rgba(211, 154, 67, 0.5);
   background: #fffaf1;
-}
-
-.signature-form {
-  display: grid;
-  gap: 12px;
-}
-
-.signer-list {
-  display: grid;
-  gap: 10px;
-}
-
-.signer-row {
-  display: grid;
-  grid-template-columns: 1.1fr 1.2fr 0.8fr 92px 38px;
-  gap: 8px;
-  align-items: end;
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px;
-  background: #f8fafb;
-}
-
-.signer-row label {
-  display: grid;
-  gap: 4px;
-  color: var(--muted);
-  font-size: 12px;
-  font-weight: 760;
-}
-
-.signature-status {
-  border: 1px solid var(--line);
-  border-radius: 8px;
-  padding: 10px;
-  color: var(--muted);
-  background: #f8fafb;
 }
 
 .autosave-highlight {
@@ -3892,7 +3866,6 @@ dialog::backdrop {
   .format-panel,
   .matter-panel,
   .guide-grid,
-  .signer-row,
   .admin-user-card {
     grid-template-columns: 1fr;
   }

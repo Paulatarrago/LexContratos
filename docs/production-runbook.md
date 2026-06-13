@@ -8,12 +8,13 @@ Esta fase deja la base productiva lista sin romper el demo local.
 - Conexión opcional a Supabase mediante variables `VITE_SUPABASE_URL` y `VITE_SUPABASE_PUBLISHABLE_KEY`.
 - Autenticación real con Supabase Auth cuando Supabase está configurado.
 - Recuperación de contraseña por correo usando Supabase Auth.
-- Esquema SQL para usuarios, licencias, carpetas, expedientes, contratos, versiones, documentos, datos extraídos y paquetes de firma.
+- Esquema SQL para usuarios, licencias, carpetas, expedientes, contratos, versiones, documentos, datos extraídos y catálogo general.
 - Row Level Security para separar información por usuario.
 - Storage privado para documentos en el bucket `contract-documents`.
 - Endpoint de contacto con Resend y respuesta automatica.
 - Notificación automática al administrador cuando alguien se registra.
-- Panel de administración para activar licencias, suspender usuarios y marcar administradores.
+- Panel de administración para activar licencias, suspender usuarios y asignar roles `user`, `admin` y `superadmin`.
+- Catálogo general de formatos editable por administración y visible para usuarios autorizados.
 - Endpoint seguro para extraccion documental con IA.
 - Endpoints sensibles protegidos por sesión y licencia activa.
 - Migración de endurecimiento para evitar que un usuario cambie su propio rol, estado de cuenta o licencia.
@@ -37,7 +38,8 @@ En producción, la fuente de verdad debe ser Supabase. El modo local/demo sirve 
 - Los contratos editables se guardan en `contracts`.
 - Las versiones relevantes se guardan en `contract_versions`.
 - Los datos extraídos o capturados se guardan en `extracted_data`.
-- Los paquetes de firma se registran en `signature_packets`.
+- La firma se opera de forma externa: LexContratos exporta Word editable o PDF para enviarlo por la herramienta de firma elegida.
+- Los formatos base compartidos se guardan en `master_templates` con `is_shared = true`.
 
 ### Documentos subidos
 
@@ -72,13 +74,14 @@ La app muestra carpetas raíz fijas para ordenar el archivo:
 1. Crear un proyecto en Supabase.
 2. Abrir el SQL Editor y ejecutar `supabase/schema-safe.sql`. Esta es la versión recomendada para primera instalación porque no borra políticas, triggers, tablas ni datos.
 3. Ejecutar `supabase/harden-security.sql` para cerrar permisos de perfiles y licencias.
-4. Si Supabase muestra un aviso/error en la parte de Storage, crear manualmente un bucket privado llamado `contract-documents` en Storage y después ejecutar `supabase/storage-policies.sql`.
-5. Crear una cuenta desde LexContratos o desde Supabase Auth.
-6. Activar la licencia del usuario en SQL:
+4. Si la base ya existía antes del rol `superadmin`, ejecutar `supabase/roles-superadmin.sql`.
+5. Si Supabase muestra un aviso/error en la parte de Storage, crear manualmente un bucket privado llamado `contract-documents` en Storage y después ejecutar `supabase/storage-policies.sql`.
+6. Crear una cuenta desde LexContratos o desde Supabase Auth.
+7. Activar la licencia del usuario en SQL:
 
 Usar `supabase/activate-first-admin.sql` y cambiar `TU_CORREO_AQUI` por el correo registrado.
 
-7. Crear un archivo `.env` local:
+8. Crear un archivo `.env` local:
 
 ```bash
 VITE_SUPABASE_URL=https://TU-PROYECTO.supabase.co
@@ -166,6 +169,6 @@ Para una primera fase, basta con un respaldo local diario descargado por adminis
 - Probar extraccion real de PDF, Word, Excel e imagenes ya desplegada en Vercel con `OPENAI_API_KEY`.
 - Conectar un modulo de consulta normativa oficial para que la revision legal pueda contrastar cada contrato contra fuentes vigentes del pais aplicable, sin presentarlo como dictamen automatico.
 - Generar `.docx` real en backend.
-- Probar Dropbox Sign de punta a punta con usuarios internos.
+- Probar el flujo externo de firma: exportar Word/PDF, enviarlo por la herramienta elegida y subir el documento firmado al expediente.
 - Personalizar plantillas de correo en Supabase Auth.
 - Integrar pagos y licencias automáticas.

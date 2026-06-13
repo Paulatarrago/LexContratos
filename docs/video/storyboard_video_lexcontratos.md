@@ -13,9 +13,9 @@
 
 | Tiempo | Escena | Visual sugerido | Mensaje clave |
 |---|---|---|---|
-| 0:00-0:25 | Intro | Logo LX, flujo Machote → Documentos → Extracción → Validación → Word | La app ayuda; la usuaria decide |
+| 0:00-0:25 | Intro | Logo LX, flujo Formato → Documentos → Extracción → Validación → Word | La app ayuda; la usuaria decide |
 | 0:25-1:00 | Acceso | Login, registro, licencia pendiente, panel admin | Usar lexcontratos.com/login |
-| 1:00-1:35 | Machote | Selector de machotes y buscador | Trabajar sobre copia editable |
+| 1:00-1:35 | Formato | Selector de formatos y buscador | Trabajar sobre copia editable |
 | 1:35-2:05 | Guardar como | Vista tipo Finder | Guardar desde el inicio |
 | 2:05-2:40 | Campos | Paso obligatorio en ámbar | Detectar campos antes de extraer |
 | 2:40-3:20 | Documentos | Cajas por parte | No mezclar documentos |

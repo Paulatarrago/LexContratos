@@ -154,7 +154,7 @@
         </article>
         <article>
           <h2>Finalidades primarias</h2>
-          <p>Los datos se tratan para permitir el acceso a la cuenta, administrar licencias, crear y organizar expedientes contractuales, cargar documentos de las partes, extraer información para revisión, prellenar campos repetitivos, conservar versiones editables, exportar contratos, preparar flujos de firma electrónica y dar soporte operativo al usuario autorizado.</p>
+          <p>Los datos se tratan para permitir el acceso a la cuenta, administrar licencias, crear y organizar expedientes contractuales, cargar documentos de las partes, extraer información para revisión, prellenar campos repetitivos, conservar versiones editables, exportar contratos para firma externa y dar soporte operativo al usuario autorizado.</p>
         </article>
         <article>
           <h2>Finalidades secundarias</h2>
@@ -166,7 +166,7 @@
         </article>
         <article>
           <h2>Transferencias</h2>
-          <p>No se venden datos personales ni se comparten para fines comerciales ajenos a LexContratos. Podrán existir comunicaciones necesarias para prestar el servicio, cumplir obligaciones legales, atender solicitudes de autoridad competente, procesar firma electrónica o ejecutar instrucciones del usuario dentro del expediente contractual.</p>
+          <p>No se venden datos personales ni se comparten para fines comerciales ajenos a LexContratos. Podrán existir comunicaciones necesarias para prestar el servicio, cumplir obligaciones legales, atender solicitudes de autoridad competente, preparar archivos para firma externa o ejecutar instrucciones del usuario dentro del expediente contractual.</p>
         </article>
         <article>
           <h2>Derechos ARCO y revocación</h2>
@@ -449,15 +449,16 @@
                 <h2 id="editor-mode-title">Documento principal <span class="info-tip" tabindex="0" data-tip="Área principal para leer, editar y revisar el contrato. El autoguardado protege el borrador mientras trabajas.">i</span></h2>
               </div>
               <div class="editor-actions">
-                <button class="secondary-action workflow-step needs-review" id="review-fields" type="button" title="Paso obligatorio antes de subir, extraer o integrar datos. Detecta los campos rellenables que siguen presentes en el contrato.">1. Detectar campos editables (obligatorio)</button>
-                <button class="secondary-action workflow-step" id="fill-contract" type="button" title="Disponible después de detectar campos editables. Abre el panel para completar únicamente los datos pendientes.">2. Integrar manualmente datos faltantes</button>
-                <button class="secondary-action workflow-step" id="critical-review" type="button" title="Pide una revisión final con observaciones de claridad, riesgos y consistencia.">3. Revisión crítica IA</button>
+                <button class="secondary-action workflow-step needs-review" id="review-fields" type="button" title="Paso obligatorio antes de subir, extraer o integrar datos. Detecta los campos rellenables que siguen presentes en el contrato.">1. Detectar campos editables</button>
+                <button class="secondary-action workflow-step" id="party-documents" type="button" title="Carga documentos por cada parte y extrae los datos para integrarlos al contrato.">2. Datos y documentos</button>
+                <button class="secondary-action workflow-step" id="fill-contract" type="button" title="Disponible después de revisar documentos. Abre el panel para completar únicamente los datos pendientes.">3. Integrar faltantes</button>
+                <button class="secondary-action workflow-step" id="critical-review" type="button" title="Pide una revisión final con observaciones de claridad, riesgos y consistencia.">4. Revisión crítica IA</button>
                 <button class="secondary-action" id="export-word" type="button" title="Exporta el contrato editable a Word con formato legal.">Exportar Word</button>
-                <button class="secondary-action is-hidden" id="send-signature" type="button" title="Prepara firmantes y guarda un paquete para enviar el contrato por tu proveedor externo de firma.">Preparar paquete de firma</button>
+                <button class="secondary-action" id="export-pdf-signature" type="button" title="Abre una versión lista para guardar como PDF y enviarla a firma externa.">Exportar PDF para firma</button>
                 <button class="secondary-action" id="save-version" type="button" title="Guarda una versión sin datos de las partes dentro de tu biblioteca de formatos base.">Guardar versión limpia como formato base</button>
               </div>
             </div>
-            <p class="editor-guidance">El contrato sigue siendo editable. LexContratos te ayuda con datos, campos y tareas repetitivas, pero el criterio jurídico y el contenido final permanecen bajo tu control. Cuando esté revisado, expórtalo a Word y envíalo a firma por la vía externa que decidas.</p>
+            <p class="editor-guidance">El contrato sigue siendo editable. LexContratos te ayuda con datos, campos y tareas repetitivas, pero el criterio jurídico y el contenido final permanecen bajo tu control. Cuando esté revisado, expórtalo a Word o a PDF para firma externa.</p>
             <section class="format-panel" aria-label="Formato de exportación legal">
               <label>
                 Fuente
@@ -492,30 +493,19 @@
                 Justificado siempre
               </label>
               <label class="letterhead-control">
-                Página membretada
+                Membrete por empresa
                 <select id="letterhead-logo-select">
                   <option value="">Sin membrete</option>
                 </select>
               </label>
               <input id="letterhead-logo-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden />
-              <button class="secondary-action" id="add-letterhead-logo" type="button" title="Agrega una página membretada del grupo para usarla en Word.">Agregar membrete</button>
+              <button class="secondary-action" id="add-letterhead-logo" type="button" title="Sube el logo o imagen de membrete de una empresa y captura el domicilio o pie que saldrá en Word/PDF.">Subir membrete</button>
               <button class="secondary-action" id="remove-letterhead-logo" type="button" title="Elimina el membrete seleccionado de tu biblioteca personal.">Quitar membrete</button>
               <button class="primary-action" id="save-as-contract" type="button" title="Guarda el contrato con nombre y carpeta, como en Finder.">Guardar como</button>
             </section>
             <textarea id="contract-editor" spellcheck="true" placeholder="Selecciona un formato o importa un draft propio para comenzar."></textarea>
           </section>
 
-          <section class="party-upload-section" aria-label="Carga por parte contractual">
-            <div class="section-heading compact">
-              <div>
-                <p class="eyebrow">Datos y documentos de cada parte</p>
-                <h2>Información de las partes <span class="info-tip" tabindex="0" data-tip="Carga documentos por cada parte para evitar mezclar roles. Lo extraído se integra al contrato y lo faltante queda para captura manual.">i</span></h2>
-              </div>
-              <button class="secondary-action" id="extract-data" type="button">Extraer e integrar datos</button>
-            </div>
-            <p class="section-help">Carga documentos o captura manualmente la información de cada parte. LexContratos extrae e integra los datos que encuentre; lo pendiente queda en “Integrar manualmente datos faltantes”.</p>
-            <div class="role-drop-grid" id="role-drop-grid"></div>
-          </section>
         </section>
       </section>
 
@@ -576,7 +566,7 @@
         <div>
           <p class="eyebrow">Manual de uso</p>
           <h2>Guía de prueba para trabajar contratos</h2>
-          <p class="dialog-copy">Usa esta guía como material de consulta durante las pruebas. El paso “Detectar campos editables” es obligatorio antes de cargar documentos, extraer información, integrar datos o completar el contrato. En la tira de acciones, la caja resaltada en color ámbar indica el siguiente paso recomendado una vez terminado el anterior.</p>
+          <p class="dialog-copy">Usa esta guía como material de consulta durante las pruebas. El paso “Detectar campos editables” es obligatorio antes de abrir documentos de partes, extraer información, integrar datos o completar el contrato. En la tira de acciones, la caja resaltada en color ámbar indica el siguiente paso recomendado una vez terminado el anterior.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar manual">×</button>
       </form>
@@ -613,8 +603,8 @@
           <article>
             <span>4</span>
             <div>
-              <strong>Carga documentos en la caja correcta</strong>
-              <p>Sube archivos por rol: prestador, cliente, proveedor, arrendador, comprador o la parte que corresponda al contrato. Puedes arrastrar documentos o carpetas completas con actas, poderes, constancias fiscales, identificaciones oficiales, correos, Word, PDF, Excel o imágenes.</p>
+              <strong>Abre “2. Datos y documentos”</strong>
+              <p>Ese botón abre la ventana de información de las partes. Ahí sube archivos por rol: prestador, cliente, proveedor, arrendador, comprador o la parte que corresponda al contrato. Puedes arrastrar documentos o carpetas completas con actas, poderes, constancias fiscales, identificaciones oficiales, correos, Word, PDF, Excel o imágenes.</p>
             </div>
           </article>
           <article>
@@ -628,7 +618,7 @@
             <span>6</span>
             <div>
               <strong>Completa los pendientes manualmente</strong>
-              <p>Abre “2. Integrar manualmente datos faltantes”. Solo deben aparecer los campos que siguen pendientes. Llena todos los datos disponibles y usa “Integrar datos capturados” para insertarlos de una vez en el contrato.</p>
+              <p>Abre “3. Integrar faltantes”. Solo deben aparecer los campos que siguen pendientes. Llena todos los datos disponibles y usa “Integrar datos capturados” para insertarlos de una vez en el contrato.</p>
             </div>
           </article>
           <article>
@@ -648,15 +638,15 @@
           <article>
             <span>9</span>
             <div>
-              <strong>Exporta a Word</strong>
-              <p>Antes de exportar, LexContratos avisará si faltan datos generales o si hay observaciones críticas pendientes. Puedes continuar bajo tu criterio. El Word se genera con formato legal, firmas alineadas y anexos en página nueva.</p>
+              <strong>Exporta a Word o PDF</strong>
+              <p>Antes de exportar, LexContratos avisará si faltan datos generales o si hay observaciones críticas pendientes. Puedes continuar bajo tu criterio. El Word queda editable; el PDF queda listo para guardarse y enviarse a firma externa.</p>
             </div>
           </article>
           <article>
             <span>10</span>
             <div>
-              <strong>Exporta, firma y archiva</strong>
-              <p>Cuando el contrato esté revisado, exporta el Word y envíalo por la vía de firma que decidas: cuenta personal, proveedor externo o firma tradicional. Conserva documentos soporte por parte, datos validados y versiones exportadas en el mismo expediente.</p>
+              <strong>Firma y archiva</strong>
+              <p>Cuando el contrato esté revisado, envía el Word o PDF por la vía de firma que decidas: cuenta personal, proveedor externo o firma tradicional. Conserva documentos soporte por parte, datos validados y versiones exportadas en el mismo expediente.</p>
             </div>
           </article>
         </div>
@@ -744,7 +734,7 @@
         <div>
           <p class="eyebrow">Administración</p>
           <h2>Usuarios y licencias</h2>
-          <p class="dialog-copy">Revisa registros pendientes, activa licencias, suspende accesos, marca usuarios autorizados como administradores o elimina cuentas que ya no deban existir.</p>
+          <p class="dialog-copy">Revisa registros pendientes, activa licencias, suspende accesos y asigna permisos. Las administradoras pueden operar usuarios y catálogo; la super administradora conserva el control total de configuración y seguridad.</p>
         </div>
         <button class="icon-button" type="submit" aria-label="Cerrar administración">×</button>
       </form>
@@ -759,24 +749,26 @@
       <div class="admin-users-list" id="admin-users-list" aria-live="polite"></div>
     </dialog>
 
-    <dialog class="signature-dialog" id="signature-dialog">
+    <dialog class="party-documents-dialog" id="party-documents-dialog">
       <form method="dialog" class="dialog-close-row">
         <div>
-          <p class="eyebrow">Firma electrónica</p>
-          <h2>Preparar paquete de firma</h2>
-          <p class="dialog-copy" id="signature-dialog-copy">Captura los firmantes y su orden para conservar el paquete en el expediente. Exporta el contrato final y envíalo desde tu cuenta de Dropbox Sign, MiFiel u otro proveedor externo.</p>
+          <p class="eyebrow">Paso 2</p>
+          <h2>Datos y documentos de las partes</h2>
+          <p class="dialog-copy">Carga documentos en la caja de la parte correcta. LexContratos extrae e integra lo que encuentre; lo que falte quedará para captura manual en el siguiente paso.</p>
         </div>
-        <button class="icon-button" type="submit" aria-label="Cerrar firma">×</button>
+        <button class="icon-button" type="submit" aria-label="Cerrar información de partes">×</button>
       </form>
-      <form class="signature-form" id="signature-form" novalidate>
-        <div class="signer-list" id="signer-list"></div>
-        <button class="secondary-action" id="add-signer" type="button">Agregar firmante</button>
-        <div class="signature-status">
-          <strong>Estado:</strong>
-          <span id="signature-status-label">Firma externa lista para preparar</span>
+      <section class="party-upload-section in-dialog" aria-label="Carga por parte contractual">
+        <div class="section-heading compact">
+          <div>
+            <p class="eyebrow">Documentos por rol</p>
+            <h2>Información de las partes <span class="info-tip" tabindex="0" data-tip="Carga documentos por cada parte para evitar mezclar roles. Lo extraído se integra al contrato y lo faltante queda para captura manual.">i</span></h2>
+          </div>
+          <button class="secondary-action" id="extract-data" type="button">Extraer e integrar datos</button>
         </div>
-        <button class="primary-action" id="signature-submit" type="submit">Guardar paquete de firma</button>
-      </form>
+        <p class="section-help">Arrastra documentos o carpetas completas. Puedes subir actas, poderes, constancias fiscales, identificaciones oficiales, correos, Word, PDF, Excel o imágenes legibles.</p>
+        <div class="role-drop-grid" id="role-drop-grid"></div>
+      </section>
     </dialog>
 
     <dialog class="critical-review-dialog" id="critical-review-dialog">

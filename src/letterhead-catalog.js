@@ -15,7 +15,7 @@ const lexContratosLogo = `
   <path d="M220 164h325" stroke="#c77700" stroke-width="6" stroke-linecap="round"/>
 </svg>`;
 
-window.lexLetterheadCatalogLocked = true;
+window.lexLetterheadCatalogLocked = false;
 window.lexLetterheadCatalog = [
   {
     id: "lexcontratos",

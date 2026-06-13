@@ -126,7 +126,7 @@ export default async function handler(request) {
 
   const access = await requireActiveAccess(request, env);
   if (!access.ok) return access.response;
-  if (access.profile?.role !== "admin") return jsonResponse({ error: "Solo administración puede descargar respaldos." }, 403);
+  if (!["admin", "superadmin"].includes(access.profile?.role)) return jsonResponse({ error: "Solo administración puede descargar respaldos." }, 403);
 
   const config = requireEnv(env);
   if (!config) return jsonResponse({ error: "El respaldo no está configurado en producción." }, 503);

@@ -68,7 +68,7 @@ async function assertAdmin(request, config) {
     `/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,email,role,account_status,license_status&limit=1`
   );
   const profile = profiles?.[0];
-  if (profile?.role !== "admin") {
+  if (!["admin", "superadmin"].includes(profile?.role)) {
     return { error: jsonResponse({ error: "No tienes permisos de administrador." }, 403) };
   }
   return { user, profile };
@@ -171,7 +171,7 @@ async function sendEmail(apiKey, payload) {
   return data;
 }
 
-async function notifyLicenseActivated(env, { email, fullName, isAdmin = false }) {
+async function notifyLicenseActivated(env, { email, fullName, role = "user" }) {
   const apiKey = env.RESEND_API_KEY;
   if (!apiKey) return { sent: false, skipped: true, reason: "Resend no configurado." };
 
@@ -180,9 +180,11 @@ async function notifyLicenseActivated(env, { email, fullName, isAdmin = false })
   const appUrl = (env.APP_BASE_URL || "https://lexcontratos.com").replace(/\/+$/, "");
   const safeName = escapeHtml(fullName || email);
   const safeAppUrl = escapeHtml(`${appUrl}/login`);
-  const roleLine = isAdmin
-    ? "Tu cuenta también quedó marcada como administradora para gestionar usuarios y licencias."
-    : "Tu licencia quedó activa para trabajar en LexContratos.";
+  const roleLine = role === "superadmin"
+    ? "Tu cuenta quedó marcada como super administradora para gestionar usuarios, licencias, configuración y respaldos."
+    : role === "admin"
+      ? "Tu cuenta también quedó marcada como administradora para gestionar usuarios, licencias y catálogo de formatos."
+      : "Tu licencia quedó activa para trabajar en LexContratos.";
 
   await sendEmail(apiKey, {
     from,
@@ -239,7 +241,13 @@ export default async function handler(request) {
     const userId = String(body.userId || "");
     const email = String(body.email || "").trim().toLowerCase();
     const fullName = String(body.fullName || email || "Usuario").trim();
-    const currentRole = body.currentRole === "admin" ? "admin" : "user";
+    const allowedRoles = new Set(["user", "admin", "superadmin"]);
+    const currentRole = allowedRoles.has(body.currentRole) ? body.currentRole : "user";
+    const targetIsSuperAdmin = currentRole === "superadmin";
+
+    if (targetIsSuperAdmin && admin.profile.role !== "superadmin") {
+      return jsonResponse({ error: "Solo super administración puede modificar otra cuenta superadmin." }, 403);
+    }
 
     if (!userId || !email) {
       return jsonResponse({ error: "Usuario incompleto." }, 400);
@@ -256,7 +264,7 @@ export default async function handler(request) {
     if (action === "notify_access") {
       let activationEmail = { sent: false };
       try {
-        activationEmail = await notifyLicenseActivated(env, { email, fullName, isAdmin: currentRole === "admin" });
+        activationEmail = await notifyLicenseActivated(env, { email, fullName, role: currentRole });
       } catch (emailError) {
         console.warn("LexContratos no pudo reenviar correo de acceso", emailError);
         return jsonResponse({ ok: false, error: "El usuario conserva su acceso, pero no se pudo enviar el correo automático." }, 502);
@@ -281,7 +289,7 @@ export default async function handler(request) {
       });
       let activationEmail = { sent: false };
       try {
-        activationEmail = await notifyLicenseActivated(env, { email, fullName });
+        activationEmail = await notifyLicenseActivated(env, { email, fullName, role: currentRole });
       } catch (emailError) {
         console.warn("LexContratos no pudo enviar correo de activacion", emailError);
       }
@@ -322,11 +330,62 @@ export default async function handler(request) {
       });
       let activationEmail = { sent: false };
       try {
-        activationEmail = await notifyLicenseActivated(env, { email, fullName, isAdmin: true });
+        activationEmail = await notifyLicenseActivated(env, { email, fullName, role: "admin" });
       } catch (emailError) {
         console.warn("LexContratos no pudo enviar correo de activacion admin", emailError);
       }
       return jsonResponse({ ok: true, activationEmailSent: Boolean(activationEmail.sent) });
+    }
+
+    if (action === "make_superadmin") {
+      if (admin.profile.role !== "superadmin") {
+        return jsonResponse({ error: "Solo super administración puede asignar este permiso." }, 403);
+      }
+      await upsertProfile(config, {
+        id: userId,
+        email,
+        full_name: fullName,
+        role: "superadmin",
+        account_status: "active",
+        license_status: "active"
+      });
+      await upsertLicense(config, {
+        user_id: userId,
+        status: "active",
+        plan: "internal",
+        starts_at: new Date().toISOString()
+      });
+      let activationEmail = { sent: false };
+      try {
+        activationEmail = await notifyLicenseActivated(env, { email, fullName, role: "superadmin" });
+      } catch (emailError) {
+        console.warn("LexContratos no pudo enviar correo de activacion superadmin", emailError);
+      }
+      return jsonResponse({ ok: true, activationEmailSent: Boolean(activationEmail.sent) });
+    }
+
+    if (action === "make_user") {
+      if (admin.profile.role !== "superadmin") {
+        return jsonResponse({ error: "Solo super administración puede cambiar administradores a usuarios." }, 403);
+      }
+      if (userId === admin.user.id) {
+        return jsonResponse({ error: "No puedes quitarte tus propios permisos desde este panel." }, 400);
+      }
+      await upsertProfile(config, {
+        id: userId,
+        email,
+        full_name: fullName,
+        role: "user",
+        account_status: "active",
+        license_status: "active"
+      });
+      await upsertLicense(config, {
+        user_id: userId,
+        status: "active",
+        plan: "internal",
+        starts_at: new Date().toISOString()
+      });
+      return jsonResponse({ ok: true });
     }
 
     return jsonResponse({ error: "Acción no reconocida." }, 400);
