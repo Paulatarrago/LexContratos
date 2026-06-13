@@ -1,6 +1,7 @@
 #!/usr/bin/env node
 
 import { createHash, createHmac } from "node:crypto";
+import { pathToFileURL } from "node:url";
 
 const TABLES = [
   "profiles",
@@ -20,7 +21,7 @@ const DEFAULT_TABLE_PAGE_SIZE = 1000;
 const DEFAULT_STORAGE_PAGE_SIZE = 1000;
 const DEFAULT_MAX_STORAGE_BYTES = 20 * 1024 * 1024 * 1024;
 
-const env = process.env;
+let env = process.env;
 
 function required(name) {
   const value = env[name];
@@ -241,75 +242,85 @@ async function downloadStorageObject(config, path) {
   return Buffer.from(await response.arrayBuffer());
 }
 
-async function main() {
+export async function runSupabaseToS3Backup(options = {}) {
+  const previousEnv = env;
+  env = options.env || process.env;
+  const log = options.log || console.log;
   const startedAt = new Date();
-  const config = supabaseConfig();
-  const rootPrefix = trimSlashes(optional("BACKUP_S3_PREFIX", "lexcontratos"));
-  const runPrefix = `${rootPrefix}/${timestampForPath(startedAt)}`;
-  const maxStorageBytes = Number(env.BACKUP_MAX_STORAGE_BYTES || DEFAULT_MAX_STORAGE_BYTES);
-  const manifest = {
-    product: "LexContratos",
-    type: "supabase-to-s3-backup",
-    startedAt: startedAt.toISOString(),
-    finishedAt: null,
-    supabaseUrl: config.url,
-    storageBucket: config.storageBucket,
-    runPrefix,
-    tables: {},
-    storage: {
-      discovered: 0,
-      uploaded: 0,
-      uploadedBytes: 0,
-      skipped: []
+  try {
+    const config = supabaseConfig();
+    const rootPrefix = trimSlashes(optional("BACKUP_S3_PREFIX", "lexcontratos"));
+    const runPrefix = `${rootPrefix}/${timestampForPath(startedAt)}`;
+    const maxStorageBytes = Number(env.BACKUP_MAX_STORAGE_BYTES || DEFAULT_MAX_STORAGE_BYTES);
+    const manifest = {
+      product: "LexContratos",
+      type: "supabase-to-s3-backup",
+      startedAt: startedAt.toISOString(),
+      finishedAt: null,
+      supabaseUrl: config.url,
+      storageBucket: config.storageBucket,
+      runPrefix,
+      tables: {},
+      storage: {
+        discovered: 0,
+        uploaded: 0,
+        uploadedBytes: 0,
+        skipped: []
+      }
+    };
+
+    log(`Iniciando respaldo externo en ${runPrefix}`);
+
+    for (const table of TABLES) {
+      const rows = await readTable(config, table);
+      manifest.tables[table] = rows.length;
+      await putS3Object(`${runPrefix}/database/${table}.json`, JSON.stringify(rows, null, 2), "application/json; charset=utf-8");
+      log(`Tabla ${table}: ${rows.length} registros`);
     }
-  };
 
-  console.log(`Iniciando respaldo externo en ${runPrefix}`);
+    const objects = await listStorage(config);
+    manifest.storage.discovered = objects.length;
+    for (const object of objects) {
+      const estimatedSize = Number(object.metadata?.size || 0);
+      if (estimatedSize && manifest.storage.uploadedBytes + estimatedSize > maxStorageBytes) {
+        manifest.storage.skipped.push({
+          path: object.path,
+          reason: "Límite de tamaño del respaldo alcanzado"
+        });
+        continue;
+      }
 
-  for (const table of TABLES) {
-    const rows = await readTable(config, table);
-    manifest.tables[table] = rows.length;
-    await putS3Object(`${runPrefix}/database/${table}.json`, JSON.stringify(rows, null, 2), "application/json; charset=utf-8");
-    console.log(`Tabla ${table}: ${rows.length} registros`);
+      const file = await downloadStorageObject(config, object.path);
+      if (manifest.storage.uploadedBytes + file.byteLength > maxStorageBytes) {
+        manifest.storage.skipped.push({
+          path: object.path,
+          reason: "Límite de tamaño del respaldo alcanzado"
+        });
+        continue;
+      }
+
+      await putS3Object(
+        `${runPrefix}/storage/${config.storageBucket}/${object.path}`,
+        file,
+        object.metadata?.mimetype || "application/octet-stream"
+      );
+      manifest.storage.uploaded += 1;
+      manifest.storage.uploadedBytes += file.byteLength;
+      log(`Archivo ${object.path}: ${bytesHuman(file.byteLength)}`);
+    }
+
+    manifest.finishedAt = new Date().toISOString();
+    await putS3Object(`${runPrefix}/manifest.json`, JSON.stringify(manifest, null, 2), "application/json; charset=utf-8");
+    log(`Respaldo terminado. Archivos: ${manifest.storage.uploaded}/${manifest.storage.discovered}. Tamaño: ${bytesHuman(manifest.storage.uploadedBytes)}.`);
+    return manifest;
+  } finally {
+    env = previousEnv;
   }
-
-  const objects = await listStorage(config);
-  manifest.storage.discovered = objects.length;
-  for (const object of objects) {
-    const estimatedSize = Number(object.metadata?.size || 0);
-    if (estimatedSize && manifest.storage.uploadedBytes + estimatedSize > maxStorageBytes) {
-      manifest.storage.skipped.push({
-        path: object.path,
-        reason: "Límite de tamaño del respaldo alcanzado"
-      });
-      continue;
-    }
-
-    const file = await downloadStorageObject(config, object.path);
-    if (manifest.storage.uploadedBytes + file.byteLength > maxStorageBytes) {
-      manifest.storage.skipped.push({
-        path: object.path,
-        reason: "Límite de tamaño del respaldo alcanzado"
-      });
-      continue;
-    }
-
-    await putS3Object(
-      `${runPrefix}/storage/${config.storageBucket}/${object.path}`,
-      file,
-      object.metadata?.mimetype || "application/octet-stream"
-    );
-    manifest.storage.uploaded += 1;
-    manifest.storage.uploadedBytes += file.byteLength;
-    console.log(`Archivo ${object.path}: ${bytesHuman(file.byteLength)}`);
-  }
-
-  manifest.finishedAt = new Date().toISOString();
-  await putS3Object(`${runPrefix}/manifest.json`, JSON.stringify(manifest, null, 2), "application/json; charset=utf-8");
-  console.log(`Respaldo terminado. Archivos: ${manifest.storage.uploaded}/${manifest.storage.discovered}. Tamaño: ${bytesHuman(manifest.storage.uploadedBytes)}.`);
 }
 
-main().catch((error) => {
-  console.error(error.message);
-  process.exitCode = 1;
-});
+if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {
+  runSupabaseToS3Backup().catch((error) => {
+    console.error(error.message);
+    process.exitCode = 1;
+  });
+}

@@ -8,6 +8,8 @@
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
     "test:extraction": "node scripts/extraction-smoke-test.mjs",
+    "test:security": "node scripts/security-smoke-test.mjs",
+    "test:preaudit": "node --check app.js && node --check api/admin-users.js && node --check api/admin-backup.js && node --check api/admin-templates.js && node --check api/cron-s3-backup.js && node --check api/extract-party-data.js && node --check api/review-contract.js && node --check scripts/backup-supabase-to-s3.mjs && node scripts/extraction-smoke-test.mjs && node scripts/security-smoke-test.mjs",
     "backup:s3": "node scripts/backup-supabase-to-s3.mjs"
   },
   "dependencies": {

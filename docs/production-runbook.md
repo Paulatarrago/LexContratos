@@ -140,6 +140,8 @@ Para una prueba interna con pocos usuarios, 100 GB debe ser suficiente. Para ope
 
 Hay que distinguir entre base de datos y archivos.
 
+Guía operativa detallada: `docs/backup-and-restore.md`.
+
 ### Base de datos
 
 Supabase realiza respaldos diarios de la base de datos en planes de pago. Esto cubre tablas como usuarios, licencias, expedientes, contratos, versiones, metadatos y datos extraídos.
@@ -156,25 +158,34 @@ Política recomendada:
 4. Guardar esa copia externa en una carpeta restringida, cifrada o en servidor interno.
 5. Probar restauración al menos una vez por trimestre.
 
-Para una primera fase, basta con un respaldo local diario descargado por administración y una revisión semanal de uso. Para una fase más robusta, conviene automatizar la copia de Storage con herramientas compatibles con S3 o con un script programado.
+Para una primera fase, se mantiene el respaldo local de administración como control adicional. La copia externa de Storage ya queda automatizada con Vercel Cron hacia S3.
 
 ### Respaldo externo a S3 o bucket compatible
 
-El proyecto incluye un script de respaldo externo para copiar:
+El proyecto incluye un respaldo externo automatico para copiar:
 
 - Tablas principales de Supabase en archivos JSON.
 - Archivos reales del bucket privado `contract-documents`.
 - Un `manifest.json` con conteo de tablas, archivos subidos, archivos omitidos y tamaño respaldado.
 
-Script:
+Vercel lo ejecuta diariamente en:
 
-```bash
-npm run backup:s3
+```text
+/api/cron-s3-backup
 ```
 
-Variables necesarias en el entorno donde se ejecute:
+Horario:
+
+```text
+0 8 * * *
+```
+
+El horario esta en UTC. En Mexico corre en la madrugada.
+
+Variables necesarias en Vercel:
 
 ```bash
+CRON_SECRET=valor_largo_aleatorio
 SUPABASE_URL=https://TU-PROYECTO.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=TU_SERVICE_ROLE_KEY
 BACKUP_S3_BUCKET=nombre-del-bucket
@@ -183,6 +194,12 @@ BACKUP_S3_ACCESS_KEY_ID=...
 BACKUP_S3_SECRET_ACCESS_KEY=...
 BACKUP_S3_PREFIX=lexcontratos
 BACKUP_SUPABASE_STORAGE_BUCKET=contract-documents
+```
+
+Tambien puede ejecutarse manualmente desde un entorno seguro:
+
+```bash
+npm run backup:s3
 ```
 
 Si el destino no es AWS S3 puro, sino un bucket compatible como Cloudflare R2, MinIO o storage interno, configurar además:

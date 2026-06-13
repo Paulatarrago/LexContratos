@@ -2,6 +2,8 @@ export const config = {
   runtime: "edge"
 };
 
+import { requireActiveAccess } from "../src/server-auth.js";
+
 function jsonResponse(body, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -60,18 +62,13 @@ async function currentUserFromToken(config, token) {
   return response.json();
 }
 
-async function assertAdmin(request, config) {
-  const user = await currentUserFromToken(config, bearerToken(request));
-  if (!user?.id) return { error: jsonResponse({ error: "Inicia sesión para administrar usuarios." }, 401) };
-  const profiles = await supabaseJson(
-    config,
-    `/rest/v1/profiles?id=eq.${encodeURIComponent(user.id)}&select=id,email,role,account_status,license_status&limit=1`
-  );
-  const profile = profiles?.[0];
-  if (!["admin", "superadmin"].includes(profile?.role)) {
+async function assertAdmin(request, env) {
+  const access = await requireActiveAccess(request, env);
+  if (!access.ok) return { error: access.response };
+  if (!["admin", "superadmin"].includes(access.profile?.role)) {
     return { error: jsonResponse({ error: "No tienes permisos de administrador." }, 403) };
   }
-  return { user, profile };
+  return { user: access.user, profile: access.profile };
 }
 
 async function listAuthUsers(config) {
@@ -224,7 +221,7 @@ export default async function handler(request) {
     return jsonResponse({ error: "Administración de usuarios no configurada." }, 503);
   }
 
-  const admin = await assertAdmin(request, config);
+  const admin = await assertAdmin(request, env);
   if (admin.error) return admin.error;
 
   try {

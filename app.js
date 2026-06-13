@@ -1785,7 +1785,7 @@ async function loadAdminUsers() {
   } catch (error) {
     console.warn("LexContratos admin usuarios no disponible", error);
     if (adminUsersSummary) adminUsersSummary.textContent = "No se pudieron cargar usuarios.";
-    if (adminUsersList) adminUsersList.innerHTML = `<div class="empty-state"><strong>Revisa que SUPABASE_SERVICE_ROLE_KEY esté configurada en Vercel.</strong></div>`;
+    if (adminUsersList) adminUsersList.innerHTML = `<div class="empty-state"><strong>No se pudo cargar la administración.</strong><span>Revisa la configuración privada del servidor o contacta a la super administradora.</span></div>`;
   }
 }
 

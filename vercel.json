@@ -1,4 +1,15 @@
 {
+  "crons": [
+    {
+      "path": "/api/cron-s3-backup",
+      "schedule": "0 8 * * *"
+    }
+  ],
+  "functions": {
+    "api/cron-s3-backup.js": {
+      "maxDuration": 300
+    }
+  },
   "headers": [
     {
       "source": "/app/:path*",

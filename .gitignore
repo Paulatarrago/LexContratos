@@ -10,3 +10,7 @@ lexconfig.local.js
 npm-debug.log*
 yarn-debug.log*
 yarn-error.log*
+lexcontratos-respaldo-*.json
+lexcontratos-backup-*.json
+backup-output/
+backups/
