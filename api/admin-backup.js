@@ -133,11 +133,18 @@ export default async function handler(request) {
 
   try {
     const tables = {};
+    const backupWarnings = [];
     for (const table of TABLES) {
-      tables[table] = await supabaseJson(config, `/rest/v1/${table}?select=*&limit=1000`);
+      const rows = await supabaseJson(config, `/rest/v1/${table}?select=*&limit=1000`);
+      tables[table] = rows;
+      if (rows.length >= 1000) {
+        backupWarnings.push(`La tabla ${table} alcanzó el límite de 1,000 registros del respaldo local. Puede requerir respaldo paginado antes de restaurar.`);
+      }
     }
 
     const storage = await storageFileBackup(config, tables.contract_documents || []);
+    const storageWarnings = (storage.skipped || []).map((item) => item.reason || `Archivo omitido: ${item.file_name || item.storage_path || "sin nombre"}`);
+    const warnings = [...backupWarnings, ...storageWarnings];
     const generatedAt = new Date().toISOString();
     const backup = {
       product: "LexContratos",
@@ -152,17 +159,19 @@ export default async function handler(request) {
         "Incluye tablas de Supabase y, dentro de límites razonables de tamaño, archivos de Storage codificados en base64.",
         "Si hay archivos omitidos por tamaño, aparecen en storage.skipped y se pueden recuperar desde Supabase Storage con storage_path."
       ],
+      warnings,
       counts: Object.fromEntries(Object.entries(tables).map(([table, rows]) => [table, rows.length])),
       tables,
       storage
     };
 
-    const filename = `lexcontratos-respaldo-${generatedAt.slice(0, 10)}.json`;
+    const filename = `lexcontratos-respaldo-${generatedAt.slice(0, 10)}${warnings.length ? "-revisar-advertencias" : ""}.json`;
     return new Response(JSON.stringify(backup, null, 2), {
       headers: {
         "content-type": "application/json; charset=utf-8",
         "content-disposition": `attachment; filename="${filename}"`,
-        "x-lex-backup-filename": filename
+        "x-lex-backup-filename": filename,
+        "x-lex-backup-warnings": String(warnings.length)
       }
     });
   } catch (error) {

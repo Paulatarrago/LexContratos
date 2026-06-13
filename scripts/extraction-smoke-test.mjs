@@ -91,14 +91,14 @@ assert.equal(proveedor.domicilioCliente, undefined);
 const { default: extractPartyData } = await import(new URL("../api/extract-party-data.js", import.meta.url));
 delete process.env.OPENAI_API_KEY;
 const statusResponse = await extractPartyData(new Request("http://localhost/api/extract-party-data", { method: "GET" }));
-assert.equal(statusResponse.status, 200);
-assert.equal((await statusResponse.json()).configured, false);
+assert.equal(statusResponse.status, 503);
+assert.deepEqual(await statusResponse.json(), { error: "El acceso privado no está configurado temporalmente." });
 
 const postResponse = await extractPartyData(new Request("http://localhost/api/extract-party-data", {
   method: "POST",
   body: new FormData()
 }));
 assert.equal(postResponse.status, 503);
-assert.deepEqual(await postResponse.json(), { error: "La extracción documental no está disponible temporalmente." });
+assert.deepEqual(await postResponse.json(), { error: "El acceso privado no está configurado temporalmente." });
 
-console.log("Extracción ficticia OK: datos por parte, fedatario/instrumento, domicilio por rol y endpoint sin llave.");
+console.log("Extracción ficticia OK: datos por parte, fedatario/instrumento, domicilio por rol y endpoint protegido.");

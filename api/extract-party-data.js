@@ -59,6 +59,13 @@ export default async function handler(request) {
   const env = typeof process !== "undefined" ? process.env : {};
   const apiKey = env.OPENAI_API_KEY;
 
+  if (!["GET", "POST"].includes(request.method)) {
+    return jsonResponse({ error: "Metodo no permitido." }, 405);
+  }
+
+  const access = await requireActiveAccess(request, env);
+  if (!access.ok) return access.response;
+
   if (request.method === "GET") {
     return jsonResponse({
       configured: Boolean(apiKey),
@@ -66,16 +73,9 @@ export default async function handler(request) {
     });
   }
 
-  if (request.method !== "POST") {
-    return jsonResponse({ error: "Metodo no permitido." }, 405);
-  }
-
   if (!apiKey) {
     return jsonResponse({ error: "La extracción documental no está disponible temporalmente." }, 503);
   }
-
-  const access = await requireActiveAccess(request, env);
-  if (!access.ok) return access.response;
 
   const formData = await request.formData();
   const roleLabel = String(formData.get("roleLabel") || "Parte contractual");

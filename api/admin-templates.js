@@ -62,7 +62,7 @@ async function listSharedTemplates(config) {
     "/rest/v1/master_templates?is_shared=eq.true&select=id,title,category,body,language,metadata,updated_at&order=updated_at.desc&limit=500"
   );
   const templates = {};
-  (rows || []).forEach((row) => {
+  (rows || []).filter((row) => row.metadata?.hidden !== true).forEach((row) => {
     const key = row.metadata?.key || row.id;
     templates[key] = {
       ...(row.metadata || {}),
@@ -137,6 +137,7 @@ export default async function handler(request) {
     const action = String(body.action || "save");
     const payload = normalizeTemplatePayload(body);
     if (action === "hide") payload.metadata.hidden = true;
+    else payload.metadata.hidden = false;
     await upsertSharedTemplate(config, payload);
     return jsonResponse({ ok: true, templates: await listSharedTemplates(config) });
   } catch (error) {

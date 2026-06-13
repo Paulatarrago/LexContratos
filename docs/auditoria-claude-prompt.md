@@ -1,4 +1,4 @@
-# Prompt para auditoria profunda de LexContratos
+ # Prompt para auditoria profunda de LexContratos
 
 ## Contexto
 
