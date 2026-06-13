@@ -652,6 +652,8 @@ const formatSize = document.querySelector("#format-size");
 const formatMargin = document.querySelector("#format-margin");
 const formatLineHeight = document.querySelector("#format-line-height");
 const formatJustify = document.querySelector("#format-justify");
+const saveVersionButton = document.querySelector("#save-version");
+const saveCatalogTemplateButton = document.querySelector("#save-catalog-template");
 const letterheadLogoSelect = document.querySelector("#letterhead-logo-select");
 const letterheadLogoInput = document.querySelector("#letterhead-logo-input");
 const addLetterheadLogoButton = document.querySelector("#add-letterhead-logo");
@@ -717,6 +719,7 @@ let templateCatalogFolders = loadTemplateCatalogFolders();
 let activeTemplateCatalogFolder = "Todos";
 let activeTemplate = null;
 let activeSourceMaster = null;
+let activeCatalogEditKey = null;
 let isWorkingCopy = false;
 let activeCategory = "Todos";
 let activeLanguage = "es";
@@ -770,29 +773,8 @@ function accountRoleLabel(role) {
   return backendRoleLabels[role] || "Usuario";
 }
 
-const demoAccount = {
-  email: "usuario.demo@lexcontratos.local",
-  password: "demo-interno",
-  name: "Usuario Demo",
-  role: "Administrador",
-  accountStatus: "active",
-  licenseStatus: "active",
-  licenseEndsAt: "2026-12-31"
-};
-
 function loadUsers() {
-  const users = readJson("lexcontratos_users", {});
-  users[demoAccount.email] = {
-    ...demoAccount,
-    ...(users[demoAccount.email] || {}),
-    password: demoAccount.password,
-    role: users[demoAccount.email]?.role || demoAccount.role,
-    accountStatus: "active",
-    licenseStatus: "active",
-    licenseEndsAt: users[demoAccount.email]?.licenseEndsAt || demoAccount.licenseEndsAt
-  };
-  localStorage.setItem("lexcontratos_users", JSON.stringify(users));
-  return users;
+  return readJson("lexcontratos_users", {});
 }
 
 function saveUsers(users) {
@@ -830,7 +812,7 @@ function normalizeUserKey(value) {
 
 function loadCurrentUser() {
   const session = loadSession();
-  return session?.email || localStorage.getItem("lexcontratos_current_user") || "usuario-demo";
+  return session?.email || localStorage.getItem("lexcontratos_current_user") || "usuario-local";
 }
 
 function saveCurrentUser(user) {
@@ -1048,6 +1030,7 @@ function restoreActiveDraft({ silent = false } = {}) {
   }
   activeFolder = ensureFolderPath(draft.folder || activeFolder);
   loadTemplate(draft.template);
+  setCatalogEditMode(null);
   isWorkingCopy = true;
   activeSourceMaster = draft.sourceMaster || templates[draft.template]?.sourceMaster || activeSourceMaster;
   activeLanguage = draft.language || activeLanguage;
@@ -1359,6 +1342,7 @@ function renderMasterInsights() {
 function clearWorkspaceState() {
   activeTemplate = null;
   activeSourceMaster = null;
+  setCatalogEditMode(null);
   isWorkingCopy = false;
   partyDataStore = {};
   sourceTextsBySide = { A: [], B: [] };
@@ -1436,6 +1420,7 @@ function switchActiveUser(user, announce = true) {
   templates = loadMasterTemplates();
   activeTemplate = null;
   activeSourceMaster = null;
+  setCatalogEditMode(null);
   isWorkingCopy = false;
   sourceTextsBySide = { A: [], B: [] };
   partyDocumentsStepVisited = false;
@@ -2623,6 +2608,13 @@ function canManageTemplateCatalog(templateKey) {
   return Boolean(template.personal || template.shared || !isCatalogBaseTemplate(templateKey) || canManageSharedCatalog());
 }
 
+function setCatalogEditMode(templateKey = null) {
+  activeCatalogEditKey = templateKey;
+  saveCatalogTemplateButton?.classList.toggle("is-hidden", !templateKey);
+  saveVersionButton?.classList.toggle("is-hidden", Boolean(templateKey));
+  editor?.classList.toggle("catalog-edit-mode", Boolean(templateKey));
+}
+
 function persistManagedTemplate(templateKey, action = "save") {
   const template = templates[templateKey];
   if (!template) return;
@@ -2670,6 +2662,74 @@ function renameMasterTemplate(templateKey) {
   persistManagedTemplate(templateKey);
   renderTemplates();
   showToast("Nombre del formato actualizado en tu catálogo.");
+}
+
+function editMasterTemplate(templateKey) {
+  const template = templates[templateKey];
+  if (!template?.master) return;
+  if (!canManageTemplateCatalog(templateKey)) {
+    showToast("Solo una administradora puede editar formatos del catálogo general.");
+    return;
+  }
+  if (templatePicker.open) templatePicker.close();
+  activeTemplate = templateKey;
+  activeSourceMaster = templateKey;
+  isWorkingCopy = false;
+  setCatalogEditMode(templateKey);
+  editorTitle.textContent = template.title;
+  selectedCategory.textContent = templateCatalogPath(template);
+  selectedDescription.textContent = "Editando formato base del catálogo. Los cambios afectarán las próximas copias que se creen desde este formato.";
+  editor.value = normalizeSignatureNameFields(template.body || "");
+  editor.readOnly = false;
+  autosaveStatus.textContent = "Editando formato base";
+  autosaveStatus.classList.remove("autosave-highlight");
+  if (renameTemplateButton) {
+    renameTemplateButton.textContent = "Renombrar formato";
+    renameTemplateButton.title = "Cambia el nombre del formato base del catálogo.";
+  }
+  setFieldsReviewedState(false);
+  sourceTextsBySide = { A: [], B: [] };
+  partyDocumentsStepVisited = false;
+  renderTemplates();
+  renderDynamicFields();
+  renderCustomFields();
+  renderRoleDrops();
+  renderRequirements();
+  showToast("Edita el formato base y usa “Guardar cambios al catálogo” al terminar.");
+}
+
+function saveCatalogTemplateEdits() {
+  if (!activeCatalogEditKey) {
+    showToast("Primero abre un formato del catálogo en modo edición.");
+    return;
+  }
+  const template = templates[activeCatalogEditKey];
+  if (!template?.master || !canManageTemplateCatalog(activeCatalogEditKey)) {
+    showToast("No tienes permisos para guardar cambios en este formato base.");
+    return;
+  }
+  const body = editor.value.trim();
+  if (!body) {
+    showToast("El formato no puede quedar vacío.");
+    return;
+  }
+  const prepared = prepareTemplateFields(body, template.customFields || []);
+  template.body = prepared.body;
+  template.customFields = prepared.fields;
+  template.fields = prepared.fields.length;
+  template.category = templateCatalogPath(template);
+  template.catalogPath = templateCatalogPath(template);
+  template.master = true;
+  persistManagedTemplate(activeCatalogEditKey);
+  editor.value = prepared.body;
+  setFieldsReviewedState(true);
+  renderTemplates();
+  renderDynamicFields();
+  renderCustomFields();
+  renderRequirements();
+  autosaveStatus.textContent = "Formato base guardado";
+  autosaveStatus.classList.add("autosave-highlight");
+  showToast(`Formato actualizado en el catálogo con ${prepared.fields.length} campo${prepared.fields.length === 1 ? "" : "s"} editable${prepared.fields.length === 1 ? "" : "s"}.`);
 }
 
 function moveMasterTemplate(templateKey) {
@@ -2741,10 +2801,11 @@ function renderTemplates() {
         <footer>
           <span>${catalogLabel}</span>
           <div class="template-card-actions">
-            <button class="ghost-button use-template" type="button" data-template-action="use">Usar</button>
-            ${canManage ? `<button class="ghost-button" type="button" data-template-action="rename">Renombrar</button>` : ""}
-            ${canManage ? `<button class="ghost-button" type="button" data-template-action="move">Mover</button>` : ""}
-            ${canManage ? `<button class="ghost-button danger-action" type="button" data-template-action="delete">Quitar</button>` : ""}
+            <button class="ghost-button use-template" type="button" data-template-action="use" title="Crear una copia de trabajo desde este formato.">Usar</button>
+            ${canManage ? `<button class="ghost-button" type="button" data-template-action="edit" title="Editar el texto y los campos del formato base.">Editar</button>` : ""}
+            ${canManage ? `<button class="ghost-button" type="button" data-template-action="rename" title="Cambiar el nombre del formato en el catálogo.">Renombrar</button>` : ""}
+            ${canManage ? `<button class="ghost-button" type="button" data-template-action="move" title="Mover este formato a otra carpeta del catálogo.">Mover</button>` : ""}
+            ${canManage ? `<button class="ghost-button danger-action" type="button" data-template-action="delete" title="Quitar este formato del catálogo sin borrar contratos ya guardados.">Quitar</button>` : ""}
           </div>
         </footer>
       </article>
@@ -2971,6 +3032,11 @@ function autoSaveVersion(reason = "auto") {
 
 function scheduleAutoSave() {
   clearTimeout(autosaveTimer);
+  if (activeCatalogEditKey) {
+    autosaveStatus.textContent = "Edición de catálogo sin guardar";
+    autosaveStatus.classList.remove("autosave-highlight");
+    return;
+  }
   if (!isWorkingCopy) {
     autosaveStatus.textContent = "Formato protegido";
     autosaveStatus.classList.remove("autosave-highlight");
@@ -2989,6 +3055,7 @@ function loadTemplate(key) {
   }
   activeTemplate = key;
   activeSourceMaster = templates[key]?.sourceMaster || (templates[key]?.master ? key : null);
+  setCatalogEditMode(null);
   isWorkingCopy = !templates[key]?.master;
   partyDataStore = {};
   const template = templates[key];
@@ -4326,6 +4393,11 @@ function discardCriticalChange(changeId) {
 function renameActiveTemplate() {
   const current = templates[activeTemplate];
   if (!current) return;
+  if (activeCatalogEditKey && current.master) {
+    renameMasterTemplate(activeCatalogEditKey);
+    editorTitle.textContent = templates[activeCatalogEditKey]?.title || editorTitle.textContent;
+    return;
+  }
   if (current.master) {
     showToast("Los formatos base no se renombran directo. Crea una copia y renombra la copia.");
     return;
@@ -4348,7 +4420,7 @@ function renameActiveTemplate() {
 function reviewEditableFieldsFromContract() {
   const template = templates[activeTemplate];
   if (!template) return;
-  if (!isWorkingCopy) {
+  if (!isWorkingCopy && !activeCatalogEditKey) {
     showToast("El formato base está protegido. Crea una copia para revisar o ajustar campos.");
     return;
   }
@@ -4357,7 +4429,8 @@ function reviewEditableFieldsFromContract() {
   template.body = prepared.body;
   template.customFields = prepared.fields;
   template.fields = prepared.fields.length;
-  if (template.master) saveMasterTemplates();
+  if (activeCatalogEditKey) persistManagedTemplate(activeCatalogEditKey);
+  else if (template.master) saveMasterTemplates();
   renderTemplates();
   renderDynamicFields();
   renderCustomFields();
@@ -6147,6 +6220,11 @@ templateGrid.addEventListener("click", async (event) => {
   const card = event.target.closest(".template-card");
   if (!card) return;
   const action = event.target.closest("[data-template-action]")?.dataset.templateAction || "use";
+  if (action === "edit") {
+    event.stopPropagation();
+    editMasterTemplate(card.dataset.template);
+    return;
+  }
   if (action === "rename") {
     event.stopPropagation();
     renameMasterTemplate(card.dataset.template);
@@ -6454,14 +6532,7 @@ document.querySelector("#login-form").addEventListener("submit", async (event) =
 });
 
 document.querySelector("#demo-login")?.addEventListener("click", () => {
-  if (productionBackend() || backendAccessLocked()) {
-    showToast("El acceso de prueba no está disponible en este espacio.");
-    return;
-  }
-  loadUsers();
-  saveSession(demoAccount.email);
-  renderAccessState();
-  showToast("Entraste con una cuenta interna de prueba.");
+  showToast("El acceso de prueba no está disponible en este espacio.");
 });
 
 document.querySelector("#register-form").addEventListener("submit", async (event) => {
@@ -6613,7 +6684,10 @@ document.querySelector("#save-version").addEventListener("click", () => {
   saveAsPersonalBaseTemplate();
 });
 
+saveCatalogTemplateButton?.addEventListener("click", saveCatalogTemplateEdits);
+
 document.querySelector("#new-template").addEventListener("click", () => {
+  setCatalogEditMode(null);
   activeTemplate = `custom-${Date.now()}`;
   const body = "NOMBRE DEL CONTRATO\n\nQUE CELEBRAN {{parteA}} Y {{parteB}}...\n\nDECLARACIONES\n\nI. Personalidad de {{parteA}}.\n\nCLÁUSULAS\n\nPRIMERA.";
   const prepared = prepareTemplateFields(body, []);
@@ -6808,6 +6882,7 @@ function handleArchiveSavedItemClick(event) {
       master: false
     };
   }
+  setCatalogEditMode(null);
   isWorkingCopy = true;
   activeSourceMaster = templates[activeTemplate]?.sourceMaster || activeSourceMaster;
   editorTitle.textContent = contract.title;
@@ -7155,6 +7230,7 @@ savedContractsList.addEventListener("click", (event) => {
       master: false
     };
   }
+  setCatalogEditMode(null);
   isWorkingCopy = true;
   activeSourceMaster = templates[activeTemplate]?.sourceMaster || activeSourceMaster;
   editorTitle.textContent = contract.title;
@@ -7216,6 +7292,7 @@ versionList.addEventListener("click", (event) => {
       master: false
     };
   }
+  setCatalogEditMode(null);
   isWorkingCopy = true;
   activeSourceMaster = templates[activeTemplate]?.sourceMaster || activeSourceMaster;
   editorTitle.textContent = version.title;

@@ -455,9 +455,9 @@ def capture_screenshots() -> list[tuple[str, Path, list[str]]]:
 
       cdp.navigate(base + "/", 0.6)
       cdp.eval("""
-        localStorage.setItem('lexcontratos_session', JSON.stringify({ email: 'usuario.demo@lexcontratos.local', date: new Date().toISOString() }));
-        localStorage.setItem('lexcontratos_current_user', 'usuario.demo@lexcontratos.local');
-        localStorage.setItem('lexcontratos_last_login_email', 'usuario.demo@lexcontratos.local');
+        localStorage.setItem('lexcontratos_session', JSON.stringify({ email: 'usuario.prueba@lexcontratos.local', date: new Date().toISOString() }));
+        localStorage.setItem('lexcontratos_current_user', 'usuario.prueba@lexcontratos.local');
+        localStorage.setItem('lexcontratos_last_login_email', 'usuario.prueba@lexcontratos.local');
       """)
       cdp.navigate(base + "/app", 2)
       cdp.eval(ANNOTATION_JS)

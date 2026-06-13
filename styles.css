@@ -3775,6 +3775,11 @@ dialog::backdrop {
   background: #fff5f7;
 }
 
+#contract-editor.catalog-edit-mode {
+  border-color: rgba(15, 118, 110, 0.55);
+  box-shadow: 0 0 0 3px rgba(20, 184, 166, 0.12);
+}
+
 .user-guide {
   display: grid;
   gap: 14px;

@@ -52,7 +52,8 @@ function assertNoSecretNamesInFrontend() {
     "BACKUP_S3_ACCESS_KEY_ID",
     "DROPBOX_SIGN_API_KEY",
     "DROPBOX_SIGN_TEST_MODE",
-    "demo123"
+    ["demo", "interno"].join("-"),
+    ["usuario", "demo"].join(".")
   ];
 
   for (const file of frontendFiles) {
