@@ -3185,12 +3185,28 @@ dialog {
   color: #0e3c74;
 }
 
+.admin-command-bar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 10px 0;
+  padding: 10px;
+  border: 1px solid rgba(25, 102, 174, 0.16);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.admin-command-bar button {
+  min-height: 36px;
+}
+
 .admin-create-user-form {
   display: grid;
-  grid-template-columns: minmax(180px, 1.2fr) minmax(150px, 1fr) minmax(190px, 1fr) minmax(150px, 0.9fr) minmax(130px, 0.8fr) auto;
+  grid-template-columns: minmax(180px, 1fr) repeat(4, minmax(130px, 0.8fr)) auto;
   gap: 8px;
   align-items: end;
-  margin: 10px 0;
+  margin: 8px 0 10px;
   padding: 12px;
   border: 1px solid rgba(25, 102, 174, 0.18);
   border-radius: 8px;

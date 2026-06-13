@@ -115,6 +115,14 @@ async function listUsers(config) {
   });
 }
 
+async function profileById(config, userId) {
+  const rows = await supabaseJson(
+    config,
+    `/rest/v1/profiles?id=eq.${encodeURIComponent(userId)}&select=id,email,full_name,role,account_status,license_status&limit=1`
+  );
+  return rows?.[0] || null;
+}
+
 async function upsertProfile(config, payload) {
   return supabaseJson(config, "/rest/v1/profiles?on_conflict=id", {
     method: "POST",
@@ -270,12 +278,6 @@ export default async function handler(request) {
     const email = String(body.email || "").trim().toLowerCase();
     const fullName = String(body.fullName || email || "Usuario").trim();
     const allowedRoles = new Set(["user", "admin", "superadmin"]);
-    const currentRole = allowedRoles.has(body.currentRole) ? body.currentRole : "user";
-    const targetIsSuperAdmin = currentRole === "superadmin";
-
-    if (targetIsSuperAdmin && admin.profile.role !== "superadmin") {
-      return jsonResponse({ error: "Solo super administración puede modificar otra cuenta superadmin." }, 403);
-    }
 
     if (action === "create_user") {
       const password = String(body.password || "");
@@ -313,6 +315,15 @@ export default async function handler(request) {
 
     if (!userId || !email) {
       return jsonResponse({ error: "Usuario incompleto." }, 400);
+    }
+
+    const targetProfile = await profileById(config, userId);
+    const fallbackRole = allowedRoles.has(body.currentRole) ? body.currentRole : "user";
+    const currentRole = allowedRoles.has(targetProfile?.role) ? targetProfile.role : fallbackRole;
+    const targetIsSuperAdmin = currentRole === "superadmin";
+
+    if (targetIsSuperAdmin && admin.profile.role !== "superadmin") {
+      return jsonResponse({ error: "Solo super administración puede modificar otra cuenta superadmin." }, 403);
     }
 
     if (action === "delete_user") {

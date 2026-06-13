@@ -681,6 +681,9 @@ const openAdminUsers = document.querySelector("#open-admin-users");
 const adminUsersDialog = document.querySelector("#admin-users-dialog");
 const adminUsersSummary = document.querySelector("#admin-users-summary");
 const adminPermissionNote = document.querySelector("#admin-permission-note");
+const adminToggleCreateUserButton = document.querySelector("#admin-toggle-create-user");
+const adminOpenTemplateCatalogButton = document.querySelector("#admin-open-template-catalog");
+const adminOpenLetterheadCatalogButton = document.querySelector("#admin-open-letterhead-catalog");
 const adminCreateUserForm = document.querySelector("#admin-create-user-form");
 const adminCreateRoleSelect = document.querySelector("#admin-create-role");
 const adminUsersList = document.querySelector("#admin-users-list");
@@ -1874,6 +1877,8 @@ async function runAdminCreateUser(event) {
   try {
     const result = await backend.updateAdminUser(payload);
     adminCreateUserForm.reset();
+    adminCreateUserForm.classList.add("is-hidden");
+    if (adminToggleCreateUserButton) adminToggleCreateUserButton.textContent = "Crear usuario";
     await loadAdminUsers();
     showToast(
       result.activationEmailSent
@@ -1889,6 +1894,30 @@ async function runAdminCreateUser(event) {
       submitButton.textContent = originalText;
     }
   }
+}
+
+function toggleAdminCreateUserForm() {
+  if (!adminCreateUserForm) return;
+  const willOpen = adminCreateUserForm.classList.contains("is-hidden");
+  adminCreateUserForm.classList.toggle("is-hidden", !willOpen);
+  if (adminToggleCreateUserButton) adminToggleCreateUserButton.textContent = willOpen ? "Ocultar alta" : "Crear usuario";
+  if (willOpen) document.querySelector("#admin-create-name")?.focus();
+}
+
+function openAdminTemplateCatalog() {
+  adminUsersDialog?.close();
+  if (templateSearch) templateSearch.value = "";
+  syncSharedTemplatesFromBackend();
+  renderTemplates();
+  templatePicker?.showModal();
+  templateSearch?.focus();
+}
+
+function openAdminLetterheadCatalog() {
+  adminUsersDialog?.close();
+  renderLetterheadLogos();
+  renderLetterheadCatalogList();
+  letterheadCatalogDialog?.showModal();
 }
 
 async function runAdminUserAction(button) {
@@ -6277,6 +6306,9 @@ adminUsersList?.addEventListener("click", (event) => {
   if (button) runAdminUserAction(button);
 });
 downloadAdminBackupButton?.addEventListener("click", runAdminBackup);
+adminToggleCreateUserButton?.addEventListener("click", toggleAdminCreateUserForm);
+adminOpenTemplateCatalogButton?.addEventListener("click", openAdminTemplateCatalog);
+adminOpenLetterheadCatalogButton?.addEventListener("click", openAdminLetterheadCatalog);
 adminCreateUserForm?.addEventListener("submit", runAdminCreateUser);
 
 document.querySelector("#fill-contract").addEventListener("click", (event) => {

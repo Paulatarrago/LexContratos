@@ -740,10 +740,15 @@
       </form>
       <div class="admin-users-summary" id="admin-users-summary">Cargando usuarios...</div>
       <div class="admin-permission-note" id="admin-permission-note"></div>
-      <form class="admin-create-user-form" id="admin-create-user-form">
+      <div class="admin-command-bar" aria-label="Acciones de administración">
+        <button class="primary-action" id="admin-toggle-create-user" type="button">Crear usuario</button>
+        <button class="secondary-action" id="admin-open-template-catalog" type="button">Catálogo de formatos</button>
+        <button class="secondary-action" id="admin-open-letterhead-catalog" type="button">Catálogo de membretes</button>
+      </div>
+      <form class="admin-create-user-form is-hidden" id="admin-create-user-form">
         <div>
-          <strong>Crear usuario activo</strong>
-          <span>Alta una cuenta interna con contraseña temporal. Compártela por un canal seguro.</span>
+          <strong>Nuevo usuario</strong>
+          <span>Crea una cuenta interna con contraseña temporal. Compártela por un canal seguro.</span>
         </div>
         <label>Nombre<input id="admin-create-name" type="text" autocomplete="off" required /></label>
         <label>Correo<input id="admin-create-email" type="email" autocomplete="off" required /></label>
