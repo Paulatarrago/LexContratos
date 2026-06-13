@@ -490,18 +490,18 @@ CUARTA. Garantías. Las garantías personales, reales, títulos de crédito o do
 };
 
 const roleLabels = {
-  prestacionDemandaEjemplo: ["Prestador de servicios", "Cliente"],
+  prestacionDemandaEjemplo: ["Cliente", "Prestador de servicios"],
   services: ["Cliente", "Prestador de servicios"],
   software: ["Cliente", "Desarrollador"],
   data: ["Responsable", "Encargado"],
-  lease: ["Arrendador", "Arrendatario"],
-  purchase: ["Vendedor", "Comprador"],
-  loan: ["Mutuante", "Mutuario"],
+  lease: ["Arrendatario", "Arrendador"],
+  purchase: ["Comprador", "Vendedor"],
+  loan: ["Mutuario", "Mutuante"],
   supply: ["Comprador", "Proveedor"],
-  distribution: ["Fabricante", "Distribuidor"],
+  distribution: ["Distribuidor", "Fabricante"],
   commission: ["Comitente", "Comisionista"],
   mandate: ["Mandante", "Mandatario"],
-  nda: ["Parte reveladora", "Parte receptora"],
+  nda: ["Parte receptora", "Parte reveladora"],
   work_order: ["Cliente", "Prestador de servicios"],
   trust: ["Fideicomitente", "Fiduciario"],
   association: ["Asociante", "Asociado"],
@@ -509,13 +509,13 @@ const roleLabels = {
   work_contract: ["Contratante", "Contratista"],
   professional_services: ["Cliente", "Profesionista"],
   promise: ["Promitente comprador", "Promitente vendedor"],
-  rights_assignment: ["Cedente", "Cesionario"],
-  license_use: ["Licenciante", "Licenciatario"],
-  franchise: ["Franquiciante", "Franquiciatario"],
-  partnership: ["Socio operativo", "Socio inversionista"],
+  rights_assignment: ["Cesionario", "Cedente"],
+  license_use: ["Licenciatario", "Licenciante"],
+  franchise: ["Franquiciatario", "Franquiciante"],
+  partnership: ["Socio inversionista", "Socio operativo"],
   amendment: ["Cliente o contratante", "Proveedor o prestador"],
   termination_agreement: ["Cliente o contratante", "Proveedor o prestador"],
-  debt_acknowledgment: ["Acreedor", "Deudor"],
+  debt_acknowledgment: ["Deudor", "Acreedor"],
   ...(window.lexImportedRoleLabels || {})
 };
 
@@ -656,6 +656,10 @@ const letterheadLogoSelect = document.querySelector("#letterhead-logo-select");
 const letterheadLogoInput = document.querySelector("#letterhead-logo-input");
 const addLetterheadLogoButton = document.querySelector("#add-letterhead-logo");
 const removeLetterheadLogoButton = document.querySelector("#remove-letterhead-logo");
+const letterheadCatalogDialog = document.querySelector("#letterhead-catalog-dialog");
+const letterheadCatalogList = document.querySelector("#letterhead-catalog-list");
+const letterheadUploadButton = document.querySelector("#letterhead-upload-button");
+const letterheadClearSelectionButton = document.querySelector("#letterhead-clear-selection");
 const currentUserLabel = document.querySelector("#current-user-label");
 const switchUserButton = document.querySelector("#switch-user");
 const renameTemplateButton = document.querySelector("#rename-template");
@@ -1162,10 +1166,39 @@ function renderLetterheadLogos() {
   letterheadLogoSelect.value = selectedLetterheadLogoId || "";
   if (addLetterheadLogoButton) addLetterheadLogoButton.hidden = letterheadCatalogLocked();
   if (removeLetterheadLogoButton) {
-    const selected = selectedLetterheadLogo();
     removeLetterheadLogoButton.hidden = letterheadCatalogLocked();
-    removeLetterheadLogoButton.disabled = !selectedLetterheadLogoId || selected?.source === "catalog";
+    removeLetterheadLogoButton.disabled = !selectedLetterheadLogoId;
   }
+  renderLetterheadCatalogList();
+}
+
+function renderLetterheadCatalogList() {
+  if (!letterheadCatalogList) return;
+  letterheadLogos = loadLetterheadLogos();
+  if (!letterheadLogos.length) {
+    letterheadCatalogList.innerHTML = `<div class="empty-state"><strong>No hay membretes guardados.</strong><span>Sube el primero para que aparezca en la lista desplegable del contrato.</span></div>`;
+    return;
+  }
+  letterheadCatalogList.innerHTML = letterheadLogos
+    .map((logo) => {
+      const selected = logo.id === selectedLetterheadLogoId;
+      const lines = letterheadFooterLines(logo);
+      return `
+        <article class="letterhead-catalog-item ${selected ? "active" : ""}">
+          <div class="letterhead-preview">${logo.dataUrl ? `<img src="${escapeHtml(logo.dataUrl)}" alt="${escapeHtml(logo.name)}" />` : `<span>LX</span>`}</div>
+          <div>
+            <strong>${escapeHtml(logo.name)}</strong>
+            <small>${escapeHtml(lines.join(" · ") || "Sin pie de página capturado")}</small>
+            <em>${logo.source === "catalog" ? "Precargado" : "Propio"}${selected ? " · En uso" : ""}</em>
+          </div>
+          <div class="letterhead-item-actions">
+            <button class="secondary-action mini-action" type="button" data-letterhead-action="select" data-letterhead-id="${escapeHtml(logo.id)}">${selected ? "Seleccionado" : "Usar"}</button>
+            ${logo.source === "catalog" ? "" : `<button class="secondary-action mini-action danger-action" type="button" data-letterhead-action="delete" data-letterhead-id="${escapeHtml(logo.id)}">Eliminar</button>`}
+          </div>
+        </article>
+      `;
+    })
+    .join("");
 }
 
 function cleanLogoName(file) {
@@ -1213,16 +1246,25 @@ function addLetterheadLogo(file) {
     saveLetterheadLogos();
     saveSelectedLetterheadLogoId();
     renderLetterheadLogos();
+    renderLetterheadCatalogList();
     saveActiveDraft("Membrete actualizado");
     showToast(`Membrete "${logo.name}" agregado.`);
   };
   reader.readAsDataURL(file);
 }
 
-function removeSelectedLetterheadLogo() {
-  const logo = selectedLetterheadLogo();
+function clearSelectedLetterheadLogo() {
+  selectedLetterheadLogoId = "";
+  saveSelectedLetterheadLogoId();
+  renderLetterheadLogos();
+  saveActiveDraft("Contrato sin membrete");
+  showToast("Este contrato queda sin membrete.");
+}
+
+function deleteLetterheadLogo(id) {
+  const logo = letterheadLogos.find((item) => item.id === id);
   if (!logo) {
-    showToast("No hay membrete seleccionado.");
+    showToast("No encontré ese membrete.");
     return;
   }
   if (logo.source === "catalog") {
@@ -1232,10 +1274,11 @@ function removeSelectedLetterheadLogo() {
   const confirmed = window.confirm(`¿Seguro que quieres eliminar este membrete de tu biblioteca?\n\n${logo.name}`);
   if (!confirmed) return;
   letterheadLogos = letterheadLogos.filter((item) => item.id !== logo.id);
-  selectedLetterheadLogoId = "";
+  if (selectedLetterheadLogoId === logo.id) selectedLetterheadLogoId = "";
   saveLetterheadLogos();
   saveSelectedLetterheadLogoId();
   renderLetterheadLogos();
+  renderLetterheadCatalogList();
   saveActiveDraft("Membrete eliminado");
   showToast("Membrete eliminado de la biblioteca.");
 }
@@ -2204,11 +2247,41 @@ function aliasForSide(text, marker) {
   return "";
 }
 
+const roleKeywordPairs = [
+  { left: "Cliente", right: "Prestador de servicios", leftRx: /\bcliente\b/, rightRx: /\bprestador(?:a)?(?:\s+de\s+servicios)?\b/ },
+  { left: "Cliente", right: "Proveedor", leftRx: /\bcliente\b/, rightRx: /\bproveedor(?:a)?\b/ },
+  { left: "Comprador", right: "Vendedor", leftRx: /\bcomprador(?:a)?\b/, rightRx: /\bvendedor(?:a)?\b/ },
+  { left: "Arrendatario", right: "Arrendador", leftRx: /\barrendatario\b/, rightRx: /\barrendador\b/ },
+  { left: "Comodatario", right: "Comodante", leftRx: /\bcomodatari[oa]\b/, rightRx: /\bcomodante\b/ },
+  { left: "Mutuario", right: "Mutuante", leftRx: /\bmutuario\b/, rightRx: /\bmutuante\b/ },
+  { left: "Mandante", right: "Mandatario", leftRx: /\bmandante\b/, rightRx: /\bmandatario\b/ },
+  { left: "Contratante", right: "Contratista", leftRx: /\bcontratante\b/, rightRx: /\bcontratista\b/ },
+  { left: "Comitente", right: "Comisionista", leftRx: /\bcomitente\b/, rightRx: /\bcomisionista\b/ },
+  { left: "Distribuidor", right: "Fabricante", leftRx: /\bdistribuidor(?:a)?\b/, rightRx: /\bfabricante\b/ },
+  { left: "Licenciatario", right: "Licenciante", leftRx: /\blicenciatario\b/, rightRx: /\blicenciante\b/ },
+  { left: "Franquiciatario", right: "Franquiciante", leftRx: /\bfranquiciatario\b/, rightRx: /\bfranquiciante\b/ },
+  { left: "Cesionario", right: "Cedente", leftRx: /\bcesionario\b/, rightRx: /\bcedente\b/ },
+  { left: "Deudor", right: "Acreedor", leftRx: /\bdeudor(?:a)?\b/, rightRx: /\bacreedor(?:a)?\b/ },
+  { left: "Parte receptora", right: "Parte reveladora", leftRx: /\bparte\s+receptora\b|\breceptor(?:a)?\b/, rightRx: /\bparte\s+reveladora\b|\brevelador(?:a)?\b/ },
+  { left: "Poderdante", right: "Apoderado", leftRx: /\bpoderdante\b/, rightRx: /\bapoderad[oa]\b/ },
+  { left: "Titular de datos", right: "Responsable", leftRx: /\btitular(?:\s+de\s+datos)?\b/, rightRx: /\bresponsable\b/ }
+];
+
+function roleLabelsFromKeywords(text) {
+  const clean = removeAccents(String(text || "")).toLowerCase();
+  const exactPair = roleKeywordPairs.find((pair) => pair.leftRx.test(clean) && pair.rightRx.test(clean));
+  if (exactPair) return [exactPair.left, exactPair.right];
+  return [];
+}
+
 function inferredRoleLabels(key) {
   const text = contractSearchText(key);
   const aliasA = aliasForSide(text, "parteA");
   const aliasB = aliasForSide(text, "parteB");
   if (aliasA && aliasB) return [aliasA, aliasB];
+
+  const keywordLabels = roleLabelsFromKeywords(text);
+  if (keywordLabels.length) return keywordLabels;
 
   const clean = removeAccents(text).toLowerCase();
   if (/prestacion de servicios|servicios profesionales|servicio bajo demanda|logistica|almacenamiento|garantia de servicios/.test(clean)) {
@@ -2229,10 +2302,13 @@ function inferredRoleLabels(key) {
   if (/franquicia/.test(clean)) return ["Franquiciante", "Franquiciatario"];
   if (/licencia de uso/.test(clean)) return ["Licenciante", "Licenciatario"];
   if (/obra/.test(clean)) return ["Contratante", "Contratista"];
-  return ["Cliente / Contratante", "Proveedor / Contraparte"];
+  return ["Parte izquierda", "Parte derecha"];
 }
 
 function roleLabelsForTemplate(key) {
+  const template = templates[key] || baseTemplates[key] || {};
+  const explicit = template.roleLabels || template.roles || template.partyRoles || [];
+  if (explicit.length >= 2 && !explicit.some(roleLabelIsGeneric)) return explicit.slice(0, 2);
   const configured = roleLabels[key] || [];
   if (configured.length >= 2 && !configured.some(roleLabelIsGeneric)) return configured;
   return inferredRoleLabels(key);
@@ -2270,8 +2346,8 @@ function documentUploadRoles() {
 function documentRoleHint(role) {
   const priority = roleUploadPriority(role);
   return priority === 0
-    ? "Cliente, comprador, contratante o quien recibe y paga."
-    : "Proveedor, prestador, vendedor o quien entrega y cobra.";
+    ? "Parte que recibe, compra, contrata, usa o paga según este formato."
+    : "Parte que entrega, vende, presta, arrienda, representa o cobra según este formato.";
 }
 
 function domicileFieldForRole(role) {
@@ -7159,6 +7235,11 @@ letterheadLogoSelect?.addEventListener("change", () => {
 });
 
 addLetterheadLogoButton?.addEventListener("click", () => {
+  renderLetterheadCatalogList();
+  letterheadCatalogDialog?.showModal();
+});
+
+letterheadUploadButton?.addEventListener("click", () => {
   letterheadLogoInput?.click();
 });
 
@@ -7167,7 +7248,25 @@ letterheadLogoInput?.addEventListener("change", () => {
   letterheadLogoInput.value = "";
 });
 
-removeLetterheadLogoButton?.addEventListener("click", removeSelectedLetterheadLogo);
+removeLetterheadLogoButton?.addEventListener("click", clearSelectedLetterheadLogo);
+letterheadClearSelectionButton?.addEventListener("click", clearSelectedLetterheadLogo);
+letterheadCatalogDialog?.addEventListener("click", (event) => {
+  if (event.target === letterheadCatalogDialog) {
+    letterheadCatalogDialog.close();
+    return;
+  }
+  const button = event.target.closest("[data-letterhead-action]");
+  if (!button) return;
+  const id = button.dataset.letterheadId;
+  if (button.dataset.letterheadAction === "select") {
+    selectedLetterheadLogoId = id || "";
+    saveSelectedLetterheadLogoId();
+    renderLetterheadLogos();
+    saveActiveDraft("Membrete seleccionado");
+    showToast("Membrete seleccionado para este documento.");
+  }
+  if (button.dataset.letterheadAction === "delete") deleteLetterheadLogo(id);
+});
 
 document.querySelector("#apply-legal-format")?.addEventListener("click", applyDefaultLegalFormat);
 

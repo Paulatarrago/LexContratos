@@ -158,6 +158,47 @@ Política recomendada:
 
 Para una primera fase, basta con un respaldo local diario descargado por administración y una revisión semanal de uso. Para una fase más robusta, conviene automatizar la copia de Storage con herramientas compatibles con S3 o con un script programado.
 
+### Respaldo externo a S3 o bucket compatible
+
+El proyecto incluye un script de respaldo externo para copiar:
+
+- Tablas principales de Supabase en archivos JSON.
+- Archivos reales del bucket privado `contract-documents`.
+- Un `manifest.json` con conteo de tablas, archivos subidos, archivos omitidos y tamaño respaldado.
+
+Script:
+
+```bash
+npm run backup:s3
+```
+
+Variables necesarias en el entorno donde se ejecute:
+
+```bash
+SUPABASE_URL=https://TU-PROYECTO.supabase.co
+SUPABASE_SERVICE_ROLE_KEY=TU_SERVICE_ROLE_KEY
+BACKUP_S3_BUCKET=nombre-del-bucket
+BACKUP_S3_REGION=us-east-1
+BACKUP_S3_ACCESS_KEY_ID=...
+BACKUP_S3_SECRET_ACCESS_KEY=...
+BACKUP_S3_PREFIX=lexcontratos
+BACKUP_SUPABASE_STORAGE_BUCKET=contract-documents
+```
+
+Si el destino no es AWS S3 puro, sino un bucket compatible como Cloudflare R2, MinIO o storage interno, configurar además:
+
+```bash
+BACKUP_S3_ENDPOINT=https://endpoint-del-proveedor
+BACKUP_S3_FORCE_PATH_STYLE=true
+```
+
+Recomendación operativa:
+
+- Ejecutar diariamente al cierre de la operación o como tarea programada.
+- Guardar las llaves del bucket sólo en el equipo/servidor que haga respaldos.
+- Probar una restauración con documentos ficticios antes de usarlo como respaldo real.
+- Mantener el respaldo externo con acceso restringido y, si el proveedor lo permite, cifrado en reposo y versionado.
+
 ## Correos e IA
 
 - Guia de correo: `docs/email-setup.md`.

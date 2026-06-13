@@ -493,14 +493,14 @@
                 Justificado siempre
               </label>
               <label class="letterhead-control">
-                Membrete por empresa
+                Membrete
                 <select id="letterhead-logo-select">
                   <option value="">Sin membrete</option>
                 </select>
               </label>
               <input id="letterhead-logo-input" type="file" accept="image/png,image/jpeg,image/webp,image/svg+xml" hidden />
-              <button class="secondary-action" id="add-letterhead-logo" type="button" title="Sube el logo o imagen de membrete de una empresa y captura el domicilio o pie que saldrá en Word/PDF.">Subir membrete</button>
-              <button class="secondary-action" id="remove-letterhead-logo" type="button" title="Elimina el membrete seleccionado de tu biblioteca personal.">Quitar membrete</button>
+              <button class="secondary-action" id="add-letterhead-logo" type="button" title="Abre la biblioteca para subir o administrar membretes de empresas.">Catálogo de membretes</button>
+              <button class="secondary-action" id="remove-letterhead-logo" type="button" title="Deja este contrato sin membrete.">Sin membrete</button>
               <button class="primary-action" id="save-as-contract" type="button" title="Guarda el contrato con nombre y carpeta, como en Finder.">Guardar como</button>
             </section>
             <textarea id="contract-editor" spellcheck="true" placeholder="Selecciona un formato o importa un draft propio para comenzar."></textarea>
@@ -764,11 +764,27 @@
             <p class="eyebrow">Documentos por rol</p>
             <h2>Información de las partes <span class="info-tip" tabindex="0" data-tip="Carga documentos por cada parte para evitar mezclar roles. Lo extraído se integra al contrato y lo faltante queda para captura manual.">i</span></h2>
           </div>
-          <button class="secondary-action" id="extract-data" type="button">Extraer e integrar datos</button>
+              <button class="primary-action action-cta" id="extract-data" type="button">Extraer e integrar datos</button>
         </div>
         <p class="section-help">Arrastra documentos o carpetas completas. Puedes subir actas, poderes, constancias fiscales, identificaciones oficiales, correos, Word, PDF, Excel o imágenes legibles.</p>
         <div class="role-drop-grid" id="role-drop-grid"></div>
       </section>
+    </dialog>
+
+    <dialog class="letterhead-catalog-dialog" id="letterhead-catalog-dialog">
+      <form method="dialog" class="dialog-close-row">
+        <div>
+          <p class="eyebrow">Catálogo</p>
+          <h2>Membretes de empresas</h2>
+          <p class="dialog-copy">Guarda aquí los membretes autorizados. Después solo selecciona uno en la lista “Membrete” para integrarlo al Word o PDF del contrato.</p>
+        </div>
+        <button class="icon-button" type="submit" aria-label="Cerrar catálogo de membretes">×</button>
+      </form>
+      <div class="letterhead-catalog-actions">
+        <button class="primary-action action-cta" id="letterhead-upload-button" type="button">Subir membrete al catálogo</button>
+        <button class="secondary-action" id="letterhead-clear-selection" type="button">Usar sin membrete</button>
+      </div>
+      <div class="letterhead-catalog-list" id="letterhead-catalog-list" aria-live="polite"></div>
     </dialog>
 
     <dialog class="critical-review-dialog" id="critical-review-dialog">

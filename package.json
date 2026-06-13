@@ -7,7 +7,8 @@
     "dev": "vite --host 127.0.0.1",
     "build": "vite build",
     "preview": "vite preview --host 127.0.0.1",
-    "test:extraction": "node scripts/extraction-smoke-test.mjs"
+    "test:extraction": "node scripts/extraction-smoke-test.mjs",
+    "backup:s3": "node scripts/backup-supabase-to-s3.mjs"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.78.0",
