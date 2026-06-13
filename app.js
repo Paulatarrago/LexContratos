@@ -681,6 +681,8 @@ const openAdminUsers = document.querySelector("#open-admin-users");
 const adminUsersDialog = document.querySelector("#admin-users-dialog");
 const adminUsersSummary = document.querySelector("#admin-users-summary");
 const adminPermissionNote = document.querySelector("#admin-permission-note");
+const adminCreateUserForm = document.querySelector("#admin-create-user-form");
+const adminCreateRoleSelect = document.querySelector("#admin-create-role");
 const adminUsersList = document.querySelector("#admin-users-list");
 const adminBackupStatus = document.querySelector("#admin-backup-status");
 const downloadAdminBackupButton = document.querySelector("#download-admin-backup");
@@ -1724,12 +1726,13 @@ function adminStatusText(user) {
   return "Pendiente de licencia";
 }
 
-function renderAdminUsers(users = []) {
+function renderAdminUsers(users = [], currentAdmin = {}) {
   const pending = users.filter((user) => !["active", "trial"].includes(user.license_status) && !isAdminBackendRole(user.role)).length;
   const active = users.filter((user) => ["active", "trial"].includes(user.license_status) || isAdminBackendRole(user.role)).length;
-  const currentEmail = String(currentAccount()?.email || activeUser || "").toLowerCase();
-  const currentIsSuperAdmin = isCurrentSuperAdmin();
-  const currentRole = currentIsSuperAdmin ? "Super administradora" : isLocalAdminAccount(currentAccount()) ? "Administradora" : "Usuario";
+  const currentBackendRole = currentAdmin?.role || "";
+  const currentEmail = String(currentAdmin?.email || currentAccount()?.email || activeUser || "").toLowerCase();
+  const currentIsSuperAdmin = currentBackendRole === "superadmin" || isCurrentSuperAdmin();
+  const currentRole = currentBackendRole ? accountRoleLabel(currentBackendRole) : currentIsSuperAdmin ? "Super administradora" : isLocalAdminAccount(currentAccount()) ? "Administradora" : "Usuario";
   if (adminUsersSummary) {
     adminUsersSummary.textContent = `${users.length} usuario${users.length === 1 ? "" : "s"} registrado${users.length === 1 ? "" : "s"} · ${pending} pendiente${pending === 1 ? "" : "s"} · ${active} activo${active === 1 ? "" : "s"} · Tu rol: ${currentRole}`;
   }
@@ -1738,6 +1741,10 @@ function renderAdminUsers(users = []) {
       ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, catálogo, configuración y respaldos."
       : "Estás entrando como administradora. Para ver y asignar el permiso de super administradora, primero tu cuenta debe activarse con ese rol desde Supabase.";
     adminPermissionNote.classList.toggle("is-superadmin", currentIsSuperAdmin);
+  }
+  if (adminCreateRoleSelect) {
+    adminCreateRoleSelect.querySelector('option[value="superadmin"]').disabled = !currentIsSuperAdmin;
+    if (!currentIsSuperAdmin && adminCreateRoleSelect.value === "superadmin") adminCreateRoleSelect.value = "user";
   }
   if (!adminUsersList) return;
   adminUsersList.innerHTML = users.length
@@ -1789,7 +1796,7 @@ async function loadAdminUsers() {
   if (adminUsersList) adminUsersList.innerHTML = "";
   try {
     const data = await backend.listAdminUsers();
-    renderAdminUsers(data.users || []);
+    renderAdminUsers(data.users || [], data.currentAdmin || {});
   } catch (error) {
     console.warn("LexContratos admin usuarios no disponible", error);
     if (adminUsersSummary) adminUsersSummary.textContent = "No se pudieron cargar usuarios.";
@@ -1837,6 +1844,50 @@ async function runAdminBackup() {
   } finally {
     downloadAdminBackupButton.disabled = false;
     downloadAdminBackupButton.textContent = originalText;
+  }
+}
+
+async function runAdminCreateUser(event) {
+  event.preventDefault();
+  const backend = productionBackend();
+  if (!backend?.updateAdminUser || !adminCreateUserForm) {
+    showToast("La creación de usuarios requiere Supabase en producción.");
+    return;
+  }
+  const payload = {
+    action: "create_user",
+    fullName: document.querySelector("#admin-create-name")?.value.trim(),
+    email: document.querySelector("#admin-create-email")?.value.trim().toLowerCase(),
+    password: document.querySelector("#admin-create-password")?.value,
+    role: document.querySelector("#admin-create-role")?.value || "user"
+  };
+  if (!payload.fullName || !payload.email || !payload.password || payload.password.length < 8) {
+    showToast("Completa nombre, correo y una contraseña temporal de al menos 8 caracteres.");
+    return;
+  }
+  const submitButton = adminCreateUserForm.querySelector('button[type="submit"]');
+  const originalText = submitButton?.textContent || "Crear usuario";
+  if (submitButton) {
+    submitButton.disabled = true;
+    submitButton.textContent = "Creando...";
+  }
+  try {
+    const result = await backend.updateAdminUser(payload);
+    adminCreateUserForm.reset();
+    await loadAdminUsers();
+    showToast(
+      result.activationEmailSent
+        ? `Usuario creado y correo enviado a ${payload.email}.`
+        : `Usuario creado. Comparte la contraseña temporal con ${payload.email} por un canal seguro.`
+    );
+  } catch (error) {
+    console.warn("LexContratos no pudo crear usuario admin", error);
+    showToast(error.message || "No se pudo crear el usuario desde administración.");
+  } finally {
+    if (submitButton) {
+      submitButton.disabled = false;
+      submitButton.textContent = originalText;
+    }
   }
 }
 
@@ -6226,6 +6277,7 @@ adminUsersList?.addEventListener("click", (event) => {
   if (button) runAdminUserAction(button);
 });
 downloadAdminBackupButton?.addEventListener("click", runAdminBackup);
+adminCreateUserForm?.addEventListener("submit", runAdminCreateUser);
 
 document.querySelector("#fill-contract").addEventListener("click", (event) => {
   event.stopPropagation();

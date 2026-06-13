@@ -146,6 +146,30 @@ async function deleteAuthUser(config, userId) {
   return data;
 }
 
+async function createAuthUser(config, { email, password, fullName }) {
+  const response = await fetch(`${config.supabaseUrl}/auth/v1/admin/users`, {
+    method: "POST",
+    headers: {
+      apikey: config.serviceKey,
+      authorization: `Bearer ${config.serviceKey}`,
+      "content-type": "application/json"
+    },
+    body: JSON.stringify({
+      email,
+      password,
+      email_confirm: true,
+      user_metadata: {
+        full_name: fullName
+      }
+    })
+  });
+  const data = await response.json().catch(() => ({}));
+  if (!response.ok) {
+    throw new Error(data?.message || data?.error_description || data?.error || "No se pudo crear el usuario.");
+  }
+  return data?.user || data;
+}
+
 function escapeHtml(value) {
   return String(value || "")
     .replace(/&/g, "&amp;")
@@ -226,7 +250,14 @@ export default async function handler(request) {
 
   try {
     if (request.method === "GET") {
-      return jsonResponse({ users: await listUsers(config) });
+      return jsonResponse({
+        currentAdmin: {
+          id: admin.user.id,
+          email: admin.profile.email || admin.user.email || "",
+          role: admin.profile.role || "user"
+        },
+        users: await listUsers(config)
+      });
     }
 
     if (request.method !== "POST") {
@@ -244,6 +275,40 @@ export default async function handler(request) {
 
     if (targetIsSuperAdmin && admin.profile.role !== "superadmin") {
       return jsonResponse({ error: "Solo super administración puede modificar otra cuenta superadmin." }, 403);
+    }
+
+    if (action === "create_user") {
+      const password = String(body.password || "");
+      const requestedRole = allowedRoles.has(body.role) ? body.role : "user";
+      if (!email || !fullName || password.length < 8) {
+        return jsonResponse({ error: "Completa nombre, correo y una contraseña temporal de al menos 8 caracteres." }, 400);
+      }
+      if (requestedRole === "superadmin" && admin.profile.role !== "superadmin") {
+        return jsonResponse({ error: "Solo super administración puede crear otra cuenta superadmin." }, 403);
+      }
+
+      const created = await createAuthUser(config, { email, password, fullName });
+      await upsertProfile(config, {
+        id: created.id,
+        email,
+        full_name: fullName,
+        role: requestedRole,
+        account_status: "active",
+        license_status: "active"
+      });
+      await upsertLicense(config, {
+        user_id: created.id,
+        status: "active",
+        plan: "internal",
+        starts_at: new Date().toISOString()
+      });
+      let activationEmail = { sent: false };
+      try {
+        activationEmail = await notifyLicenseActivated(env, { email, fullName, role: requestedRole });
+      } catch (emailError) {
+        console.warn("LexContratos no pudo enviar correo de usuario creado", emailError);
+      }
+      return jsonResponse({ ok: true, userId: created.id, activationEmailSent: Boolean(activationEmail.sent) });
     }
 
     if (!userId || !email) {

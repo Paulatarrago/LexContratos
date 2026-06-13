@@ -3185,6 +3185,55 @@ dialog {
   color: #0e3c74;
 }
 
+.admin-create-user-form {
+  display: grid;
+  grid-template-columns: minmax(180px, 1.2fr) minmax(150px, 1fr) minmax(190px, 1fr) minmax(150px, 0.9fr) minmax(130px, 0.8fr) auto;
+  gap: 8px;
+  align-items: end;
+  margin: 10px 0;
+  padding: 12px;
+  border: 1px solid rgba(25, 102, 174, 0.18);
+  border-radius: 8px;
+  background: #f8fbff;
+}
+
+.admin-create-user-form strong,
+.admin-create-user-form span,
+.admin-create-user-form label {
+  display: block;
+}
+
+.admin-create-user-form strong {
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.admin-create-user-form span {
+  color: var(--muted);
+  font-size: 12px;
+  line-height: 1.35;
+}
+
+.admin-create-user-form label {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 800;
+}
+
+.admin-create-user-form input,
+.admin-create-user-form select {
+  width: 100%;
+  min-height: 36px;
+  margin-top: 4px;
+  padding: 8px 10px;
+  border: 1px solid #d5e0eb;
+  border-radius: 8px;
+  color: var(--ink);
+  background: white;
+  font: inherit;
+  font-weight: 720;
+}
+
 .admin-backup-panel strong,
 .admin-backup-panel span {
   display: block;

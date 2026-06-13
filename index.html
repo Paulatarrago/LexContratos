@@ -740,6 +740,23 @@
       </form>
       <div class="admin-users-summary" id="admin-users-summary">Cargando usuarios...</div>
       <div class="admin-permission-note" id="admin-permission-note"></div>
+      <form class="admin-create-user-form" id="admin-create-user-form">
+        <div>
+          <strong>Crear usuario activo</strong>
+          <span>Alta una cuenta interna con contraseña temporal. Compártela por un canal seguro.</span>
+        </div>
+        <label>Nombre<input id="admin-create-name" type="text" autocomplete="off" required /></label>
+        <label>Correo<input id="admin-create-email" type="email" autocomplete="off" required /></label>
+        <label>Contraseña temporal<input id="admin-create-password" type="password" autocomplete="new-password" minlength="8" required /></label>
+        <label>Rol
+          <select id="admin-create-role">
+            <option value="user">Usuario</option>
+            <option value="admin">Administradora</option>
+            <option value="superadmin">Super administradora</option>
+          </select>
+        </label>
+        <button class="primary-action" type="submit">Crear usuario</button>
+      </form>
       <section class="admin-backup-panel" aria-label="Respaldo local de administración">
         <div>
           <strong>Respaldo local diario</strong>
