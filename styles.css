@@ -2326,6 +2326,30 @@ button {
   box-shadow: none;
 }
 
+.archive-system-separator {
+  margin: 18px 4px 4px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(155, 44, 44, 0.22);
+  color: #9b2c2c;
+  font-size: 11px;
+  font-weight: 820;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.archive-root.system-root {
+  color: #8f1d1d;
+  background: #fff8f6;
+  border: 1px solid #f0c8c0;
+}
+
+.archive-root.system-root:hover,
+.archive-root.system-root.active {
+  color: #7a1717;
+  background: #ffe8e2;
+  border-color: #dc8d7f;
+}
+
 .archive-list-header,
 .content-list-header,
 .finder-row,

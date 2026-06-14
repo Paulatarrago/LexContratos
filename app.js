@@ -728,7 +728,7 @@ let activeLanguage = "es";
 let partyDataStore = {};
 let sourceTextsBySide = { A: [], B: [] };
 let partyDocumentsStepVisited = false;
-const baseRootFolders = ["Mis Documentos", "Clientes", "Proveedores", "Empresas del Grupo", "Personales", "Documentos de las partes"];
+const baseRootFolders = ["Mis Documentos", "Clientes", "Proveedores", "Empresas del Grupo", "Otros", "Documentos de las partes"];
 const systemRootFolders = ["Formatos del sistema", "Catálogos del sistema"];
 let rootFolders = computeRootFolders();
 let folders = loadFolders();
@@ -783,6 +783,15 @@ function loadUsers() {
 
 function saveUsers(users) {
   localStorage.setItem("lexcontratos_users", JSON.stringify(users));
+}
+
+function normalizeArchiveFolderPath(folder) {
+  const value = String(folder || "").trim();
+  if (!value) return "Mis Documentos";
+  if (value === "General") return "Mis Documentos/General";
+  if (value === "Personales") return "Otros";
+  if (value.startsWith("Personales/")) return `Otros/${value.slice("Personales/".length)}`;
+  return value;
 }
 
 function loadSession() {
@@ -915,7 +924,7 @@ function loadFolders() {
   refreshRootFolders();
   const saved = readJson(userStorageKey("folders"), readJson("lexcontratos_folders", rootFolders));
   const normalized = (Array.isArray(saved) ? saved : rootFolders)
-    .map((folder) => (folder === "General" ? "Mis Documentos/General" : folder))
+    .map(normalizeArchiveFolderPath)
     .filter(Boolean)
     .filter(folderAllowedForCurrentUser);
   return Array.from(new Set([...rootFolders, ...normalized]));
@@ -931,7 +940,7 @@ function loadSavedContracts() {
   const saved = readJson(userStorageKey("saved_contracts"), readJson("lexcontratos_saved_contracts", []));
   return saved.map((contract) => ({
     ...contract,
-    folder: contract.folder === "General" ? "Mis Documentos/General" : (contract.folder || "Mis Documentos")
+    folder: normalizeArchiveFolderPath(contract.folder || "Mis Documentos")
   }));
 }
 
@@ -947,7 +956,7 @@ function loadVersions() {
   const saved = readJson(userStorageKey("versions"), readJson("lexcontratos_versions", []));
   return saved.map((version) => ({
     ...version,
-    folder: version.folder === "General" ? "Mis Documentos/General" : (version.folder || "Mis Documentos")
+    folder: normalizeArchiveFolderPath(version.folder || "Mis Documentos")
   }));
 }
 
@@ -958,7 +967,7 @@ function saveVersions() {
 function loadSupportDocuments() {
   return readJson(userStorageKey("support_documents"), []).map((document) => ({
     ...document,
-    folder: document.folder || "Mis Documentos"
+    folder: normalizeArchiveFolderPath(document.folder || "Mis Documentos")
   }));
 }
 
@@ -2645,14 +2654,11 @@ function saveTemplateCatalogFolders() {
 }
 
 function catalogPathToSystemFolder(path) {
-  const clean = normalizeTemplateCatalogPath(path);
-  return `Formatos del sistema/${clean.split(" / ").join("/")}`;
+  return "Formatos del sistema";
 }
 
 function systemFolderToCatalogPath(folder) {
-  const prefix = "Formatos del sistema/";
-  if (!String(folder || "").startsWith(prefix)) return "";
-  return String(folder).slice(prefix.length).split("/").filter(Boolean).join(" / ");
+  return String(folder || "") === "Formatos del sistema" ? "Formatos generales" : "";
 }
 
 function syncSystemCatalogFolders() {
@@ -2663,15 +2669,7 @@ function syncSystemCatalogFolders() {
   }
   templateCatalogFolders = loadTemplateCatalogFolders();
   const dynamicFolders = ["Formatos del sistema", "Catálogos del sistema", "Catálogos del sistema/Membretes"];
-  templateCatalogFolders.forEach((path) => {
-    const parts = catalogPathToSystemFolder(path).split("/");
-    let current = "";
-    parts.forEach((part) => {
-      current = current ? `${current}/${part}` : part;
-      dynamicFolders.push(current);
-    });
-  });
-  folders = Array.from(new Set([...folders, ...dynamicFolders]));
+  folders = Array.from(new Set([...folders.filter((folder) => !folder.startsWith("Formatos del sistema/")), ...dynamicFolders]));
 }
 
 function ensureTemplateCatalogFolder(path) {
@@ -2895,13 +2893,11 @@ function deleteMasterTemplate(templateKey) {
 
 function renderTemplates() {
   const query = templateSearch.value.trim().toLowerCase();
-  renderTemplateFolderFilter();
+  activeTemplateCatalogFolder = "Todos";
   const filtered = Object.entries(templates).filter(([, template]) => {
     if (!template.master) return false;
-    const path = templateCatalogPath(template);
-    const haystack = `${template.title} ${template.description} ${template.category} ${path}`.toLowerCase();
-    const matchesFolder = activeTemplateCatalogFolder === "Todos" || path === activeTemplateCatalogFolder || path.startsWith(`${activeTemplateCatalogFolder} /`);
-    return matchesFolder && haystack.includes(query);
+    const haystack = `${template.title} ${template.description} ${template.category} ${templateCatalogPath(template)}`.toLowerCase();
+    return haystack.includes(query);
   });
 
   templateGrid.innerHTML = filtered
@@ -2919,14 +2915,13 @@ function renderTemplates() {
       return `
       <article class="template-card ${key === activeTemplate ? "selected" : ""}" data-template="${key}">
         <h2>${template.title}</h2>
-        <p>${templateCatalogPath(template)} · ${template.fields} campos</p>
+        <p>Formato del sistema · ${template.fields} campos</p>
         <footer>
           <span>${catalogLabel}</span>
           <div class="template-card-actions">
             <button class="ghost-button use-template" type="button" data-template-action="use" title="Crear una copia de trabajo desde este formato.">Usar</button>
             ${canManage ? `<button class="ghost-button" type="button" data-template-action="edit" title="Editar el texto y los campos del formato base.">Editar</button>` : ""}
             ${canManage ? `<button class="ghost-button" type="button" data-template-action="rename" title="Cambiar el nombre del formato en el catálogo.">Renombrar</button>` : ""}
-            ${canManage ? `<button class="ghost-button" type="button" data-template-action="move" title="Mover este formato a otra carpeta del catálogo.">Mover</button>` : ""}
             ${canManage ? `<button class="ghost-button danger-action" type="button" data-template-action="delete" title="Quitar este formato del catálogo sin borrar contratos ya guardados.">Quitar</button>` : ""}
           </div>
         </footer>
@@ -5041,7 +5036,7 @@ function archiveActionCapabilities(targets = currentArchiveTargets()) {
   const letterheadTargets = usefulTargets.filter((item) => item.type === "letterhead");
   return {
     rename: usefulTargets.length === 1,
-    move: (documentTargets.length > 0 && folderTargets.length === 0 && templateTargets.length === 0 && letterheadTargets.length === 0) || (templateTargets.length === 1 && usefulTargets.length === 1),
+    move: documentTargets.length > 0 && folderTargets.length === 0 && templateTargets.length === 0 && letterheadTargets.length === 0,
     copy: documentTargets.length > 0 && folderTargets.length === 0,
     delete: usefulTargets.length > 0
   };
@@ -5335,11 +5330,9 @@ function normalizeLegacySupportFolders() {
 }
 
 function templatesForSystemFolder(folder) {
-  const catalogPath = systemFolderToCatalogPath(folder);
-  if (!catalogPath) return [];
+  if (folder !== "Formatos del sistema") return [];
   return Object.entries(templates)
     .filter(([, template]) => template?.master)
-    .filter(([, template]) => templateCatalogPath(template) === catalogPath)
     .filter(([key]) => canManageTemplateCatalog(key));
 }
 
@@ -5351,7 +5344,6 @@ function letterheadsForSystemFolder(folder) {
 function systemFolderSubtitle(folder) {
   if (folder === "Formatos del sistema") return "Catálogo editable";
   if (folder === "Catálogos del sistema") return "Membretes y catálogos";
-  if (folder.startsWith("Formatos del sistema/")) return "Carpeta de formatos";
   if (folder === "Catálogos del sistema/Membretes") return "Catálogo de membretes";
   return folderMetaText(folder);
 }
@@ -5442,7 +5434,7 @@ function renderFolders() {
           <span class="finder-icon document-icon" aria-hidden="true">□</span>
           <span>
             <strong>${escapeHtml(template.title || "Formato sin nombre")}</strong>
-            <small>${escapeHtml(templateCatalogPath(template))} · ${Number(template.fields || 0)} campos</small>
+            <small>Formato del sistema · ${Number(template.fields || 0)} campos</small>
           </span>
         </button>
       </span>
@@ -5471,7 +5463,7 @@ function renderFolders() {
     </article>
   `;
   const visibleTemplates = templatesForSystemFolder(activeFolder)
-    .filter(([, template]) => archiveMatches(template.title, templateCatalogPath(template), "Formato"));
+    .filter(([, template]) => archiveMatches(template.title, "Formato del sistema", "Formato"));
   const visibleLetterheads = letterheadsForSystemFolder(activeFolder)
     .filter((logo) => archiveMatches(logo.name, logo.companyName || "", "Membrete"));
   const contentItems = [
@@ -5522,16 +5514,21 @@ function renderFolders() {
     }))
   ].sort(compareArchiveItems);
   const contentRows = contentItems.map((item) => item.html);
+  const regularRootButtons = rootFolders.filter((root) => !systemRootFolders.includes(root));
+  const systemRootButtons = rootFolders.filter((root) => systemRootFolders.includes(root));
+  const rootButton = (root, extraClass = "") => `
+    <button class="folder-item archive-root ${extraClass} ${activeFolder === root || activeFolder.startsWith(`${root}/`) ? "active" : ""}" type="button" data-folder="${escapeHtml(root)}">
+      ${escapeHtml(root)}
+    </button>
+  `;
   folderList.innerHTML = `
     <div class="archive-finder view-${escapeHtml(archiveViewMode)}" role="list" data-context-folder="${escapeHtml(activeFolder)}">
       <div class="archive-rootbar" aria-label="Carpetas raíz">
-        ${rootFolders
-          .map((root) => `
-            <button class="folder-item archive-root ${activeFolder === root || activeFolder.startsWith(`${root}/`) ? "active" : ""}" type="button" data-folder="${escapeHtml(root)}">
-              ${escapeHtml(root)}
-            </button>
-          `)
-          .join("")}
+        ${regularRootButtons.map((root) => rootButton(root)).join("")}
+        ${systemRootButtons.length ? `
+          <div class="archive-system-separator" aria-hidden="true">Sistema</div>
+          ${systemRootButtons.map((root) => rootButton(root, "system-root")).join("")}
+        ` : ""}
       </div>
       <div class="archive-list-header">
         <button class="archive-sort-button" type="button" data-archive-sort="name" data-sort-label="Nombre">Nombre</button>
@@ -5586,13 +5583,6 @@ function renameArchiveTargets(targets = currentArchiveTargets()) {
 }
 
 async function moveArchiveTargets(targets = currentArchiveTargets()) {
-  if (targets.length === 1 && targets[0].type === "template") {
-    moveMasterTemplate(targets[0].id);
-    selectedArchiveItems.clear();
-    syncSystemCatalogFolders();
-    renderFolders();
-    return;
-  }
   const movable = targets.filter((item) => item.type === "contract" || item.type === "document");
   if (!movable.length || movable.length !== targets.length) {
     showToast("Por ahora puedes mover contratos y documentos. Las carpetas se reorganizan con renombrar o eliminar.");
@@ -5727,14 +5717,14 @@ async function runArchiveContextAction(action) {
 
 function createFolderInsideArchive(folder = activeFolder) {
   const baseFolder = ensureFolderPath(folder || activeFolder || "Mis Documentos");
+  if (isSystemRoot(baseFolder)) {
+    showToast("Los catálogos del sistema no usan subcarpetas. Sube ahí los formatos o membretes aprobados.");
+    return;
+  }
   const name = window.prompt(`Nombre de la nueva carpeta dentro de "${baseFolder}"`);
   if (!name || !name.trim()) return;
   const cleanName = name.trim().replace(/\//g, " ");
   const newPath = ensureFolderPath(`${baseFolder}/${cleanName}`, baseFolder.split("/")[0] || "Mis Documentos");
-  if (newPath.startsWith("Formatos del sistema/")) {
-    ensureTemplateCatalogFolder(systemFolderToCatalogPath(newPath));
-    syncSystemCatalogFolders();
-  }
   activeFolder = newPath;
   if (!folders.includes(activeFolder)) folders.push(activeFolder);
   saveFolders();
@@ -5929,22 +5919,22 @@ function deleteFolder(folder, { skipConfirm = false } = {}) {
   const affectedDocuments = supportDocuments.filter((document) => pathInFolder(document.folder || "", folder)).length;
   const childFolders = folders.filter((path) => pathInFolder(path, folder)).length;
   const isSystemFolder = isSystemRoot(folder);
-  const confirmed = skipConfirm || window.confirm(`${isSystemFolder ? "¿Estás segura de que quieres eliminar una carpeta del sistema?" : "¿Seguro que quieres eliminar esta carpeta?"}\n\n"${folder}" y ${childFolders - 1} subcarpeta(s) dejarán de aparecer.\n\nNo se borrarán contratos ni versiones: se moverán a Personales. Los formatos del sistema, si los hay, se moverán a Formatos generales.`);
+  const confirmed = skipConfirm || window.confirm(`${isSystemFolder ? "¿Estás segura de que quieres eliminar una carpeta del sistema?" : "¿Seguro que quieres eliminar esta carpeta?"}\n\n"${folder}" y ${childFolders - 1} subcarpeta(s) dejarán de aparecer.\n\nNo se borrarán contratos ni versiones: se moverán a Otros. Los formatos del sistema, si los hay, se conservarán en Formatos del sistema.`);
   if (!confirmed) return;
 
   const movedTemplates = moveTemplatesOutOfDeletedSystemFolder(folder);
   folders = folders.filter((path) => !pathInFolder(path, folder));
   folders = Array.from(new Set([...rootFolders, ...folders]));
   savedContracts = savedContracts.map((contract) => (
-    pathInFolder(contract.folder || "", folder) ? { ...contract, folder: "Personales" } : contract
+    pathInFolder(contract.folder || "", folder) ? { ...contract, folder: "Otros" } : contract
   ));
   versions = versions.map((version) => (
-    pathInFolder(version.folder || "", folder) ? { ...version, folder: "Personales" } : version
+    pathInFolder(version.folder || "", folder) ? { ...version, folder: "Otros" } : version
   ));
   supportDocuments = supportDocuments.map((document) => (
     pathInFolder(document.folder || "", folder) ? { ...document, folder: "Documentos de las partes" } : document
   ));
-  activeFolder = pathInFolder(activeFolder, folder) ? "Personales" : activeFolder;
+  activeFolder = pathInFolder(activeFolder, folder) ? "Otros" : activeFolder;
   saveFolders();
   saveSavedContracts();
   saveSupportDocuments();
@@ -7345,9 +7335,9 @@ archiveNewFolderButton?.addEventListener("click", () => {
 });
 
 archiveUploadDocumentsButton?.addEventListener("click", () => {
-  if (activeFolder === "Formatos del sistema" || activeFolder.startsWith("Formatos del sistema/")) {
+  if (activeFolder === "Formatos del sistema") {
     if (!canSeeSystemCatalogs()) return;
-    pendingTemplateImportCatalogPath = systemFolderToCatalogPath(activeFolder) || activeTemplateCatalogFolder || "Formatos generales";
+    pendingTemplateImportCatalogPath = "Formatos generales";
     templateImport?.click();
     return;
   }
