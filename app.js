@@ -717,6 +717,7 @@ let activeUser = loadCurrentUser();
 let templates = loadMasterTemplates();
 let templateCatalogFolders = loadTemplateCatalogFolders();
 let activeTemplateCatalogFolder = "Todos";
+let pendingTemplateImportCatalogPath = "";
 let activeTemplate = null;
 let activeSourceMaster = null;
 let activeCatalogEditKey = null;
@@ -726,7 +727,9 @@ let activeLanguage = "es";
 let partyDataStore = {};
 let sourceTextsBySide = { A: [], B: [] };
 let partyDocumentsStepVisited = false;
-const rootFolders = ["Mis Documentos", "Clientes", "Proveedores", "Empresas del Grupo", "Personales", "Documentos de las partes"];
+const baseRootFolders = ["Mis Documentos", "Clientes", "Proveedores", "Empresas del Grupo", "Personales", "Documentos de las partes"];
+const systemRootFolders = ["Formatos del sistema", "Catálogos del sistema"];
+let rootFolders = computeRootFolders();
 let folders = loadFolders();
 let activeFolder = folders[0] || "Mis Documentos";
 let savedContracts = loadSavedContracts();
@@ -907,10 +910,12 @@ async function syncSharedTemplatesFromBackend() {
 }
 
 function loadFolders() {
+  refreshRootFolders();
   const saved = readJson(userStorageKey("folders"), readJson("lexcontratos_folders", rootFolders));
-  const normalized = saved
+  const normalized = (Array.isArray(saved) ? saved : rootFolders)
     .map((folder) => (folder === "General" ? "Mis Documentos/General" : folder))
-    .filter(Boolean);
+    .filter(Boolean)
+    .filter(folderAllowedForCurrentUser);
   return Array.from(new Set([...rootFolders, ...normalized]));
 }
 
@@ -1272,6 +1277,28 @@ function deleteLetterheadLogo(id) {
   showToast("Membrete eliminado de la biblioteca.");
 }
 
+function renameLetterheadLogo(id) {
+  const logo = letterheadLogos.find((item) => item.id === id);
+  if (!logo) {
+    showToast("No encontré ese membrete.");
+    return;
+  }
+  if (logo.source === "catalog") {
+    showToast("Ese membrete es precargado. Para cambiarlo, sube una nueva versión aprobada al catálogo.");
+    return;
+  }
+  const name = window.prompt("Nuevo nombre del membrete", logo.name || "Membrete");
+  if (!name || !name.trim()) return;
+  const confirmed = window.confirm(`¿Seguro que quieres renombrar este membrete como "${name.trim()}"?`);
+  if (!confirmed) return;
+  logo.name = name.trim();
+  logo.companyName = logo.companyName || logo.name;
+  saveLetterheadLogos();
+  renderLetterheadLogos();
+  renderFolders();
+  showToast("Membrete renombrado.");
+}
+
 function letterheadLogoForSignature() {
   const logo = selectedLetterheadLogo();
   if (!logo?.dataUrl) return Promise.resolve(null);
@@ -1417,6 +1444,7 @@ function recordMasterImprovement(masterKey, prepared) {
 function switchActiveUser(user, announce = true) {
   activeUser = user;
   saveCurrentUser(user);
+  refreshRootFolders();
   templates = loadMasterTemplates();
   activeTemplate = null;
   activeSourceMaster = null;
@@ -1475,6 +1503,35 @@ function isLocalAdminAccount(account = currentAccount()) {
 
 function isCurrentSuperAdmin() {
   return currentAccount()?.role === "Super administradora" || currentAccount()?.role === "Superadministradora";
+}
+
+function canSeeSystemCatalogs() {
+  return isLocalAdminAccount();
+}
+
+function computeRootFolders() {
+  return canSeeSystemCatalogs() ? [...baseRootFolders, ...systemRootFolders] : baseRootFolders.slice();
+}
+
+function refreshRootFolders() {
+  rootFolders = computeRootFolders();
+  return rootFolders;
+}
+
+function folderRoot(path) {
+  return String(path || "").split("/").filter(Boolean)[0] || "Mis Documentos";
+}
+
+function isSystemRoot(path) {
+  return systemRootFolders.includes(folderRoot(path));
+}
+
+function saveDialogRootFolders() {
+  return baseRootFolders.slice();
+}
+
+function folderAllowedForCurrentUser(folder) {
+  return rootFolders.includes(folderRoot(folder));
 }
 
 function hasActiveAccess(account) {
@@ -1726,8 +1783,8 @@ function renderAdminUsers(users = [], currentAdmin = {}) {
   }
   if (adminPermissionNote) {
     adminPermissionNote.textContent = currentIsSuperAdmin
-      ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, catálogo, configuración y respaldos."
-      : "Estás entrando como administradora. Para ver y asignar el permiso de super administradora, primero tu cuenta debe activarse con ese rol desde Supabase.";
+      ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, configuración y respaldos. Los formatos y membretes del sistema se administran desde Mis Documentos."
+      : "Estás entrando como administradora. Los formatos y membretes del sistema se administran desde Mis Documentos; la super administración conserva permisos avanzados.";
     adminPermissionNote.classList.toggle("is-superadmin", currentIsSuperAdmin);
   }
   if (adminCreateRoleSelect) {
@@ -1891,18 +1948,23 @@ function toggleAdminCreateUserForm() {
 
 function openAdminTemplateCatalog() {
   adminUsersDialog?.close();
-  if (templateSearch) templateSearch.value = "";
+  if (!canSeeSystemCatalogs()) {
+    showToast("Solo administración puede modificar los formatos del sistema.");
+    return;
+  }
   syncSharedTemplatesFromBackend();
-  renderTemplates();
-  templatePicker?.showModal();
-  templateSearch?.focus();
+  openArchiveFolder("Formatos del sistema", { announce: false });
+  archiveDrawer.classList.add("open");
 }
 
 function openAdminLetterheadCatalog() {
   adminUsersDialog?.close();
-  renderLetterheadLogos();
-  renderLetterheadCatalogList();
-  letterheadCatalogDialog?.showModal();
+  if (!canSeeSystemCatalogs()) {
+    showToast("Solo administración puede modificar los membretes del sistema.");
+    return;
+  }
+  openArchiveFolder("Catálogos del sistema/Membretes", { announce: false });
+  archiveDrawer.classList.add("open");
 }
 
 async function runAdminUserAction(button) {
@@ -2577,6 +2639,36 @@ function saveTemplateCatalogFolders() {
   localStorage.setItem(userStorageKey("template_catalog_folders"), JSON.stringify(templateCatalogFolders));
 }
 
+function catalogPathToSystemFolder(path) {
+  const clean = normalizeTemplateCatalogPath(path);
+  return `Formatos del sistema/${clean.split(" / ").join("/")}`;
+}
+
+function systemFolderToCatalogPath(folder) {
+  const prefix = "Formatos del sistema/";
+  if (!String(folder || "").startsWith(prefix)) return "";
+  return String(folder).slice(prefix.length).split("/").filter(Boolean).join(" / ");
+}
+
+function syncSystemCatalogFolders() {
+  refreshRootFolders();
+  if (!canSeeSystemCatalogs()) {
+    folders = folders.filter((folder) => !isSystemRoot(folder));
+    return;
+  }
+  templateCatalogFolders = loadTemplateCatalogFolders();
+  const dynamicFolders = ["Formatos del sistema", "Catálogos del sistema", "Catálogos del sistema/Membretes"];
+  templateCatalogFolders.forEach((path) => {
+    const parts = catalogPathToSystemFolder(path).split("/");
+    let current = "";
+    parts.forEach((part) => {
+      current = current ? `${current}/${part}` : part;
+      dynamicFolders.push(current);
+    });
+  });
+  folders = Array.from(new Set([...folders, ...dynamicFolders]));
+}
+
 function ensureTemplateCatalogFolder(path) {
   const clean = normalizeTemplateCatalogPath(path);
   if (!templateCatalogFolders.includes(clean)) {
@@ -2606,6 +2698,17 @@ function canManageTemplateCatalog(templateKey) {
   const template = templates[templateKey];
   if (!template?.master) return false;
   return Boolean(template.personal || template.shared || !isCatalogBaseTemplate(templateKey) || canManageSharedCatalog());
+}
+
+function requiresSystemTemplateConfirmation(templateKey) {
+  const template = templates[templateKey];
+  return Boolean(template?.shared || isCatalogBaseTemplate(templateKey));
+}
+
+function confirmSystemTemplateChange(action, templateKey) {
+  if (!requiresSystemTemplateConfirmation(templateKey)) return true;
+  const title = templates[templateKey]?.title || "este formato";
+  return window.confirm(`¿Estás segura de que quieres ${action} un archivo del sistema?\n\n${title}\n\nEste cambio puede afectar los formatos base que usará el equipo.`);
 }
 
 function setCatalogEditMode(templateKey = null) {
@@ -2655,11 +2758,14 @@ function renameMasterTemplate(templateKey) {
     showToast("Solo una administradora puede renombrar formatos del catálogo general.");
     return;
   }
+  if (!confirmSystemTemplateChange("renombrar", templateKey)) return;
   const name = window.prompt("Nuevo nombre del formato", template.title || "Formato");
   if (!name || !name.trim()) return;
   template.title = name.trim();
   template.personal = template.personal || !baseTemplates[templateKey];
   persistManagedTemplate(templateKey);
+  syncSystemCatalogFolders();
+  renderFolders();
   renderTemplates();
   showToast("Nombre del formato actualizado en tu catálogo.");
 }
@@ -2671,6 +2777,7 @@ function editMasterTemplate(templateKey) {
     showToast("Solo una administradora puede editar formatos del catálogo general.");
     return;
   }
+  if (!confirmSystemTemplateChange("editar", templateKey)) return;
   if (templatePicker.open) templatePicker.close();
   activeTemplate = templateKey;
   activeSourceMaster = templateKey;
@@ -2708,6 +2815,7 @@ function saveCatalogTemplateEdits() {
     showToast("No tienes permisos para guardar cambios en este formato base.");
     return;
   }
+  if (!confirmSystemTemplateChange("guardar cambios en", activeCatalogEditKey)) return;
   const body = editor.value.trim();
   if (!body) {
     showToast("El formato no puede quedar vacío.");
@@ -2723,6 +2831,8 @@ function saveCatalogTemplateEdits() {
   persistManagedTemplate(activeCatalogEditKey);
   editor.value = prepared.body;
   setFieldsReviewedState(true);
+  syncSystemCatalogFolders();
+  renderFolders();
   renderTemplates();
   renderDynamicFields();
   renderCustomFields();
@@ -2739,6 +2849,7 @@ function moveMasterTemplate(templateKey) {
     showToast("Solo una administradora puede mover formatos del catálogo general.");
     return;
   }
+  if (!confirmSystemTemplateChange("mover", templateKey)) return;
   const path = promptTemplateCatalogPath(templateCatalogPath(template));
   if (!path) return;
   template.catalogPath = path;
@@ -2746,6 +2857,9 @@ function moveMasterTemplate(templateKey) {
   template.personal = template.personal || !baseTemplates[templateKey];
   persistManagedTemplate(templateKey);
   activeTemplateCatalogFolder = path;
+  syncSystemCatalogFolders();
+  activeFolder = catalogPathToSystemFolder(path);
+  renderFolders();
   renderTemplates();
   showToast(`Formato movido a ${path}.`);
 }
@@ -2757,6 +2871,7 @@ function deleteMasterTemplate(templateKey) {
     showToast("Solo una administradora puede quitar formatos del catálogo general.");
     return;
   }
+  if (!confirmSystemTemplateChange("quitar", templateKey)) return;
   const confirmed = window.confirm(`¿Seguro que quieres quitar este formato del catálogo?\n\n${template.title}\n\nNo se borran contratos ya guardados con base en este formato.`);
   if (!confirmed) return;
   if (canManageSharedCatalog() && isCatalogBaseTemplate(templateKey)) {
@@ -2767,6 +2882,8 @@ function deleteMasterTemplate(templateKey) {
     saveMasterTemplates();
   }
   if (activeTemplate === templateKey) clearWorkspaceState();
+  syncSystemCatalogFolders();
+  renderFolders();
   renderTemplates();
   showToast("Formato quitado del catálogo.");
 }
@@ -4915,9 +5032,11 @@ function archiveActionCapabilities(targets = currentArchiveTargets()) {
   const usefulTargets = targets.filter((item) => item.type !== "parent");
   const documentTargets = usefulTargets.filter((item) => item.type === "contract" || item.type === "document");
   const folderTargets = usefulTargets.filter((item) => item.type === "folder");
+  const templateTargets = usefulTargets.filter((item) => item.type === "template");
+  const letterheadTargets = usefulTargets.filter((item) => item.type === "letterhead");
   return {
     rename: usefulTargets.length === 1,
-    move: documentTargets.length > 0 && folderTargets.length === 0,
+    move: (documentTargets.length > 0 && folderTargets.length === 0 && templateTargets.length === 0 && letterheadTargets.length === 0) || (templateTargets.length === 1 && usefulTargets.length === 1),
     copy: documentTargets.length > 0 && folderTargets.length === 0,
     delete: usefulTargets.length > 0
   };
@@ -4973,7 +5092,9 @@ function folderColumnParentsFor(folder) {
 
 function renderSaveLocationBrowser() {
   if (!saveLocationBrowser || !saveLocationSelected) return;
-  const selected = saveLocationState.folder || activeFolder || "Mis Documentos";
+  let selected = ensureFolderPath(saveLocationState.folder || activeFolder || "Mis Documentos");
+  if (!saveDialogRootFolders().includes(folderRoot(selected))) selected = "Mis Documentos";
+  saveLocationState.folder = selected;
   saveLocationSelected.textContent = selected;
   if (saveLocationFileName) {
     saveLocationFileName.value = saveLocationState.fileName || saveLocationState.defaultName || "";
@@ -4988,7 +5109,7 @@ function renderSaveLocationBrowser() {
       return `
         <article class="save-file-row save-folder-row" data-save-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
           <button class="save-file-name save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
-            <span class="finder-icon" aria-hidden="true">▣</span><strong>${escapeHtml(label)}</strong>
+            <strong>${escapeHtml(label)}</strong>
           </button>
           <span>--</span>
           <span>${escapeHtml(folderMetaText(folder))}</span>
@@ -5033,10 +5154,10 @@ function renderSaveLocationBrowser() {
   saveLocationBrowser.innerHTML = `
     <div class="save-location-shell" data-save-folder="${escapeHtml(selected)}">
       <aside class="save-location-roots" aria-label="Carpetas raíz">
-        ${rootFolders
+        ${saveDialogRootFolders()
           .map((root) => `
             <button class="save-folder-option ${selected === root || selected.startsWith(`${root}/`) ? "active" : ""}" type="button" data-save-folder="${escapeHtml(root)}">
-              <span class="finder-icon" aria-hidden="true">▣</span>${escapeHtml(root)}
+              ${escapeHtml(root)}
             </button>
           `)
           .join("")}
@@ -5208,14 +5329,38 @@ function normalizeLegacySupportFolders() {
   saveSupportDocuments();
 }
 
+function templatesForSystemFolder(folder) {
+  const catalogPath = systemFolderToCatalogPath(folder);
+  if (!catalogPath) return [];
+  return Object.entries(templates)
+    .filter(([, template]) => template?.master)
+    .filter(([, template]) => templateCatalogPath(template) === catalogPath)
+    .filter(([key]) => canManageTemplateCatalog(key));
+}
+
+function letterheadsForSystemFolder(folder) {
+  if (folder !== "Catálogos del sistema/Membretes") return [];
+  return loadLetterheadLogos();
+}
+
+function systemFolderSubtitle(folder) {
+  if (folder === "Formatos del sistema") return "Catálogo editable";
+  if (folder === "Catálogos del sistema") return "Membretes y catálogos";
+  if (folder.startsWith("Formatos del sistema/")) return "Carpeta de formatos";
+  if (folder === "Catálogos del sistema/Membretes") return "Catálogo de membretes";
+  return folderMetaText(folder);
+}
+
 function renderFolders() {
+  refreshRootFolders();
+  syncSystemCatalogFolders();
   folders = Array.from(new Set([...rootFolders, ...folders])).sort((a, b) => a.localeCompare(b, "es"));
   normalizeLegacySupportFolders();
   folders = Array.from(new Set([...rootFolders, ...folders])).sort((a, b) => a.localeCompare(b, "es"));
   while (!folders.includes(activeFolder) && folderParent(activeFolder)) {
     activeFolder = folderParent(activeFolder);
   }
-  if (!folders.includes(activeFolder)) activeFolder = "Mis Documentos";
+  if (!folders.includes(activeFolder) || !folderAllowedForCurrentUser(activeFolder)) activeFolder = "Mis Documentos";
   renderFinderPath();
   const children = directChildFolders(activeFolder).filter((folder) => archiveMatches(folder, folder.split("/").pop(), folderMetaText(folder)));
   const visibleContracts = savedContracts
@@ -5226,9 +5371,9 @@ function renderFolders() {
     .filter((document) => archiveMatches(document.name, document.type || "", document.size || "", document.date || "", document.roleLabel || "", document.party || ""));
   const rowForFolder = (folder, { root = false } = {}) => {
     const label = folder.split("/").pop();
-    const description = folderMetaText(folder);
+    const description = isSystemRoot(folder) ? systemFolderSubtitle(folder) : folderMetaText(folder);
     const canSelect = !rootFolders.includes(folder);
-    const sizeText = folderMetaText(folder);
+    const sizeText = isSystemRoot(folder) ? systemFolderSubtitle(folder) : folderMetaText(folder);
     return `
       <article class="finder-row ${folder === activeFolder ? "active" : ""} ${root ? "root-row" : ""} ${isArchiveSelected("folder", folder) ? "is-selected" : ""}" data-folder="${escapeHtml(folder)}" data-archive-row="folder" data-archive-id="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
         <span class="archive-name-cell">
@@ -5284,6 +5429,46 @@ function renderFolders() {
       <span>${escapeHtml(document.type || "Documento")}</span>
     </article>
   `;
+  const rowForTemplate = ([key, template]) => `
+    <article class="finder-row content-row system-template-row ${isArchiveSelected("template", key) ? "is-selected" : ""}" data-template="${escapeHtml(key)}" data-archive-row="template" data-archive-id="${escapeHtml(key)}">
+      <span class="archive-name-cell">
+        <input class="archive-select" type="checkbox" data-archive-type="template" data-archive-id="${escapeHtml(key)}" ${isArchiveSelected("template", key) ? "checked" : ""} aria-label="Seleccionar formato ${escapeHtml(template.title)}" />
+        <button class="saved-contract-open open-system-template" type="button" data-template="${escapeHtml(key)}">
+          <span class="finder-icon document-icon" aria-hidden="true">□</span>
+          <span>
+            <strong>${escapeHtml(template.title || "Formato sin nombre")}</strong>
+            <small>${escapeHtml(templateCatalogPath(template))} · ${Number(template.fields || 0)} campos</small>
+          </span>
+        </button>
+      </span>
+      <span class="archive-row-action-space"></span>
+      <span>${escapeHtml(template.updatedAt || template.updated_at || template.metadata?.updatedAt || "--")}</span>
+      <span>${Number(template.fields || 0)} campos</span>
+      <span>Formato</span>
+    </article>
+  `;
+  const rowForLetterhead = (logo) => `
+    <article class="finder-row content-row system-letterhead-row ${isArchiveSelected("letterhead", logo.id) ? "is-selected" : ""}" data-letterhead-id="${escapeHtml(logo.id)}" data-archive-row="letterhead" data-archive-id="${escapeHtml(logo.id)}">
+      <span class="archive-name-cell">
+        <input class="archive-select" type="checkbox" data-archive-type="letterhead" data-archive-id="${escapeHtml(logo.id)}" ${isArchiveSelected("letterhead", logo.id) ? "checked" : ""} aria-label="Seleccionar membrete ${escapeHtml(logo.name)}" />
+        <button class="saved-contract-open open-system-letterhead" type="button" data-letterhead-id="${escapeHtml(logo.id)}">
+          <span class="finder-icon document-icon" aria-hidden="true">□</span>
+          <span>
+            <strong>${escapeHtml(logo.name || "Membrete sin nombre")}</strong>
+            <small>${escapeHtml(logo.companyName || logo.name || "Membrete")} · ${logo.source === "catalog" ? "Precargado" : "Propio"}</small>
+          </span>
+        </button>
+      </span>
+      <span class="archive-row-action-space"></span>
+      <span>${escapeHtml(logo.date || "--")}</span>
+      <span>${logo.dataUrl ? "Imagen" : "--"}</span>
+      <span>Membrete</span>
+    </article>
+  `;
+  const visibleTemplates = templatesForSystemFolder(activeFolder)
+    .filter(([, template]) => archiveMatches(template.title, templateCatalogPath(template), "Formato"));
+  const visibleLetterheads = letterheadsForSystemFolder(activeFolder)
+    .filter((logo) => archiveMatches(logo.name, logo.companyName || "", "Membrete"));
   const contentItems = [
     ...children.map((folder) => ({
       html: rowForFolder(folder, { root: rootFolders.includes(folder) }),
@@ -5310,6 +5495,24 @@ function renderFolders() {
         date: archiveDateValue(document.date),
         size: archiveSizeValue(document.size),
         class: document.type || "Documento"
+      }
+    })),
+    ...visibleTemplates.map(([key, template]) => ({
+      html: rowForTemplate([key, template]),
+      sort: {
+        name: template.title || "",
+        date: archiveDateValue(template.updatedAt || template.updated_at || template.metadata?.updatedAt),
+        size: Number(template.fields || 0),
+        class: "Formato"
+      }
+    })),
+    ...visibleLetterheads.map((logo) => ({
+      html: rowForLetterhead(logo),
+      sort: {
+        name: logo.name || "",
+        date: archiveDateValue(logo.date),
+        size: logo.dataUrl ? String(logo.dataUrl).length : 0,
+        class: "Membrete"
       }
     }))
   ].sort(compareArchiveItems);
@@ -5373,9 +5576,18 @@ function renameArchiveTargets(targets = currentArchiveTargets()) {
   if (type === "folder") renameFolder(id);
   if (type === "contract") renameSavedContract(id);
   if (type === "document") renameSupportDocument(id);
+  if (type === "template") renameMasterTemplate(id);
+  if (type === "letterhead") renameLetterheadLogo(id);
 }
 
 async function moveArchiveTargets(targets = currentArchiveTargets()) {
+  if (targets.length === 1 && targets[0].type === "template") {
+    moveMasterTemplate(targets[0].id);
+    selectedArchiveItems.clear();
+    syncSystemCatalogFolders();
+    renderFolders();
+    return;
+  }
   const movable = targets.filter((item) => item.type === "contract" || item.type === "document");
   if (!movable.length || movable.length !== targets.length) {
     showToast("Por ahora puedes mover contratos y documentos. Las carpetas se reorganizan con renombrar o eliminar.");
@@ -5481,6 +5693,8 @@ function deleteArchiveTargets(targets = currentArchiveTargets()) {
     if (type === "folder") deleteFolder(id, { skipConfirm: true });
     if (type === "contract") deleteSavedContract(id, { skipConfirm: true });
     if (type === "document") deleteSupportDocument(id, { skipConfirm: true });
+    if (type === "template") deleteMasterTemplate(id);
+    if (type === "letterhead") deleteLetterheadLogo(id);
   });
   selectedArchiveItems.clear();
   renderFolders();
@@ -5512,6 +5726,10 @@ function createFolderInsideArchive(folder = activeFolder) {
   if (!name || !name.trim()) return;
   const cleanName = name.trim().replace(/\//g, " ");
   const newPath = ensureFolderPath(`${baseFolder}/${cleanName}`, baseFolder.split("/")[0] || "Mis Documentos");
+  if (newPath.startsWith("Formatos del sistema/")) {
+    ensureTemplateCatalogFolder(systemFolderToCatalogPath(newPath));
+    syncSystemCatalogFolders();
+  }
   activeFolder = newPath;
   if (!folders.includes(activeFolder)) folders.push(activeFolder);
   saveFolders();
@@ -5606,6 +5824,46 @@ function replaceFolderPath(path, oldPath, newPath) {
   return path;
 }
 
+function updateTemplateCatalogFolderPath(oldFolder, newFolder) {
+  if (!oldFolder.startsWith("Formatos del sistema/") || !newFolder.startsWith("Formatos del sistema/")) return;
+  const oldCatalogPath = systemFolderToCatalogPath(oldFolder);
+  const newCatalogPath = systemFolderToCatalogPath(newFolder);
+  if (!oldCatalogPath || !newCatalogPath) return;
+  templateCatalogFolders = templateCatalogFolders.map((path) => (
+    path === oldCatalogPath || path.startsWith(`${oldCatalogPath} /`)
+      ? `${newCatalogPath}${path.slice(oldCatalogPath.length)}`
+      : path
+  ));
+  templateCatalogFolders = Array.from(new Set(templateCatalogFolders)).sort((a, b) => a.localeCompare(b, "es"));
+  Object.entries(templates).forEach(([key, template]) => {
+    const currentPath = templateCatalogPath(template);
+    if (currentPath !== oldCatalogPath && !currentPath.startsWith(`${oldCatalogPath} /`)) return;
+    const updatedPath = `${newCatalogPath}${currentPath.slice(oldCatalogPath.length)}`;
+    template.catalogPath = updatedPath;
+    template.category = updatedPath;
+    persistManagedTemplate(key);
+  });
+  saveTemplateCatalogFolders();
+}
+
+function moveTemplatesOutOfDeletedSystemFolder(folder) {
+  if (!folder.startsWith("Formatos del sistema/")) return 0;
+  const catalogPath = systemFolderToCatalogPath(folder);
+  if (!catalogPath) return 0;
+  let moved = 0;
+  Object.entries(templates).forEach(([key, template]) => {
+    const currentPath = templateCatalogPath(template);
+    if (currentPath !== catalogPath && !currentPath.startsWith(`${catalogPath} /`)) return;
+    template.catalogPath = "Formatos generales";
+    template.category = "Formatos generales";
+    persistManagedTemplate(key);
+    moved += 1;
+  });
+  templateCatalogFolders = templateCatalogFolders.filter((path) => path !== catalogPath && !path.startsWith(`${catalogPath} /`));
+  saveTemplateCatalogFolders();
+  return moved;
+}
+
 function renameFolder(folder) {
   if (rootFolders.includes(folder)) {
     showToast("Las carpetas raíz se conservan fijas para mantener el archivo ordenado.");
@@ -5625,9 +5883,10 @@ function renameFolder(folder) {
     return;
   }
 
-  const confirmed = window.confirm(`¿Seguro que quieres renombrar "${folder}" como "${newPath}"?\n\nTambién se actualizarán sus subcarpetas, contratos y versiones guardadas.`);
+  const confirmed = window.confirm(`${isSystemRoot(folder) ? "¿Estás segura de que quieres modificar una carpeta del sistema?" : "¿Seguro que quieres renombrar esta carpeta?"}\n\n"${folder}" se renombrará como "${newPath}".\n\nTambién se actualizarán sus subcarpetas, contratos, versiones o formatos asociados.`);
   if (!confirmed) return;
 
+  updateTemplateCatalogFolderPath(folder, newPath);
   folders = folders.map((path) => replaceFolderPath(path, folder, newPath));
   savedContracts = savedContracts.map((contract) => ({
     ...contract,
@@ -5664,9 +5923,11 @@ function deleteFolder(folder, { skipConfirm = false } = {}) {
   const affectedVersions = versions.filter((version) => pathInFolder(version.folder || "", folder)).length;
   const affectedDocuments = supportDocuments.filter((document) => pathInFolder(document.folder || "", folder)).length;
   const childFolders = folders.filter((path) => pathInFolder(path, folder)).length;
-  const confirmed = skipConfirm || window.confirm(`¿Seguro que quieres eliminar "${folder}" y ${childFolders - 1} subcarpeta(s)?\n\nNo se borrarán contratos ni versiones: se moverán a Personales.`);
+  const isSystemFolder = isSystemRoot(folder);
+  const confirmed = skipConfirm || window.confirm(`${isSystemFolder ? "¿Estás segura de que quieres eliminar una carpeta del sistema?" : "¿Seguro que quieres eliminar esta carpeta?"}\n\n"${folder}" y ${childFolders - 1} subcarpeta(s) dejarán de aparecer.\n\nNo se borrarán contratos ni versiones: se moverán a Personales. Los formatos del sistema, si los hay, se moverán a Formatos generales.`);
   if (!confirmed) return;
 
+  const movedTemplates = moveTemplatesOutOfDeletedSystemFolder(folder);
   folders = folders.filter((path) => !pathInFolder(path, folder));
   folders = Array.from(new Set([...rootFolders, ...folders]));
   savedContracts = savedContracts.map((contract) => (
@@ -5687,7 +5948,7 @@ function deleteFolder(folder, { skipConfirm = false } = {}) {
   renderSavedContracts();
   renderVersions();
   saveActiveDraft("Carpeta eliminada");
-  showToast(affectedContracts || affectedVersions || affectedDocuments ? "Carpeta eliminada. Su contenido se movió a una carpeta raíz." : "Carpeta eliminada.");
+  showToast(affectedContracts || affectedVersions || affectedDocuments || movedTemplates ? "Carpeta eliminada. Su contenido se movió a una carpeta raíz." : "Carpeta eliminada.");
   return true;
 }
 
@@ -6760,10 +7021,13 @@ templateImport.addEventListener("change", async () => {
   const [file] = Array.from(templateImport.files);
   if (!file) return;
 
-  const addToMaster = window.confirm("¿Quieres guardar este contrato como formato del catálogo?\n\nAceptar: revisa campos, limpia marcadores y lo guarda como formato base.\nCancelar: solo lo abre como copia de trabajo para este contrato.");
+  const importingToSystemCatalog = Boolean(pendingTemplateImportCatalogPath) && canSeeSystemCatalogs();
+  const addToMaster = importingToSystemCatalog || window.confirm("¿Quieres guardar este contrato como formato del catálogo?\n\nAceptar: revisa campos, limpia marcadores y lo guarda como formato base.\nCancelar: solo lo abre como copia de trabajo para este contrato.");
+  const suggestedCatalogPath = pendingTemplateImportCatalogPath || (activeTemplateCatalogFolder === "Todos" ? "Documentos base propios" : activeTemplateCatalogFolder);
   const catalogPath = addToMaster
-    ? promptTemplateCatalogPath(activeTemplateCatalogFolder === "Todos" ? "Documentos base propios" : activeTemplateCatalogFolder)
+    ? promptTemplateCatalogPath(suggestedCatalogPath)
     : "";
+  pendingTemplateImportCatalogPath = "";
   if (addToMaster && !catalogPath) {
     templateImport.value = "";
     showToast("Importación cancelada. No se guardó el formato.");
@@ -6796,7 +7060,7 @@ templateImport.addEventListener("change", async () => {
   }
 
   if (addToMaster) {
-    const saveAsSharedCatalog = canManageSharedCatalog() && window.confirm("¿Quieres publicarlo en el catálogo general para el equipo?\n\nAceptar: catálogo general.\nCancelar: solo biblioteca personal.");
+    const saveAsSharedCatalog = importingToSystemCatalog || (canManageSharedCatalog() && window.confirm("¿Quieres publicarlo en el catálogo general para el equipo?\n\nAceptar: catálogo general.\nCancelar: solo biblioteca personal."));
     if (saveAsSharedCatalog) {
       templates[activeTemplate].shared = true;
       templates[activeTemplate].personal = false;
@@ -6806,6 +7070,9 @@ templateImport.addEventListener("change", async () => {
       saveMasterTemplates();
     }
     activeTemplateCatalogFolder = catalogPath;
+    syncSystemCatalogFolders();
+    activeFolder = catalogPathToSystemFolder(catalogPath);
+    renderFolders();
   }
   loadTemplate(activeTemplate);
   templateImport.value = "";
@@ -6863,6 +7130,19 @@ function handleArchiveSavedItemClick(event) {
   const deleteDocumentButton = event.target.closest(".delete-document");
   if (deleteDocumentButton) {
     deleteSupportDocument(deleteDocumentButton.dataset.id);
+    return true;
+  }
+  const systemTemplateButton = event.target.closest(".open-system-template");
+  if (systemTemplateButton) {
+    editMasterTemplate(systemTemplateButton.dataset.template);
+    return true;
+  }
+  const systemLetterheadButton = event.target.closest(".open-system-letterhead");
+  if (systemLetterheadButton) {
+    selectedLetterheadLogoId = systemLetterheadButton.dataset.letterheadId || selectedLetterheadLogoId;
+    saveSelectedLetterheadLogoId();
+    renderLetterheadLogos();
+    openAdminLetterheadCatalog();
     return true;
   }
   const button = event.target.closest(".open-saved-contract");
@@ -6972,7 +7252,7 @@ folderList.addEventListener("contextmenu", (event) => {
   if (archiveRow) {
     const type = archiveRow.dataset.archiveRow;
     const id = archiveRow.dataset.archiveId || archiveRow.dataset.folder || archiveRow.dataset.id || archiveRow.dataset.documentId || "";
-    if (type === "contract" || type === "document") {
+    if (type === "contract" || type === "document" || type === "template" || type === "letterhead") {
       const target = { type, id };
       hoveredArchiveItem = target;
       const targetKey = archiveKey(type, id);
@@ -7059,9 +7339,26 @@ archiveNewFolderButton?.addEventListener("click", () => {
   createFolderInsideArchive(visibleFolder);
 });
 
-archiveUploadDocumentsButton?.addEventListener("click", () => archiveDocumentUpload?.click());
+archiveUploadDocumentsButton?.addEventListener("click", () => {
+  if (activeFolder === "Formatos del sistema" || activeFolder.startsWith("Formatos del sistema/")) {
+    if (!canSeeSystemCatalogs()) return;
+    pendingTemplateImportCatalogPath = systemFolderToCatalogPath(activeFolder) || activeTemplateCatalogFolder || "Formatos generales";
+    templateImport?.click();
+    return;
+  }
+  if (activeFolder === "Catálogos del sistema/Membretes" && canSeeSystemCatalogs()) {
+    letterheadLogoInput?.click();
+    return;
+  }
+  archiveDocumentUpload?.click();
+});
 archiveUploadFolderButton?.addEventListener("click", () => archiveFolderUpload?.click());
 archiveDocumentUpload?.addEventListener("change", async () => {
+  if (activeFolder === "Catálogos del sistema/Membretes" && canSeeSystemCatalogs()) {
+    addLetterheadLogo(archiveDocumentUpload.files?.[0]);
+    archiveDocumentUpload.value = "";
+    return;
+  }
   await addFilesToArchiveFolder(archiveDocumentUpload.files, activeFolder);
   archiveDocumentUpload.value = "";
 });

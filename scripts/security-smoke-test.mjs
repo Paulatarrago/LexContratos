@@ -124,7 +124,14 @@ assertIncludes(".gitignore", "lexcontratos-respaldo-*.json", "Respaldos locales 
 assertIncludes(".env.example", "BACKUP_S3_BUCKET=", "Variables de respaldo externo documentadas");
 assertIncludes(".env.example", "CRON_SECRET=", "Secreto de cron documentado");
 assertIncludes("vercel.json", "\"crons\"", "Respaldo diario programado en Vercel");
+assertIncludes("vercel.json", "Content-Security-Policy", "Headers de seguridad: CSP");
+assertIncludes("vercel.json", "X-Frame-Options", "Headers de seguridad: anti-clickjacking");
+assertIncludes("vercel.json", "X-Content-Type-Options", "Headers de seguridad: nosniff");
+assertIncludes("vercel.json", "Referrer-Policy", "Headers de seguridad: referrer policy");
 assertIncludes("api/cron-s3-backup.js", "CRON_SECRET", "Ruta de cron protegida con secreto");
+assertIncludes("api/contact.js", "checkRateLimit", "Formulario de contacto con limite basico");
+assertIncludes("api/contact.js", "assertAllowedOrigin", "Formulario de contacto valida origen");
+assertIncludes("api/contact.js", "website", "Formulario de contacto con campo anti-spam");
 
 assertApiProtected("api/extract-party-data.js", "Extracción documental");
 assertApiProtected("api/review-contract.js", "Revisión crítica IA");
