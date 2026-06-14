@@ -721,6 +721,7 @@ let pendingTemplateImportCatalogPath = "";
 let activeTemplate = null;
 let activeSourceMaster = null;
 let activeCatalogEditKey = null;
+let activeBackendRole = "";
 let isWorkingCopy = false;
 let activeCategory = "Todos";
 let activeLanguage = "es";
@@ -802,6 +803,7 @@ function saveSession(email, remember = true) {
 }
 
 function clearSession() {
+  activeBackendRole = "";
   localStorage.removeItem("lexcontratos_session");
   sessionStorage.removeItem("lexcontratos_session_once");
 }
@@ -1506,7 +1508,7 @@ function isCurrentSuperAdmin() {
 }
 
 function canSeeSystemCatalogs() {
-  return isLocalAdminAccount();
+  return isLocalAdminAccount() || isAdminBackendRole(activeBackendRole);
 }
 
 function computeRootFolders() {
@@ -1541,6 +1543,7 @@ function hasActiveAccess(account) {
 function syncBackendAccount(access) {
   if (!access?.user?.email) return;
   const backendRole = access.profile?.role || "user";
+  activeBackendRole = backendRole;
   const users = loadUsers();
   users[access.user.email] = {
     email: access.user.email,
@@ -1761,6 +1764,8 @@ function requireFieldsReviewed(actionLabel = "seguir") {
 
 function setAdminAccessVisible(isAdmin) {
   openAdminUsers?.classList.toggle("is-hidden", !isAdmin);
+  refreshRootFolders();
+  if (folderList) renderFolders();
 }
 
 function adminStatusText(user) {
@@ -2691,7 +2696,7 @@ function isCatalogBaseTemplate(templateKey) {
 }
 
 function canManageSharedCatalog() {
-  return isLocalAdminAccount();
+  return canSeeSystemCatalogs();
 }
 
 function canManageTemplateCatalog(templateKey) {
