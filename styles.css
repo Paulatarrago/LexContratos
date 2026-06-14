@@ -1507,10 +1507,7 @@ button {
 }
 
 .section-heading {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 12px;
+  display: block;
   margin-bottom: 6px;
 }
 
