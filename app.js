@@ -728,14 +728,32 @@ let activeLanguage = "es";
 let partyDataStore = {};
 let sourceTextsBySide = { A: [], B: [] };
 let partyDocumentsStepVisited = false;
+const personalRootFolder = "Documentos";
+const personalFallbackFolder = "Documentos/Otros";
+const sharedLibraryRootFolder = "Biblioteca compartida";
+const sharedLibraryFolders = [
+  `${sharedLibraryRootFolder}/Documentos de clientes`,
+  `${sharedLibraryRootFolder}/Documentos de proveedores`,
+  `${sharedLibraryRootFolder}/Documentos de empresas del grupo`,
+  `${sharedLibraryRootFolder}/Documentos varios`
+];
+const mattersRootFolder = "Expedientes";
+const partyDocumentsRootFolder = `${mattersRootFolder}/Documentos de las partes`;
+const signedContractsRootFolder = "Contratos firmados";
+const workFormatsRootFolder = "Formatos de trabajo";
+const logosRootFolder = "Logos";
 const reviewRootFolder = "Revisión de documentos";
 const reviewContractsStorageKey = "lexcontratos_review_contracts";
 const reviewDocumentsStorageKey = "lexcontratos_review_documents";
-const baseRootFolders = ["Mis Documentos", "Clientes", "Proveedores", "Empresas del Grupo", "Documentos de las partes", reviewRootFolder, "Otros"];
-const systemRootFolders = ["Formatos del sistema", "Catálogos del sistema"];
+const sharedDocumentsStorageKey = "lexcontratos_shared_library_documents";
+const sharedLetterheadLogosStorageKey = "lexcontratos_shared_letterhead_logos";
+const baseRootFolders = [personalRootFolder, sharedLibraryRootFolder, mattersRootFolder, workFormatsRootFolder, logosRootFolder, reviewRootFolder, signedContractsRootFolder];
+const systemRootFolders = [sharedLibraryRootFolder, workFormatsRootFolder, logosRootFolder, reviewRootFolder, signedContractsRootFolder];
+const adminManagedRootFolders = [sharedLibraryRootFolder, workFormatsRootFolder, logosRootFolder];
+const immutableRootFolders = [signedContractsRootFolder];
 let rootFolders = computeRootFolders();
 let folders = loadFolders();
-let activeFolder = folders[0] || "Mis Documentos";
+let activeFolder = folders[0] || personalRootFolder;
 let savedContracts = loadSavedContracts();
 let versions = loadVersions();
 let supportDocuments = loadSupportDocuments();
@@ -750,7 +768,7 @@ let toastTimer;
 let autosaveTimer;
 let contextMenuFolder = "";
 let saveLocationResolve = null;
-let saveLocationState = { folder: "Mis Documentos", confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
+let saveLocationState = { folder: personalRootFolder, confirmLabel: "Guardar aquí", defaultName: "", requireName: false };
 let saveContextFolder = "";
 let archiveViewMode = localStorage.getItem("lexcontratos_archive_view") || "details";
 let archiveSearchTerm = "";
@@ -791,14 +809,31 @@ function saveUsers(users) {
 
 function normalizeArchiveFolderPath(folder) {
   const value = String(folder || "").trim();
-  if (!value) return "Mis Documentos";
-  if (value === "General") return "Mis Documentos/General";
-  if (value === "Personales") return "Otros";
-  if (value.startsWith("Personales/")) return `Otros/${value.slice("Personales/".length)}`;
+  if (!value) return personalRootFolder;
+  if (value === "Mis Documentos") return personalRootFolder;
+  if (value.startsWith("Mis Documentos/")) return `${personalRootFolder}/${value.slice("Mis Documentos/".length)}`;
+  if (value === "General") return `${personalRootFolder}/General`;
+  if (value === "Personales" || value === "Otros") return personalFallbackFolder;
+  if (value.startsWith("Personales/")) return `${personalFallbackFolder}/${value.slice("Personales/".length)}`;
+  if (value.startsWith("Otros/")) return `${personalFallbackFolder}/${value.slice("Otros/".length)}`;
+  if (value === "Clientes") return `${sharedLibraryRootFolder}/Documentos de clientes`;
+  if (value.startsWith("Clientes/")) return `${sharedLibraryRootFolder}/Documentos de clientes/${value.slice("Clientes/".length)}`;
+  if (value === "Proveedores") return `${sharedLibraryRootFolder}/Documentos de proveedores`;
+  if (value.startsWith("Proveedores/")) return `${sharedLibraryRootFolder}/Documentos de proveedores/${value.slice("Proveedores/".length)}`;
+  if (value === "Empresas del Grupo") return `${sharedLibraryRootFolder}/Documentos de empresas del grupo`;
+  if (value.startsWith("Empresas del Grupo/")) return `${sharedLibraryRootFolder}/Documentos de empresas del grupo/${value.slice("Empresas del Grupo/".length)}`;
+  if (value === "Documentos de las partes") return partyDocumentsRootFolder;
+  if (value.startsWith("Documentos de las partes/")) return `${partyDocumentsRootFolder}/${value.slice("Documentos de las partes/".length)}`;
   if (value === "Documentos para revisión") return reviewRootFolder;
   if (value.startsWith("Documentos para revisión/")) return `${reviewRootFolder}/${value.slice("Documentos para revisión/".length)}`;
-  if (value === "Catálogos del sistema/Membretes") return "Catálogos del sistema/Logos";
-  if (value.startsWith("Catálogos del sistema/Membretes/")) return `Catálogos del sistema/Logos/${value.slice("Catálogos del sistema/Membretes/".length)}`;
+  if (value === "Formatos del sistema") return workFormatsRootFolder;
+  if (value.startsWith("Formatos del sistema/")) return `${workFormatsRootFolder}/${value.slice("Formatos del sistema/".length)}`;
+  if (value === "Catálogos del sistema/Membretes" || value === "Catálogos del sistema/Logos") return logosRootFolder;
+  if (value.startsWith("Catálogos del sistema/Membretes/")) return `${logosRootFolder}/${value.slice("Catálogos del sistema/Membretes/".length)}`;
+  if (value.startsWith("Catálogos del sistema/Logos/")) return `${logosRootFolder}/${value.slice("Catálogos del sistema/Logos/".length)}`;
+  if (value === "Catálogos del sistema") return logosRootFolder;
+  if (value.startsWith("Catálogos del sistema/")) return `${logosRootFolder}/${value.slice("Catálogos del sistema/".length)}`;
+  if (value === "Logos" || value.startsWith("Logos/")) return value.replace("Logos/Logos", "Logos");
   return value;
 }
 
@@ -951,14 +986,14 @@ function isReviewFolder(folder) {
 function normalizeSavedContract(contract = {}) {
   return {
     ...contract,
-    folder: normalizeArchiveFolderPath(contract.folder || "Mis Documentos")
+    folder: normalizeArchiveFolderPath(contract.folder || personalRootFolder)
   };
 }
 
 function normalizeSupportDocument(document = {}) {
   return {
     ...document,
-    folder: normalizeArchiveFolderPath(document.folder || "Mis Documentos")
+    folder: normalizeArchiveFolderPath(document.folder || personalRootFolder)
   };
 }
 
@@ -995,7 +1030,7 @@ function loadVersions() {
   const saved = readJson(userStorageKey("versions"), readJson("lexcontratos_versions", []));
   return saved.map((version) => ({
     ...version,
-    folder: normalizeArchiveFolderPath(version.folder || "Mis Documentos")
+    folder: normalizeArchiveFolderPath(version.folder || personalRootFolder)
   }));
 }
 
@@ -1005,16 +1040,19 @@ function saveVersions() {
 
 function loadSupportDocuments() {
   const saved = readJson(userStorageKey("support_documents"), []).map(normalizeSupportDocument);
+  const shared = readJson(sharedDocumentsStorageKey, []).map(normalizeSupportDocument);
   const reviewDocuments = readJson(reviewDocumentsStorageKey, []).map(normalizeSupportDocument);
   return uniqueById([
-    ...saved.filter((document) => !isReviewFolder(document.folder)),
+    ...saved.filter((document) => !isReviewFolder(document.folder) && !isSharedLibraryDocumentFolder(document.folder)),
+    ...shared,
     ...reviewDocuments,
-    ...saved.filter((document) => isReviewFolder(document.folder))
+    ...saved.filter((document) => isReviewFolder(document.folder) || isSharedLibraryDocumentFolder(document.folder))
   ]);
 }
 
 function saveSupportDocuments() {
-  localStorage.setItem(userStorageKey("support_documents"), JSON.stringify(supportDocuments.filter((document) => !isReviewFolder(document.folder))));
+  localStorage.setItem(userStorageKey("support_documents"), JSON.stringify(supportDocuments.filter((document) => !isReviewFolder(document.folder) && !isSharedLibraryDocumentFolder(document.folder))));
+  localStorage.setItem(sharedDocumentsStorageKey, JSON.stringify(supportDocuments.filter((document) => isSharedLibraryDocumentFolder(document.folder))));
   localStorage.setItem(reviewDocumentsStorageKey, JSON.stringify(supportDocuments.filter((document) => isReviewFolder(document.folder))));
 }
 
@@ -1144,17 +1182,23 @@ function saveLegalFormat() {
 
 function loadLetterheadLogos() {
   const catalog = defaultLetterheadLogos();
-  if (letterheadCatalogLocked()) return catalog;
+  const shared = readJson(sharedLetterheadLogosStorageKey, [])
+    .filter((logo) => logo?.id && logo?.dataUrl && logo?.name)
+    .map((logo) => ({ ...logo, source: "shared" }));
+  if (letterheadCatalogLocked()) return [...catalog, ...shared];
   const personal = readJson(userStorageKey("letterhead_logos"), [])
     .filter((logo) => logo?.id && logo?.dataUrl && logo?.name)
     .map((logo) => ({ ...logo, source: logo.source || "personal" }));
-  const byId = new Map([...catalog, ...personal].map((logo) => [logo.id, logo]));
+  const byId = new Map([...catalog, ...shared, ...personal].map((logo) => [logo.id, logo]));
   return Array.from(byId.values());
 }
 
 function saveLetterheadLogos() {
   if (letterheadCatalogLocked()) return;
-  localStorage.setItem(userStorageKey("letterhead_logos"), JSON.stringify(letterheadLogos.filter((logo) => logo.source !== "catalog").slice(-20)));
+  if (canSeeSystemCatalogs()) {
+    localStorage.setItem(sharedLetterheadLogosStorageKey, JSON.stringify(letterheadLogos.filter((logo) => logo.source === "shared").slice(-40)));
+  }
+  localStorage.setItem(userStorageKey("letterhead_logos"), JSON.stringify(letterheadLogos.filter((logo) => logo.source !== "catalog" && logo.source !== "shared").slice(-20)));
 }
 
 function loadSelectedLetterheadLogoId() {
@@ -1201,7 +1245,8 @@ function renderLetterheadLogos() {
     saveSelectedLetterheadLogoId();
   }
   const catalog = letterheadLogos.filter((logo) => logo.source === "catalog");
-  const personal = letterheadLogos.filter((logo) => logo.source !== "catalog");
+  const shared = letterheadLogos.filter((logo) => logo.source === "shared");
+  const personal = letterheadLogos.filter((logo) => logo.source !== "catalog" && logo.source !== "shared");
   const optionMarkup = (logo) => {
     const detail = logo.companyName && logo.companyName !== logo.name ? ` · ${logo.companyName}` : "";
     return `<option value="${escapeHtml(logo.id)}">${escapeHtml(`${logo.name}${detail}`)}</option>`;
@@ -1209,6 +1254,7 @@ function renderLetterheadLogos() {
   letterheadLogoSelect.innerHTML = `
     <option value="">Sin logo</option>
     ${catalog.length ? `<optgroup label="Logos precargados">${catalog.map(optionMarkup).join("")}</optgroup>` : ""}
+    ${shared.length ? `<optgroup label="Logos compartidos">${shared.map(optionMarkup).join("")}</optgroup>` : ""}
     ${personal.length ? `<optgroup label="Logos propios">${personal.map(optionMarkup).join("")}</optgroup>` : ""}
   `;
   letterheadLogoSelect.value = selectedLetterheadLogoId || "";
@@ -1236,11 +1282,11 @@ function renderLetterheadCatalogList() {
           <div>
             <strong>${escapeHtml(logo.name)}</strong>
             <small>${escapeHtml(logo.companyName || "Logo autorizado para contratos")}</small>
-            <em>${logo.source === "catalog" ? "Precargado" : "Propio"}${selected ? " · En uso" : ""}</em>
+            <em>${logo.source === "catalog" ? "Precargado" : logo.source === "shared" ? "Compartido" : "Propio"}${selected ? " · En uso" : ""}</em>
           </div>
           <div class="letterhead-item-actions">
             <button class="secondary-action mini-action" type="button" data-letterhead-action="select" data-letterhead-id="${escapeHtml(logo.id)}">${selected ? "Seleccionado" : "Usar"}</button>
-            ${logo.source === "catalog" ? "" : `<button class="secondary-action mini-action danger-action" type="button" data-letterhead-action="delete" data-letterhead-id="${escapeHtml(logo.id)}">Eliminar</button>`}
+            ${logo.source === "catalog" || (logo.source === "shared" && !canSeeSystemCatalogs()) ? "" : `<button class="secondary-action mini-action danger-action" type="button" data-letterhead-action="delete" data-letterhead-id="${escapeHtml(logo.id)}">Eliminar</button>`}
           </div>
         </article>
       `;
@@ -1283,10 +1329,14 @@ function addLetterheadLogo(file) {
       footerLines: [],
       dataUrl: String(reader.result || ""),
       type: file.type,
-      source: "personal",
+      source: canSeeSystemCatalogs() ? "shared" : "personal",
       date: new Date().toLocaleString("es-MX")
     };
-    letterheadLogos = [...letterheadLogos.filter((item) => item.name !== logo.name), logo].slice(-20);
+    letterheadLogos = [
+      ...letterheadLogos.filter((item) => item.source === "catalog"),
+      ...letterheadLogos.filter((item) => item.source !== "catalog" && item.name !== logo.name),
+      logo
+    ];
     selectedLetterheadLogoId = logo.id;
     saveLetterheadLogos();
     saveSelectedLetterheadLogoId();
@@ -1312,7 +1362,7 @@ function deleteLetterheadLogo(id) {
     showToast("No encontré ese logo.");
     return;
   }
-  if (logo.source === "catalog") {
+  if (logo.source === "catalog" || (logo.source === "shared" && !canSeeSystemCatalogs())) {
     showToast("Este logo pertenece al catálogo aprobado y no puede eliminarse desde la cuenta.");
     return;
   }
@@ -1334,7 +1384,7 @@ function renameLetterheadLogo(id) {
     showToast("No encontré ese logo.");
     return;
   }
-  if (logo.source === "catalog") {
+  if (logo.source === "catalog" || (logo.source === "shared" && !canSeeSystemCatalogs())) {
     showToast("Ese logo es precargado. Para cambiarlo, sube una nueva versión aprobada al catálogo.");
     return;
   }
@@ -1506,7 +1556,7 @@ function switchActiveUser(user, announce = true) {
   activeMatterFolio = null;
   activeMatterDraftId = "";
   folders = loadFolders();
-  activeFolder = folders[0] || "Mis Documentos";
+  activeFolder = folders[0] || personalRootFolder;
   savedContracts = loadSavedContracts();
   versions = loadVersions();
   legalFormat = loadLegalFormat();
@@ -1561,7 +1611,7 @@ function canSeeSystemCatalogs() {
 }
 
 function computeRootFolders() {
-  return canSeeSystemCatalogs() ? [...baseRootFolders, ...systemRootFolders] : baseRootFolders.slice();
+  return baseRootFolders.slice();
 }
 
 function refreshRootFolders() {
@@ -1570,11 +1620,61 @@ function refreshRootFolders() {
 }
 
 function folderRoot(path) {
-  return String(path || "").split("/").filter(Boolean)[0] || "Mis Documentos";
+  return String(path || "").split("/").filter(Boolean)[0] || personalRootFolder;
 }
 
 function isSystemRoot(path) {
   return systemRootFolders.includes(folderRoot(path));
+}
+
+function isAdminManagedFolder(path) {
+  return adminManagedRootFolders.includes(folderRoot(path));
+}
+
+function isImmutableArchiveFolder(path) {
+  return immutableRootFolders.includes(folderRoot(path));
+}
+
+function isSharedLibraryDocumentFolder(path) {
+  return folderRoot(path) === sharedLibraryRootFolder || folderRoot(path) === signedContractsRootFolder;
+}
+
+function isSignedArchiveFolder(path) {
+  return folderRoot(path) === signedContractsRootFolder;
+}
+
+function canModifyArchiveFolder(path, action = "editar") {
+  const root = folderRoot(path);
+  if (immutableRootFolders.includes(root)) {
+    return false;
+  }
+  if (adminManagedRootFolders.includes(root)) {
+    return canSeeSystemCatalogs();
+  }
+  return true;
+}
+
+function canUploadArchiveFolder(path) {
+  const root = folderRoot(path);
+  if (root === signedContractsRootFolder) return true;
+  if (adminManagedRootFolders.includes(root)) return canSeeSystemCatalogs();
+  return true;
+}
+
+function requireArchiveModificationPermission(path, action = "modificar") {
+  if (canModifyArchiveFolder(path, action)) return true;
+  if (isImmutableArchiveFolder(path)) {
+    showToast("Los contratos firmados son de consulta. No se pueden modificar ni eliminar desde la app.");
+    return false;
+  }
+  showToast("Solo administración puede modificar esta carpeta compartida.");
+  return false;
+}
+
+function requireArchiveUploadPermission(path, action = "agregar documentos") {
+  if (canUploadArchiveFolder(path)) return true;
+  showToast("Solo administración puede agregar documentos en esta biblioteca compartida.");
+  return false;
 }
 
 function saveDialogRootFolders() {
@@ -1837,8 +1937,8 @@ function renderAdminUsers(users = [], currentAdmin = {}) {
   }
   if (adminPermissionNote) {
     adminPermissionNote.textContent = currentIsSuperAdmin
-      ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, configuración y respaldos. Los formatos y logos del sistema se administran desde Mis Documentos."
-      : "Estás entrando como administradora. Los formatos y logos del sistema se administran desde Mis Documentos; la super administración conserva permisos avanzados.";
+      ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, configuración y respaldos. Biblioteca compartida, formatos de trabajo y logos se administran desde Documentos."
+      : "Estás entrando como administradora. Biblioteca compartida, formatos de trabajo y logos se administran desde Documentos; la super administración conserva permisos avanzados.";
     adminPermissionNote.classList.toggle("is-superadmin", currentIsSuperAdmin);
   }
   if (adminCreateRoleSelect) {
@@ -2003,21 +2103,21 @@ function toggleAdminCreateUserForm() {
 function openAdminTemplateCatalog() {
   adminUsersDialog?.close();
   if (!canSeeSystemCatalogs()) {
-    showToast("Solo administración puede modificar los formatos del sistema.");
+    showToast("Solo administración puede modificar los formatos de trabajo compartidos.");
     return;
   }
   syncSharedTemplatesFromBackend();
-  openArchiveFolder("Formatos del sistema", { announce: false });
+  openArchiveFolder(workFormatsRootFolder, { announce: false });
   archiveDrawer.classList.add("open");
 }
 
 function openAdminLetterheadCatalog() {
   adminUsersDialog?.close();
   if (!canSeeSystemCatalogs()) {
-    showToast("Solo administración puede modificar los logos del sistema.");
+    showToast("Solo administración puede modificar los logos compartidos.");
     return;
   }
-  openArchiveFolder("Catálogos del sistema/Logos", { announce: false });
+  openArchiveFolder(logosRootFolder, { announce: false });
   archiveDrawer.classList.add("open");
 }
 
@@ -2802,22 +2902,31 @@ function saveTemplateCatalogFolders() {
 }
 
 function catalogPathToSystemFolder(path) {
-  return "Formatos del sistema";
+  return workFormatsRootFolder;
 }
 
 function systemFolderToCatalogPath(folder) {
-  return String(folder || "") === "Formatos del sistema" ? "Formatos generales" : "";
+  return normalizeArchiveFolderPath(folder || "") === workFormatsRootFolder ? "Formatos generales" : "";
 }
 
 function syncSystemCatalogFolders() {
   refreshRootFolders();
-  if (!canSeeSystemCatalogs()) {
-    folders = folders.filter((folder) => !isSystemRoot(folder));
-    return;
-  }
   templateCatalogFolders = loadTemplateCatalogFolders();
-  const dynamicFolders = ["Formatos del sistema", "Catálogos del sistema", "Catálogos del sistema/Logos"];
-  folders = Array.from(new Set([...folders.filter((folder) => !folder.startsWith("Formatos del sistema/")), ...dynamicFolders]));
+  const dynamicFolders = [
+    personalFallbackFolder,
+    ...sharedLibraryFolders,
+    partyDocumentsRootFolder,
+    workFormatsRootFolder,
+    logosRootFolder,
+    reviewRootFolder,
+    signedContractsRootFolder
+  ];
+  folders = Array.from(new Set([
+    ...folders
+      .map(normalizeArchiveFolderPath)
+      .filter((folder) => folderAllowedForCurrentUser(folder)),
+    ...dynamicFolders
+  ]));
 }
 
 function ensureTemplateCatalogFolder(path) {
@@ -2848,7 +2957,8 @@ function canManageSharedCatalog() {
 function canManageTemplateCatalog(templateKey) {
   const template = templates[templateKey];
   if (!template?.master) return false;
-  return Boolean(template.personal || template.shared || !isCatalogBaseTemplate(templateKey) || canManageSharedCatalog());
+  if (canManageSharedCatalog()) return true;
+  return Boolean(template.personal && !template.shared && !isCatalogBaseTemplate(templateKey));
 }
 
 function requiresSystemTemplateConfirmation(templateKey) {
@@ -2859,7 +2969,7 @@ function requiresSystemTemplateConfirmation(templateKey) {
 function confirmSystemTemplateChange(action, templateKey) {
   if (!requiresSystemTemplateConfirmation(templateKey)) return true;
   const title = templates[templateKey]?.title || "este formato";
-  return window.confirm(`¿Estás segura de que quieres ${action} un archivo del sistema?\n\n${title}\n\nEste cambio puede afectar los formatos base que usará el equipo.`);
+  return window.confirm(`¿Estás segura de que quieres ${action} un formato de trabajo compartido?\n\n${title}\n\nEste cambio puede afectar los formatos base que usará el equipo.`);
 }
 
 function setCatalogEditMode(templateKey = null) {
@@ -3063,7 +3173,7 @@ function renderTemplates() {
       return `
       <article class="template-card ${key === activeTemplate ? "selected" : ""}" data-template="${key}">
         <h2>${template.title}</h2>
-        <p>Formato del sistema · ${template.fields} campos</p>
+        <p>Formato de trabajo · ${template.fields} campos</p>
         <footer>
           <span>${catalogLabel}</span>
           <div class="template-card-actions">
@@ -3150,7 +3260,7 @@ async function startContractFromTemplate(sourceKey) {
   }
   const destination = await openSaveLocationDialog({
     title: `Guardar como: ${source.title}`,
-    initialFolder: activeFolder || "Mis Documentos",
+    initialFolder: activeFolder || personalRootFolder,
     confirmLabel: "Guardar aquí",
     defaultName: cleanWorkingTitle(source.title),
     requireName: true
@@ -3159,7 +3269,11 @@ async function startContractFromTemplate(sourceKey) {
     showToast("Selección cancelada. No se creó el documento de trabajo.");
     return false;
   }
-  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || "Mis Documentos");
+  if (isSignedArchiveFolder(destination.folder)) {
+    showToast("Los contratos firmados son solo para versiones finales firmadas. Guarda este documento en Documentos o Expedientes.");
+    return false;
+  }
+  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || personalRootFolder);
   renderFolders();
   renderSavedContracts();
   renderVersions();
@@ -5079,7 +5193,7 @@ function renderFolderSelector() {
   if (!contractFolderSelect) return;
   const sorted = folders.slice().sort((a, b) => a.localeCompare(b, "es"));
   contractFolderSelect.innerHTML = sorted.map((folder) => `<option value="${folder}">${folder}</option>`).join("");
-  if (!sorted.includes(activeFolder)) activeFolder = sorted[0] || "Mis Documentos";
+  if (!sorted.includes(activeFolder)) activeFolder = sorted[0] || personalRootFolder;
   contractFolderSelect.value = activeFolder;
 }
 
@@ -5102,7 +5216,7 @@ function directChildFolders(parent = "") {
 }
 
 function folderColumnParents() {
-  const parts = String(activeFolder || "Mis Documentos").split("/").filter(Boolean);
+  const parts = String(activeFolder || personalRootFolder).split("/").filter(Boolean);
   const columns = [""];
   let path = "";
   parts.forEach((part) => {
@@ -5184,25 +5298,35 @@ function currentArchiveTargets() {
   return hoveredArchiveItem?.type && hoveredArchiveItem?.id ? [hoveredArchiveItem] : [];
 }
 
+function archiveFolderForTarget(type, id) {
+  if (type === "folder") return id;
+  if (type === "contract") return savedContracts.find((item) => item.id === id)?.folder || activeFolder;
+  if (type === "document") return supportDocuments.find((item) => item.id === id)?.folder || activeFolder;
+  if (type === "template") return workFormatsRootFolder;
+  if (type === "letterhead") return logosRootFolder;
+  return activeFolder;
+}
+
 function archiveActionCapabilities(targets = currentArchiveTargets()) {
   const usefulTargets = targets.filter((item) => item.type !== "parent");
   const documentTargets = usefulTargets.filter((item) => item.type === "contract" || item.type === "document");
   const folderTargets = usefulTargets.filter((item) => item.type === "folder");
   const templateTargets = usefulTargets.filter((item) => item.type === "template");
   const letterheadTargets = usefulTargets.filter((item) => item.type === "letterhead");
+  const canEditEveryTarget = usefulTargets.every((item) => canModifyArchiveFolder(archiveFolderForTarget(item.type, item.id), "editar"));
   return {
-    rename: usefulTargets.length === 1,
-    move: documentTargets.length > 0 && folderTargets.length === 0 && templateTargets.length === 0 && letterheadTargets.length === 0,
+    rename: usefulTargets.length === 1 && canEditEveryTarget,
+    move: documentTargets.length > 0 && folderTargets.length === 0 && templateTargets.length === 0 && letterheadTargets.length === 0 && canEditEveryTarget,
     copy: documentTargets.length > 0 && folderTargets.length === 0,
-    delete: usefulTargets.length > 0
+    delete: usefulTargets.length > 0 && canEditEveryTarget
   };
 }
 
 function renderArchiveToolbarState() {
   archiveViewButtons.forEach((button) => button.classList.toggle("active", button.dataset.archiveView === archiveViewMode));
-  if (archiveDeleteSelectedButton) archiveDeleteSelectedButton.disabled = selectedArchiveItems.size === 0;
   const targets = currentArchiveTargets();
   const capabilities = archiveActionCapabilities(targets);
+  if (archiveDeleteSelectedButton) archiveDeleteSelectedButton.disabled = !capabilities.delete;
   document.querySelectorAll("[data-archive-action]").forEach((button) => {
     const action = button.dataset.archiveAction;
     button.disabled = !capabilities[action];
@@ -5330,7 +5454,7 @@ function updateReviewSubmission(type, id) {
 
 function renderFinderPath() {
   if (!finderPath) return;
-  const parts = String(activeFolder || "Mis Documentos").split("/").filter(Boolean);
+  const parts = String(activeFolder || personalRootFolder).split("/").filter(Boolean);
   let path = "";
   finderPath.innerHTML = parts
     .map((part, index) => {
@@ -5342,7 +5466,7 @@ function renderFinderPath() {
 }
 
 function folderColumnParentsFor(folder) {
-  const parts = String(folder || "Mis Documentos").split("/").filter(Boolean);
+  const parts = String(folder || personalRootFolder).split("/").filter(Boolean);
   const columns = [""];
   let path = "";
   parts.forEach((part) => {
@@ -5354,8 +5478,8 @@ function folderColumnParentsFor(folder) {
 
 function renderSaveLocationBrowser() {
   if (!saveLocationBrowser || !saveLocationSelected) return;
-  let selected = ensureFolderPath(saveLocationState.folder || activeFolder || "Mis Documentos");
-  if (!saveDialogRootFolders().includes(folderRoot(selected))) selected = "Mis Documentos";
+  let selected = ensureFolderPath(saveLocationState.folder || activeFolder || personalRootFolder);
+  if (!saveDialogRootFolders().includes(folderRoot(selected))) selected = personalRootFolder;
   saveLocationState.folder = selected;
   saveLocationSelected.textContent = selected;
   if (saveLocationFileName) {
@@ -5368,6 +5492,7 @@ function renderSaveLocationBrowser() {
     .map((folder) => {
       const label = folder.split("/").pop();
       const root = rootFolders.includes(folder);
+      const canEditFolder = canModifyArchiveFolder(folder, "editar");
       return `
         <article class="save-file-row save-folder-row" data-save-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
           <button class="save-file-name save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
@@ -5377,8 +5502,8 @@ function renderSaveLocationBrowser() {
           <span>${escapeHtml(folderMetaText(folder))}</span>
           <span>Carpeta</span>
           <div class="save-folder-actions">
-            <button class="folder-action save-folder-action" type="button" data-save-action="rename" data-save-folder="${escapeHtml(folder)}" ${root ? "disabled" : ""}>Renombrar</button>
-            <button class="folder-action danger save-folder-action" type="button" data-save-action="delete" data-save-folder="${escapeHtml(folder)}" ${root ? "disabled" : ""}>Eliminar</button>
+            <button class="folder-action save-folder-action" type="button" data-save-action="rename" data-save-folder="${escapeHtml(folder)}" ${root || !canEditFolder ? "disabled" : ""}>Renombrar</button>
+            <button class="folder-action danger save-folder-action" type="button" data-save-action="delete" data-save-folder="${escapeHtml(folder)}" ${root || !canEditFolder ? "disabled" : ""}>Eliminar</button>
           </div>
         </article>
       `;
@@ -5457,7 +5582,7 @@ function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder 
   return new Promise((resolve) => {
     saveLocationResolve = resolve;
     saveLocationState = {
-      folder: ensureFolderPath(initialFolder || activeFolder || "Mis Documentos"),
+      folder: ensureFolderPath(initialFolder || activeFolder || personalRootFolder),
       confirmLabel,
       defaultName,
       fileName: defaultName,
@@ -5469,12 +5594,13 @@ function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder 
   });
 }
 
-function createFolderInsideSaveLocationAt(folder = saveLocationState.folder || "Mis Documentos") {
-  const baseFolder = ensureFolderPath(folder || saveLocationState.folder || "Mis Documentos");
+function createFolderInsideSaveLocationAt(folder = saveLocationState.folder || personalRootFolder) {
+  const baseFolder = ensureFolderPath(folder || saveLocationState.folder || personalRootFolder);
+  if (!requireArchiveModificationPermission(baseFolder, "crear carpeta")) return;
   const name = window.prompt(`Nombre de la nueva carpeta dentro de "${baseFolder}"`);
   if (!name || !name.trim()) return;
   saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
-  saveLocationState.folder = ensureFolderPath(`${baseFolder}/${name.trim().replace(/\//g, " ")}`, baseFolder.split("/")[0] || "Mis Documentos");
+  saveLocationState.folder = ensureFolderPath(`${baseFolder}/${name.trim().replace(/\//g, " ")}`, baseFolder.split("/")[0] || personalRootFolder);
   renderFolders();
   renderSaveLocationBrowser();
   showToast(`Carpeta lista: ${saveLocationState.folder}.`);
@@ -5490,20 +5616,20 @@ function renameFolderInsideSaveLocation(folder) {
 
 function deleteFolderInsideSaveLocation(folder) {
   saveLocationState.fileName = saveLocationFileName?.value || saveLocationState.fileName || saveLocationState.defaultName || "";
-  const parent = folderParent(folder) || "Mis Documentos";
+  const parent = folderParent(folder) || personalRootFolder;
   if (!deleteFolder(folder)) return;
   saveLocationState.folder = pathInFolder(saveLocationState.folder || activeFolder, folder) ? parent : saveLocationState.folder;
-  if (!folders.includes(saveLocationState.folder)) saveLocationState.folder = "Mis Documentos";
+  if (!folders.includes(saveLocationState.folder)) saveLocationState.folder = personalRootFolder;
   renderSaveLocationBrowser();
 }
 
-function ensureFolderPath(value, fallbackRoot = activeFolder.split("/")[0] || "Mis Documentos") {
+function ensureFolderPath(value, fallbackRoot = activeFolder.split("/")[0] || personalRootFolder) {
   const parts = String(value || "")
     .split("/")
     .map((part) => part.trim())
     .filter(Boolean);
-  if (!parts.length) return activeFolder || "Mis Documentos";
-  if (!rootFolders.includes(parts[0])) parts.unshift(rootFolders.includes(fallbackRoot) ? fallbackRoot : "Mis Documentos");
+  if (!parts.length) return activeFolder || personalRootFolder;
+  if (!rootFolders.includes(parts[0])) parts.unshift(rootFolders.includes(fallbackRoot) ? fallbackRoot : personalRootFolder);
 
   let path = "";
   parts.forEach((part) => {
@@ -5537,7 +5663,7 @@ function supportFolderNameForRole(role, values = getPartyData()) {
 }
 
 function supportFolderForRole(role, values = getPartyData()) {
-  return ensureFolderPath(`Documentos de las partes/${supportFolderNameForRole(role, values)}`, "Documentos de las partes");
+  return ensureFolderPath(`${partyDocumentsRootFolder}/${supportFolderNameForRole(role, values)}`, partyDocumentsRootFolder);
 }
 
 function reconcileSupportDocumentFolders(values = getPartyData()) {
@@ -5563,10 +5689,12 @@ function reconcileSupportDocumentFolders(values = getPartyData()) {
 function normalizeLegacySupportFolders() {
   const roles = getRoles();
   const replacements = [
-    ["Documentos de las partes/Parte A", `Documentos de las partes/${safeFolderName(roles[0]?.label || "Contratante")} - Sin identificar`],
-    ["Documentos de las partes/Parte B", `Documentos de las partes/${safeFolderName(roles[1]?.label || "Contraparte")} - Sin identificar`],
-    [`Documentos de las partes/${safeFolderName(roles[0]?.label || "Contratante")} - Sin identificar`, `Documentos de las partes/${supportFolderNameForRole(roles[0], {})}`],
-    [`Documentos de las partes/${safeFolderName(roles[1]?.label || "Contraparte")} - Sin identificar`, `Documentos de las partes/${supportFolderNameForRole(roles[1], {})}`]
+    ["Documentos de las partes/Parte A", `${partyDocumentsRootFolder}/${safeFolderName(roles[0]?.label || "Contratante")} - Sin identificar`],
+    ["Documentos de las partes/Parte B", `${partyDocumentsRootFolder}/${safeFolderName(roles[1]?.label || "Contraparte")} - Sin identificar`],
+    [`${partyDocumentsRootFolder}/Parte A`, `${partyDocumentsRootFolder}/${safeFolderName(roles[0]?.label || "Contratante")} - Sin identificar`],
+    [`${partyDocumentsRootFolder}/Parte B`, `${partyDocumentsRootFolder}/${safeFolderName(roles[1]?.label || "Contraparte")} - Sin identificar`],
+    [`${partyDocumentsRootFolder}/${safeFolderName(roles[0]?.label || "Contratante")} - Sin identificar`, `${partyDocumentsRootFolder}/${supportFolderNameForRole(roles[0], {})}`],
+    [`${partyDocumentsRootFolder}/${safeFolderName(roles[1]?.label || "Contraparte")} - Sin identificar`, `${partyDocumentsRootFolder}/${supportFolderNameForRole(roles[1], {})}`]
   ];
   let changed = false;
   replacements.forEach(([oldPath, newPath]) => {
@@ -5592,21 +5720,23 @@ function normalizeLegacySupportFolders() {
 }
 
 function templatesForSystemFolder(folder) {
-  if (folder !== "Formatos del sistema") return [];
+  if (normalizeArchiveFolderPath(folder) !== workFormatsRootFolder) return [];
   return Object.entries(templates)
-    .filter(([, template]) => template?.master)
-    .filter(([key]) => canManageTemplateCatalog(key));
+    .filter(([, template]) => template?.master);
 }
 
 function letterheadsForSystemFolder(folder) {
-  if (normalizeArchiveFolderPath(folder) !== "Catálogos del sistema/Logos") return [];
+  if (normalizeArchiveFolderPath(folder) !== logosRootFolder) return [];
   return loadLetterheadLogos();
 }
 
 function systemFolderSubtitle(folder) {
-  if (folder === "Formatos del sistema") return "Catálogo editable";
-  if (folder === "Catálogos del sistema") return "Logos y catálogos";
-  if (normalizeArchiveFolderPath(folder) === "Catálogos del sistema/Logos") return "Catálogo de logos";
+  const normalized = normalizeArchiveFolderPath(folder);
+  if (normalized === sharedLibraryRootFolder) return "Biblioteca para consulta del equipo";
+  if (normalized === workFormatsRootFolder) return canSeeSystemCatalogs() ? "Formatos aprobados editables" : "Formatos aprobados";
+  if (normalized === logosRootFolder) return canSeeSystemCatalogs() ? "Logos aprobados editables" : "Logos aprobados";
+  if (normalized === reviewRootFolder) return "Documentos enviados a revisión";
+  if (normalized === signedContractsRootFolder) return "Solo consulta y descarga";
   return folderMetaText(folder);
 }
 
@@ -5619,7 +5749,7 @@ function renderFolders() {
   while (!folders.includes(activeFolder) && folderParent(activeFolder)) {
     activeFolder = folderParent(activeFolder);
   }
-  if (!folders.includes(activeFolder) || !folderAllowedForCurrentUser(activeFolder)) activeFolder = "Mis Documentos";
+  if (!folders.includes(activeFolder) || !folderAllowedForCurrentUser(activeFolder)) activeFolder = personalRootFolder;
   renderFinderPath();
   const children = directChildFolders(activeFolder).filter((folder) => archiveMatches(folder, folder.split("/").pop(), folderMetaText(folder)));
   const visibleContracts = savedContracts
@@ -5699,7 +5829,7 @@ function renderFolders() {
           <span class="finder-icon document-icon" aria-hidden="true"></span>
           <span>
             <strong>${escapeHtml(template.title || "Formato sin nombre")}</strong>
-            <small>Formato del sistema · ${Number(template.fields || 0)} campos</small>
+            <small>Formato de trabajo · ${Number(template.fields || 0)} campos</small>
           </span>
         </button>
       </span>
@@ -5727,7 +5857,7 @@ function renderFolders() {
     </article>
   `;
   const visibleTemplates = templatesForSystemFolder(activeFolder)
-    .filter(([, template]) => archiveMatches(template.title, "Formato del sistema", "Formato"));
+    .filter(([, template]) => archiveMatches(template.title, "Formato de trabajo", "Formato"));
   const visibleLetterheads = letterheadsForSystemFolder(activeFolder)
     .filter((logo) => archiveMatches(logo.name, logo.companyName || "", "Logo"));
   const contentItems = [
@@ -5790,7 +5920,7 @@ function renderFolders() {
       <div class="archive-rootbar" aria-label="Carpetas raíz">
         ${regularRootButtons.map((root) => rootButton(root)).join("")}
         ${systemRootButtons.length ? `
-          <div class="archive-system-separator" aria-hidden="true">Sistema</div>
+          <div class="archive-system-separator" aria-hidden="true">Compartido</div>
           ${systemRootButtons.map((root) => rootButton(root, "system-root")).join("")}
         ` : ""}
       </div>
@@ -5888,6 +6018,8 @@ function renameArchiveTargets(targets = currentArchiveTargets()) {
     return;
   }
   const [{ type, id }] = targets;
+  const targetFolder = type === "folder" ? id : archiveFolderForTarget(type, id);
+  if (!requireArchiveModificationPermission(targetFolder, "renombrar")) return;
   if (type === "folder") renameFolder(id);
   if (type === "contract") renameSavedContract(id);
   if (type === "document") renameSupportDocument(id);
@@ -5901,11 +6033,21 @@ async function moveArchiveTargets(targets = currentArchiveTargets()) {
     showToast("Por ahora puedes mover contratos y documentos. Las carpetas se reorganizan con renombrar o eliminar.");
     return;
   }
+  const blockedMove = movable.find((item) => !canModifyArchiveFolder(archiveFolderForTarget(item.type, item.id), "mover"));
+  if (blockedMove) {
+    requireArchiveModificationPermission(archiveFolderForTarget(blockedMove.type, blockedMove.id), "mover");
+    return;
+  }
   const destination = await askDestinationFolder(activeFolder, {
     title: movable.length === 1 ? "Mover elemento seleccionado" : `Mover ${movable.length} elementos`,
     confirmLabel: "Mover aquí"
   });
   if (!destination) return;
+  if (!requireArchiveUploadPermission(destination, "mover")) return;
+  if (isSignedArchiveFolder(destination) && movable.some((item) => item.type === "contract")) {
+    showToast("Contratos firmados recibe documentos finales firmados. No muevas borradores editables a ese archivo.");
+    return;
+  }
   movable.forEach(({ type, id }) => {
     if (type === "contract") {
       const contract = savedContracts.find((item) => item.id === id);
@@ -5949,6 +6091,11 @@ async function copyArchiveTargets(targets = currentArchiveTargets()) {
     confirmLabel: "Copiar aquí"
   });
   if (!destination) return;
+  if (!requireArchiveUploadPermission(destination, "copiar")) return;
+  if (isSignedArchiveFolder(destination) && copyable.some((item) => item.type === "contract")) {
+    showToast("Contratos firmados recibe documentos finales firmados. No copies borradores editables a ese archivo.");
+    return;
+  }
   const stamp = Date.now();
   copyable.forEach(({ type, id }, index) => {
     if (type === "contract") {
@@ -5994,6 +6141,11 @@ function deleteArchiveTargets(targets = currentArchiveTargets()) {
     showToast("Selecciona un documento, contrato o carpeta para eliminar.");
     return;
   }
+  const blocked = items.find((item) => !canModifyArchiveFolder(item.type === "folder" ? item.id : archiveFolderForTarget(item.type, item.id), "eliminar"));
+  if (blocked) {
+    requireArchiveModificationPermission(blocked.type === "folder" ? blocked.id : archiveFolderForTarget(blocked.type, blocked.id), "eliminar");
+    return;
+  }
   const confirmed = window.confirm(`¿Seguro que quieres eliminar ${items.length} elemento${items.length === 1 ? "" : "s"} seleccionado${items.length === 1 ? "" : "s"}?\n\nLas carpetas raíz no se eliminan.`);
   if (!confirmed) return;
 
@@ -6029,15 +6181,14 @@ async function runArchiveContextAction(action) {
 }
 
 function createFolderInsideArchive(folder = activeFolder) {
-  const baseFolder = ensureFolderPath(folder || activeFolder || "Mis Documentos");
-  if (isSystemRoot(baseFolder)) {
-    showToast("Los catálogos del sistema no usan subcarpetas. Sube ahí los formatos o logos aprobados.");
+  const baseFolder = ensureFolderPath(folder || activeFolder || personalRootFolder);
+  if (!requireArchiveModificationPermission(baseFolder, "crear carpeta")) {
     return;
   }
   const name = window.prompt(`Nombre de la nueva carpeta dentro de "${baseFolder}"`);
   if (!name || !name.trim()) return;
   const cleanName = name.trim().replace(/\//g, " ");
-  const newPath = ensureFolderPath(`${baseFolder}/${cleanName}`, baseFolder.split("/")[0] || "Mis Documentos");
+  const newPath = ensureFolderPath(`${baseFolder}/${cleanName}`, baseFolder.split("/")[0] || personalRootFolder);
   activeFolder = newPath;
   if (!folders.includes(activeFolder)) folders.push(activeFolder);
   saveFolders();
@@ -6072,13 +6223,15 @@ function showFolderContextMenu(event, folder = activeFolder, { onNew = null, onR
   if (!folderContextMenu) return;
   event.preventDefault();
   event.stopPropagation();
-  contextMenuFolder = ensureFolderPath(folder || activeFolder || "Mis Documentos");
+  contextMenuFolder = ensureFolderPath(folder || activeFolder || personalRootFolder);
   folderContextMenu._onNew = onNew;
   folderContextMenu._onRename = onRename;
   folderContextMenu._onDelete = onDelete;
   folderContextMenu._mode = mode;
   folderContextMenu._target = target;
   const isRoot = rootFolders.includes(contextMenuFolder);
+  const canEditFolder = canModifyArchiveFolder(contextMenuFolder, "editar");
+  const canCreateInFolder = canModifyArchiveFolder(contextMenuFolder, "crear carpeta");
   if (mode === "item") {
     const targets = target ? [target] : currentArchiveTargets();
     const capabilities = archiveActionCapabilities(targets);
@@ -6088,11 +6241,11 @@ function showFolderContextMenu(event, folder = activeFolder, { onNew = null, onR
     setContextButton("copy", { text: "Copiar", hidden: false, disabled: !capabilities.copy });
     setContextButton("delete", { text: "Eliminar", disabled: !capabilities.delete });
   } else {
-    setContextButton("new", { text: "Nueva carpeta aquí", hidden: false, disabled: false });
-    setContextButton("rename", { text: "Renombrar carpeta", hidden: false, disabled: isRoot });
+    setContextButton("new", { text: "Nueva carpeta aquí", hidden: false, disabled: !canCreateInFolder });
+    setContextButton("rename", { text: "Renombrar carpeta", hidden: false, disabled: isRoot || !canEditFolder });
     setContextButton("move", { hidden: true });
     setContextButton("copy", { hidden: true });
-    setContextButton("delete", { text: "Eliminar carpeta", hidden: false, disabled: isRoot });
+    setContextButton("delete", { text: "Eliminar carpeta", hidden: false, disabled: isRoot || !canEditFolder });
   }
   folderContextMenu.classList.remove("is-hidden");
   const menuWidth = 210;
@@ -6107,14 +6260,17 @@ function hideSaveLocationContextMenu() {
   saveContextFolder = "";
 }
 
-function showSaveLocationContextMenu(event, folder = saveLocationState.folder || activeFolder || "Mis Documentos") {
+function showSaveLocationContextMenu(event, folder = saveLocationState.folder || activeFolder || personalRootFolder) {
   if (!saveLocationContextMenu) return;
   event.preventDefault();
   event.stopPropagation();
-  saveContextFolder = ensureFolderPath(folder || saveLocationState.folder || activeFolder || "Mis Documentos");
+  saveContextFolder = ensureFolderPath(folder || saveLocationState.folder || activeFolder || personalRootFolder);
   const isRoot = rootFolders.includes(saveContextFolder);
-  saveLocationContextMenu.querySelector('[data-save-context-action="rename"]').disabled = isRoot;
-  saveLocationContextMenu.querySelector('[data-save-context-action="delete"]').disabled = isRoot;
+  const canEditFolder = canModifyArchiveFolder(saveContextFolder, "editar");
+  const canCreateInFolder = canModifyArchiveFolder(saveContextFolder, "crear carpeta");
+  saveLocationContextMenu.querySelector('[data-save-context-action="new"]').disabled = !canCreateInFolder;
+  saveLocationContextMenu.querySelector('[data-save-context-action="rename"]').disabled = isRoot || !canEditFolder;
+  saveLocationContextMenu.querySelector('[data-save-context-action="delete"]').disabled = isRoot || !canEditFolder;
   saveLocationContextMenu.classList.remove("is-hidden");
   const menuWidth = 210;
   const menuHeight = 118;
@@ -6133,7 +6289,7 @@ function replaceFolderPath(path, oldPath, newPath) {
 }
 
 function updateTemplateCatalogFolderPath(oldFolder, newFolder) {
-  if (!oldFolder.startsWith("Formatos del sistema/") || !newFolder.startsWith("Formatos del sistema/")) return;
+  if (!normalizeArchiveFolderPath(oldFolder).startsWith(`${workFormatsRootFolder}/`) || !normalizeArchiveFolderPath(newFolder).startsWith(`${workFormatsRootFolder}/`)) return;
   const oldCatalogPath = systemFolderToCatalogPath(oldFolder);
   const newCatalogPath = systemFolderToCatalogPath(newFolder);
   if (!oldCatalogPath || !newCatalogPath) return;
@@ -6155,7 +6311,7 @@ function updateTemplateCatalogFolderPath(oldFolder, newFolder) {
 }
 
 function moveTemplatesOutOfDeletedSystemFolder(folder) {
-  if (!folder.startsWith("Formatos del sistema/")) return 0;
+  if (!normalizeArchiveFolderPath(folder).startsWith(`${workFormatsRootFolder}/`)) return 0;
   const catalogPath = systemFolderToCatalogPath(folder);
   if (!catalogPath) return 0;
   let moved = 0;
@@ -6177,6 +6333,7 @@ function renameFolder(folder) {
     showToast("Las carpetas raíz se conservan fijas para mantener el archivo ordenado.");
     return;
   }
+  if (!requireArchiveModificationPermission(folder, "renombrar")) return;
 
   const parts = folder.split("/");
   const currentName = parts.pop();
@@ -6191,22 +6348,22 @@ function renameFolder(folder) {
     return;
   }
 
-  const confirmed = window.confirm(`${isSystemRoot(folder) ? "¿Estás segura de que quieres modificar una carpeta del sistema?" : "¿Seguro que quieres renombrar esta carpeta?"}\n\n"${folder}" se renombrará como "${newPath}".\n\nTambién se actualizarán sus subcarpetas, contratos, versiones o formatos asociados.`);
+  const confirmed = window.confirm(`${isSystemRoot(folder) ? "¿Estás segura de que quieres modificar una carpeta compartida?" : "¿Seguro que quieres renombrar esta carpeta?"}\n\n"${folder}" se renombrará como "${newPath}".\n\nTambién se actualizarán sus subcarpetas, contratos, versiones o formatos asociados.`);
   if (!confirmed) return;
 
   updateTemplateCatalogFolderPath(folder, newPath);
   folders = folders.map((path) => replaceFolderPath(path, folder, newPath));
   savedContracts = savedContracts.map((contract) => ({
     ...contract,
-    folder: replaceFolderPath(contract.folder || "Mis Documentos", folder, newPath)
+    folder: replaceFolderPath(contract.folder || personalRootFolder, folder, newPath)
   }));
   supportDocuments = supportDocuments.map((document) => ({
     ...document,
-    folder: replaceFolderPath(document.folder || "Documentos de las partes", folder, newPath)
+    folder: replaceFolderPath(document.folder || partyDocumentsRootFolder, folder, newPath)
   }));
   versions = versions.map((version) => ({
     ...version,
-    folder: replaceFolderPath(version.folder || "Mis Documentos", folder, newPath)
+    folder: replaceFolderPath(version.folder || personalRootFolder, folder, newPath)
   }));
   activeFolder = replaceFolderPath(activeFolder, folder, newPath);
   saveFolders();
@@ -6226,28 +6383,29 @@ function deleteFolder(folder, { skipConfirm = false } = {}) {
     showToast("Las carpetas raíz no se eliminan.");
     return false;
   }
+  if (!requireArchiveModificationPermission(folder, "eliminar")) return false;
 
   const affectedContracts = savedContracts.filter((contract) => pathInFolder(contract.folder || "", folder)).length;
   const affectedVersions = versions.filter((version) => pathInFolder(version.folder || "", folder)).length;
   const affectedDocuments = supportDocuments.filter((document) => pathInFolder(document.folder || "", folder)).length;
   const childFolders = folders.filter((path) => pathInFolder(path, folder)).length;
   const isSystemFolder = isSystemRoot(folder);
-  const confirmed = skipConfirm || window.confirm(`${isSystemFolder ? "¿Estás segura de que quieres eliminar una carpeta del sistema?" : "¿Seguro que quieres eliminar esta carpeta?"}\n\n"${folder}" y ${childFolders - 1} subcarpeta(s) dejarán de aparecer.\n\nNo se borrarán contratos ni versiones: se moverán a Otros. Los formatos del sistema, si los hay, se conservarán en Formatos del sistema.`);
+  const confirmed = skipConfirm || window.confirm(`${isSystemFolder ? "¿Estás segura de que quieres eliminar una carpeta compartida?" : "¿Seguro que quieres eliminar esta carpeta?"}\n\n"${folder}" y ${childFolders - 1} subcarpeta(s) dejarán de aparecer.\n\nNo se borrarán contratos ni versiones: se moverán a Documentos/Otros. Los formatos de trabajo, si los hay, se conservarán en el catálogo.`);
   if (!confirmed) return;
 
   const movedTemplates = moveTemplatesOutOfDeletedSystemFolder(folder);
   folders = folders.filter((path) => !pathInFolder(path, folder));
   folders = Array.from(new Set([...rootFolders, ...folders]));
   savedContracts = savedContracts.map((contract) => (
-    pathInFolder(contract.folder || "", folder) ? { ...contract, folder: "Otros" } : contract
+    pathInFolder(contract.folder || "", folder) ? { ...contract, folder: personalFallbackFolder } : contract
   ));
   versions = versions.map((version) => (
-    pathInFolder(version.folder || "", folder) ? { ...version, folder: "Otros" } : version
+    pathInFolder(version.folder || "", folder) ? { ...version, folder: personalFallbackFolder } : version
   ));
   supportDocuments = supportDocuments.map((document) => (
-    pathInFolder(document.folder || "", folder) ? { ...document, folder: "Documentos de las partes" } : document
+    pathInFolder(document.folder || "", folder) ? { ...document, folder: partyDocumentsRootFolder } : document
   ));
-  activeFolder = pathInFolder(activeFolder, folder) ? "Otros" : activeFolder;
+  activeFolder = pathInFolder(activeFolder, folder) ? personalFallbackFolder : activeFolder;
   saveFolders();
   saveSavedContracts();
   saveSupportDocuments();
@@ -6263,17 +6421,18 @@ function deleteFolder(folder, { skipConfirm = false } = {}) {
 async function askDestinationFolder(currentFolder, { title = "Elige carpeta destino", confirmLabel = "Seleccionar carpeta" } = {}) {
   const destination = await openSaveLocationDialog({
     title,
-    initialFolder: currentFolder || activeFolder || "Mis Documentos",
+    initialFolder: currentFolder || activeFolder || personalRootFolder,
     confirmLabel,
     requireName: false
   });
   if (!destination) return null;
-  return ensureFolderPath(destination.folder, (currentFolder || activeFolder || "Mis Documentos").split("/")[0]);
+  return ensureFolderPath(destination.folder, (currentFolder || activeFolder || personalRootFolder).split("/")[0]);
 }
 
 function renameSavedContract(contractId) {
   const contract = savedContracts.find((item) => item.id === contractId);
   if (!contract) return;
+  if (!requireArchiveModificationPermission(contract.folder || activeFolder, "renombrar")) return;
   const currentName = cleanWorkingTitle(contract.title || "Contrato");
   const nextName = window.prompt("Nuevo nombre del contrato", currentName);
   if (!nextName || !nextName.trim()) return;
@@ -6291,11 +6450,17 @@ function renameSavedContract(contractId) {
 async function moveContractToFolder(contractId) {
   const contract = savedContracts.find((item) => item.id === contractId);
   if (!contract) return;
+  if (!requireArchiveModificationPermission(contract.folder || activeFolder, "mover")) return;
   const destination = await askDestinationFolder(contract.folder, {
     title: `Mover "${contract.title}"`,
     confirmLabel: "Mover aquí"
   });
   if (!destination) return;
+  if (!requireArchiveUploadPermission(destination, "mover")) return;
+  if (isSignedArchiveFolder(destination)) {
+    showToast("Contratos firmados recibe documentos finales firmados. No muevas borradores editables a ese archivo.");
+    return;
+  }
   const folio = contract.matter?.folio || contract.folio;
   contract.folder = destination;
   if (contract.matter) contract.matter.folder = destination;
@@ -6321,6 +6486,11 @@ async function copyContractToFolder(contractId) {
     confirmLabel: "Copiar aquí"
   });
   if (!destination) return;
+  if (!requireArchiveUploadPermission(destination, "copiar")) return;
+  if (isSignedArchiveFolder(destination)) {
+    showToast("Contratos firmados recibe documentos finales firmados. No copies borradores editables a ese archivo.");
+    return;
+  }
   const sourceFolio = contract.matter?.folio || contract.folio || "";
   const copyFolio = sourceFolio ? `${sourceFolio}-COPIA` : "";
   const copy = {
@@ -6344,6 +6514,7 @@ async function copyContractToFolder(contractId) {
 function deleteSavedContract(contractId, { skipConfirm = false } = {}) {
   const contract = savedContracts.find((item) => item.id === contractId);
   if (!contract) return;
+  if (!requireArchiveModificationPermission(contract.folder || activeFolder, "eliminar")) return;
   const folio = contract.matter?.folio || contract.folio || "";
   const relatedVersions = folio ? versions.filter((version) => version.matter?.folio === folio).length : 0;
   const confirmed = skipConfirm || window.confirm(
@@ -6367,6 +6538,7 @@ function deleteSavedContract(contractId, { skipConfirm = false } = {}) {
 function renameSupportDocument(documentId) {
   const document = supportDocuments.find((item) => item.id === documentId);
   if (!document) return;
+  if (!requireArchiveModificationPermission(document.folder || activeFolder, "renombrar")) return;
   const nextName = window.prompt("Nuevo nombre del documento", document.name || "Documento soporte");
   if (!nextName || !nextName.trim()) return;
   const cleanName = nextName.trim();
@@ -6389,11 +6561,13 @@ function renameSupportDocument(documentId) {
 async function moveSupportDocumentToFolder(documentId) {
   const document = supportDocuments.find((item) => item.id === documentId);
   if (!document) return;
+  if (!requireArchiveModificationPermission(document.folder || activeFolder, "mover")) return;
   const destination = await askDestinationFolder(document.folder, {
     title: `Mover "${document.name}"`,
     confirmLabel: "Mover aquí"
   });
   if (!destination) return;
+  if (!requireArchiveUploadPermission(destination, "mover")) return;
   document.folder = destination;
   document.date = new Date().toLocaleString("es-MX");
   activeFolder = destination;
@@ -6413,6 +6587,7 @@ async function copySupportDocumentToFolder(documentId) {
     confirmLabel: "Copiar aquí"
   });
   if (!destination) return;
+  if (!requireArchiveUploadPermission(destination, "copiar")) return;
   const copy = {
     ...document,
     id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
@@ -6431,6 +6606,7 @@ async function copySupportDocumentToFolder(documentId) {
 function deleteSupportDocument(documentId, { skipConfirm = false } = {}) {
   const document = supportDocuments.find((item) => item.id === documentId);
   if (!document) return;
+  if (!requireArchiveModificationPermission(document.folder || activeFolder, "eliminar")) return;
   const confirmed = skipConfirm || window.confirm(`¿Seguro que quieres eliminar este documento del expediente?\n\n${document.name}`);
   if (!confirmed) return;
   supportDocuments = supportDocuments.filter((item) => item.id !== documentId);
@@ -6455,6 +6631,11 @@ async function moveVersionToFolder(versionId) {
     confirmLabel: "Mover aquí"
   });
   if (!destination) return;
+  if (!requireArchiveUploadPermission(destination, "mover")) return;
+  if (isSignedArchiveFolder(destination)) {
+    showToast("Contratos firmados recibe documentos finales firmados. No muevas versiones editables a ese archivo.");
+    return;
+  }
   version.folder = destination;
   if (version.matter) version.matter.folder = destination;
   activeFolder = destination;
@@ -6472,6 +6653,11 @@ async function copyVersionToFolder(versionId) {
     confirmLabel: "Copiar aquí"
   });
   if (!destination) return;
+  if (!requireArchiveUploadPermission(destination, "copiar")) return;
+  if (isSignedArchiveFolder(destination)) {
+    showToast("Contratos firmados recibe documentos finales firmados. No copies versiones editables a ese archivo.");
+    return;
+  }
   versions.push({
     ...version,
     id: Date.now().toString(),
@@ -6672,7 +6858,17 @@ async function filesFromDrop(dataTransfer) {
 async function addFilesToArchiveFolder(fileList, folder = activeFolder) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
-  const targetFolder = ensureFolderPath(folder || activeFolder || "Mis Documentos");
+  const targetFolder = ensureFolderPath(folder || activeFolder || personalRootFolder);
+  if (!requireArchiveUploadPermission(targetFolder, "agregar documentos")) return;
+  const normalizedTarget = normalizeArchiveFolderPath(targetFolder);
+  if (normalizedTarget === workFormatsRootFolder) {
+    showToast("Para agregar formatos de trabajo usa “Importar draft propio” o el botón de subir dentro de Formatos de trabajo.");
+    return;
+  }
+  if (normalizedTarget === logosRootFolder) {
+    showToast("Para agregar logos usa el botón de subir dentro de Logos.");
+    return;
+  }
   const existing = new Set(
     supportDocuments
       .filter((document) => document.folder === targetFolder)
@@ -6688,7 +6884,7 @@ async function addFilesToArchiveFolder(fileList, folder = activeFolder) {
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       folder: targetFolder,
       roleLabel: "Archivo",
-      party: targetFolder.split("/").pop() || "Mis Documentos",
+      party: targetFolder.split("/").pop() || personalRootFolder,
       folio: "",
       draftId: "",
       name: displayName,
@@ -7049,7 +7245,7 @@ contractFolderSelect?.addEventListener("change", () => {
 quickFolderButton?.addEventListener("click", async () => {
   const destination = await openSaveLocationDialog({
     title: "Elegir carpeta de trabajo",
-    initialFolder: activeFolder || "Mis Documentos",
+    initialFolder: activeFolder || personalRootFolder,
     confirmLabel: "Usar esta carpeta"
   });
   if (!destination) return;
@@ -7206,8 +7402,8 @@ async function saveContractToArchive({ saveAs = false } = {}) {
   if (!ensureEditableWorkspace("guardar contrato")) return;
   const defaultName = cleanWorkingTitle(templates[activeTemplate]?.title || editorTitle.textContent) || "Contrato";
   const destination = await openSaveLocationDialog({
-    title: saveAs ? "Guardar contrato como" : "Guardar contrato en Mis Documentos",
-    initialFolder: activeFolder || "Mis Documentos",
+    title: saveAs ? "Guardar contrato como" : "Guardar contrato en Documentos",
+    initialFolder: activeFolder || personalRootFolder,
     confirmLabel: saveAs ? "Guardar como" : "Guardar aquí",
     defaultName,
     requireName: true
@@ -7216,7 +7412,11 @@ async function saveContractToArchive({ saveAs = false } = {}) {
     showToast("Guardado cancelado. El contrato sigue como borrador.");
     return;
   }
-  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || "Mis Documentos");
+  if (isSignedArchiveFolder(destination.folder)) {
+    showToast("Contratos firmados es un archivo de consulta. Guarda aquí solo el PDF firmado desde el explorador.");
+    return;
+  }
+  activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || personalRootFolder);
   renderFolders();
   renderFolderSelector();
   if (destination.fileName) {
@@ -7433,7 +7633,7 @@ function openArchiveFolder(folder, { announce = true } = {}) {
   renderSavedContracts();
   renderVersions();
   renderFolderSelector();
-  if (announce) showToast(`Expediente abierto: ${activeFolder}.`);
+  if (announce) showToast(`Carpeta abierta: ${activeFolder}.`);
 }
 
 function openSavedContractById(id) {
@@ -7491,14 +7691,16 @@ function openArchiveRow(row) {
   }
   if (target.type === "contract") return openSavedContractById(target.id);
   if (target.type === "template") {
-    editMasterTemplate(target.id);
+    if (canManageTemplateCatalog(target.id)) editMasterTemplate(target.id);
+    else startContractFromTemplate(target.id);
     return true;
   }
   if (target.type === "letterhead") {
     selectedLetterheadLogoId = target.id || selectedLetterheadLogoId;
     saveSelectedLetterheadLogoId();
     renderLetterheadLogos();
-    openAdminLetterheadCatalog();
+    if (canSeeSystemCatalogs()) openAdminLetterheadCatalog();
+    else showToast("Logo seleccionado para este documento.");
     return true;
   }
   return false;
@@ -7550,7 +7752,8 @@ function handleArchiveSavedItemClick(event) {
   }
   const systemTemplateButton = event.target.closest(".open-system-template");
   if (systemTemplateButton) {
-    editMasterTemplate(systemTemplateButton.dataset.template);
+    if (canManageTemplateCatalog(systemTemplateButton.dataset.template)) editMasterTemplate(systemTemplateButton.dataset.template);
+    else startContractFromTemplate(systemTemplateButton.dataset.template);
     return true;
   }
   const systemLetterheadButton = event.target.closest(".open-system-letterhead");
@@ -7558,7 +7761,8 @@ function handleArchiveSavedItemClick(event) {
     selectedLetterheadLogoId = systemLetterheadButton.dataset.letterheadId || selectedLetterheadLogoId;
     saveSelectedLetterheadLogoId();
     renderLetterheadLogos();
-    openAdminLetterheadCatalog();
+    if (canSeeSystemCatalogs()) openAdminLetterheadCatalog();
+    else showToast("Logo seleccionado para este documento.");
     return true;
   }
   const button = event.target.closest(".open-saved-contract");
@@ -7724,21 +7928,27 @@ archiveNewFolderButton?.addEventListener("click", () => {
 });
 
 archiveUploadDocumentsButton?.addEventListener("click", () => {
-  if (activeFolder === "Formatos del sistema") {
-    if (!canSeeSystemCatalogs()) return;
+  const normalized = normalizeArchiveFolderPath(activeFolder);
+  if (normalized === workFormatsRootFolder) {
+    if (!requireArchiveUploadPermission(activeFolder, "subir formatos")) return;
     pendingTemplateImportCatalogPath = "Formatos generales";
     templateImport?.click();
     return;
   }
-  if (normalizeArchiveFolderPath(activeFolder) === "Catálogos del sistema/Logos" && canSeeSystemCatalogs()) {
+  if (normalized === logosRootFolder) {
+    if (!requireArchiveUploadPermission(activeFolder, "subir logos")) return;
     letterheadLogoInput?.click();
     return;
   }
+  if (!requireArchiveUploadPermission(activeFolder, "subir documentos")) return;
   archiveDocumentUpload?.click();
 });
-archiveUploadFolderButton?.addEventListener("click", () => archiveFolderUpload?.click());
+archiveUploadFolderButton?.addEventListener("click", () => {
+  if (!requireArchiveUploadPermission(activeFolder, "subir carpeta")) return;
+  archiveFolderUpload?.click();
+});
 archiveDocumentUpload?.addEventListener("change", async () => {
-  if (normalizeArchiveFolderPath(activeFolder) === "Catálogos del sistema/Logos" && canSeeSystemCatalogs()) {
+  if (normalizeArchiveFolderPath(activeFolder) === logosRootFolder && canSeeSystemCatalogs()) {
     addLetterheadLogo(archiveDocumentUpload.files?.[0]);
     archiveDocumentUpload.value = "";
     return;
@@ -7813,7 +8023,7 @@ saveLocationBrowser?.addEventListener("dblclick", (event) => {
 
 saveLocationBrowser?.addEventListener("contextmenu", (event) => {
   const row = event.target.closest("[data-save-folder]");
-  const folder = row?.dataset.saveFolder || saveLocationState.folder || activeFolder || "Mis Documentos";
+  const folder = row?.dataset.saveFolder || saveLocationState.folder || activeFolder || personalRootFolder;
   showSaveLocationContextMenu(event, folder);
 });
 
@@ -7829,7 +8039,8 @@ saveLocationContextMenu?.addEventListener("click", (event) => {
 });
 
 saveLocationConfirm?.addEventListener("click", () => {
-  const folder = ensureFolderPath(saveLocationState.folder || activeFolder || "Mis Documentos");
+  const folder = ensureFolderPath(saveLocationState.folder || activeFolder || personalRootFolder);
+  if (!requireArchiveUploadPermission(folder, "guardar")) return;
   const fileName = saveLocationFileName?.value.trim() || saveLocationState.defaultName || "";
   if (saveLocationState.requireName && !fileName) {
     showToast("Escribe un nombre para guardar el contrato.");
