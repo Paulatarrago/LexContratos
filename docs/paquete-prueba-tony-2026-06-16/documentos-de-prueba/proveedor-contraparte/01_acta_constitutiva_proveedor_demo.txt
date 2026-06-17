@@ -1,0 +1,20 @@
+ACTA CONSTITUTIVA FICTICIA
+
+Este documento es de prueba. No corresponde a una sociedad real.
+
+Denominación social: SERVICIOS NEBULA, S.A. DE C.V.
+RFC: SNE220315K92
+Fecha de constitución: 20 de marzo de 2022
+Lugar de constitución: Monterrey, Nuevo León
+Objeto social: Prestación de servicios administrativos, tecnológicos, logísticos y de soporte operativo.
+Folio mercantil electrónico: 998877-NL
+Tipo de fedatario: Corredor público
+Instrumento: Póliza mercantil número 9,182
+Corredor público: Lic. Rodrigo Castillo Peña
+Número de correduría: Correduría Pública número 12
+Plaza: Monterrey, Nuevo León
+Domicilio: Calzada del Valle 250, Colonia Del Valle, San Pedro Garza García, Nuevo León, C.P. 66220.
+
+Uso para prueba:
+Este archivo sirve para validar qué LexContratos distinga entre notario/escritura y corredor público/póliza.
+

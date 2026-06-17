@@ -1,0 +1,12 @@
+campo,valor,parte,fuente
+razón_social,CLIENTE DEMO TECNOLOGIA S.A. DE C.V.,cliente,Constancia fiscal ficticia
+rfc,CDT240101AB1,cliente,Constancia fiscal ficticia
+representante_legal,ANA SOFIA MARTINEZ RIOS,cliente,Poder notarial ficticio
+correo_firmante,ana.martinez.demo@example.com,cliente,Poder notarial ficticio
+razón_social,SERVICIOS NEBULA S.A. DE C.V.,proveedor,Acta constitutiva ficticia
+rfc,SNE220315K92,proveedor,Acta constitutiva ficticia
+representante_legal,LUIS EDUARDO CARRANZA MORA,proveedor,Identificación oficial ficticia
+correo_firmante,luis.carranza.demo@example.com,proveedor,Identificación oficial ficticia
+importe_mensual,125000.00,contrato,Correo demo
+fecha_firma,30/06/2026,contrato,Correo demo
+

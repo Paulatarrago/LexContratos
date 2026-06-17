@@ -728,7 +728,10 @@ let activeLanguage = "es";
 let partyDataStore = {};
 let sourceTextsBySide = { A: [], B: [] };
 let partyDocumentsStepVisited = false;
-const baseRootFolders = ["Mis Documentos", "Clientes", "Proveedores", "Empresas del Grupo", "Documentos de las partes", "Otros"];
+const reviewRootFolder = "Revisión de documentos";
+const reviewContractsStorageKey = "lexcontratos_review_contracts";
+const reviewDocumentsStorageKey = "lexcontratos_review_documents";
+const baseRootFolders = ["Mis Documentos", "Clientes", "Proveedores", "Empresas del Grupo", "Documentos de las partes", reviewRootFolder, "Otros"];
 const systemRootFolders = ["Formatos del sistema", "Catálogos del sistema"];
 let rootFolders = computeRootFolders();
 let folders = loadFolders();
@@ -792,6 +795,10 @@ function normalizeArchiveFolderPath(folder) {
   if (value === "General") return "Mis Documentos/General";
   if (value === "Personales") return "Otros";
   if (value.startsWith("Personales/")) return `Otros/${value.slice("Personales/".length)}`;
+  if (value === "Documentos para revisión") return reviewRootFolder;
+  if (value.startsWith("Documentos para revisión/")) return `${reviewRootFolder}/${value.slice("Documentos para revisión/".length)}`;
+  if (value === "Catálogos del sistema/Membretes") return "Catálogos del sistema/Logos";
+  if (value.startsWith("Catálogos del sistema/Membretes/")) return `Catálogos del sistema/Logos/${value.slice("Catálogos del sistema/Membretes/".length)}`;
   return value;
 }
 
@@ -937,16 +944,47 @@ function saveFolders() {
   if (backend) backend.saveFolders(folders).catch((error) => reportBackendError("guardar carpetas", error));
 }
 
-function loadSavedContracts() {
-  const saved = readJson(userStorageKey("saved_contracts"), readJson("lexcontratos_saved_contracts", []));
-  return saved.map((contract) => ({
+function isReviewFolder(folder) {
+  return folderRoot(folder) === reviewRootFolder;
+}
+
+function normalizeSavedContract(contract = {}) {
+  return {
     ...contract,
     folder: normalizeArchiveFolderPath(contract.folder || "Mis Documentos")
-  }));
+  };
+}
+
+function normalizeSupportDocument(document = {}) {
+  return {
+    ...document,
+    folder: normalizeArchiveFolderPath(document.folder || "Mis Documentos")
+  };
+}
+
+function uniqueById(items = []) {
+  const seen = new Set();
+  return items.filter((item) => {
+    const id = item?.id || `${item?.folder || ""}-${item?.name || item?.title || ""}-${item?.date || ""}`;
+    if (seen.has(id)) return false;
+    seen.add(id);
+    return true;
+  });
+}
+
+function loadSavedContracts() {
+  const saved = readJson(userStorageKey("saved_contracts"), readJson("lexcontratos_saved_contracts", [])).map(normalizeSavedContract);
+  const reviewContracts = readJson(reviewContractsStorageKey, []).map(normalizeSavedContract);
+  return uniqueById([
+    ...saved.filter((contract) => !isReviewFolder(contract.folder)),
+    ...reviewContracts,
+    ...saved.filter((contract) => isReviewFolder(contract.folder))
+  ]);
 }
 
 function saveSavedContracts(contractToSync = null, { syncLatest = true } = {}) {
-  localStorage.setItem(userStorageKey("saved_contracts"), JSON.stringify(savedContracts));
+  localStorage.setItem(userStorageKey("saved_contracts"), JSON.stringify(savedContracts.filter((contract) => !isReviewFolder(contract.folder))));
+  localStorage.setItem(reviewContractsStorageKey, JSON.stringify(savedContracts.filter((contract) => isReviewFolder(contract.folder))));
   if (!syncLatest) return;
   const backend = productionBackend();
   const latest = contractToSync || savedContracts[savedContracts.length - 1];
@@ -966,14 +1004,18 @@ function saveVersions() {
 }
 
 function loadSupportDocuments() {
-  return readJson(userStorageKey("support_documents"), []).map((document) => ({
-    ...document,
-    folder: normalizeArchiveFolderPath(document.folder || "Mis Documentos")
-  }));
+  const saved = readJson(userStorageKey("support_documents"), []).map(normalizeSupportDocument);
+  const reviewDocuments = readJson(reviewDocumentsStorageKey, []).map(normalizeSupportDocument);
+  return uniqueById([
+    ...saved.filter((document) => !isReviewFolder(document.folder)),
+    ...reviewDocuments,
+    ...saved.filter((document) => isReviewFolder(document.folder))
+  ]);
 }
 
 function saveSupportDocuments() {
-  localStorage.setItem(userStorageKey("support_documents"), JSON.stringify(supportDocuments));
+  localStorage.setItem(userStorageKey("support_documents"), JSON.stringify(supportDocuments.filter((document) => !isReviewFolder(document.folder))));
+  localStorage.setItem(reviewDocumentsStorageKey, JSON.stringify(supportDocuments.filter((document) => isReviewFolder(document.folder))));
 }
 
 function activeDraftKey() {
@@ -1060,7 +1102,7 @@ function restoreActiveDraft({ silent = false } = {}) {
   setPartyData(draft.partyData || {});
   sourceTextsBySide = draft.sourceTextsBySide || { A: [], B: [] };
   partyDocumentsStepVisited = Boolean(draft.partyDocumentsStepVisited || Object.values(sourceTextsBySide).some((files) => files?.length));
-  activeMatterFolio = draft.matter?.folio || null;
+  activeMatterFolio = draft.matter?.signatureCode || draft.matter?.folio || null;
   activeMatterDraftId = draft.draftId || draft.matter?.draftId || "";
   matterHistoryEvents = draft.history || draft.matter?.history || [];
   autosaveStatus.textContent = `Borrador recuperado · ${draft.date || ""}`.trim();
@@ -1165,9 +1207,9 @@ function renderLetterheadLogos() {
     return `<option value="${escapeHtml(logo.id)}">${escapeHtml(`${logo.name}${detail}`)}</option>`;
   };
   letterheadLogoSelect.innerHTML = `
-    <option value="">Sin membrete</option>
-    ${catalog.length ? `<optgroup label="Membretes precargados">${catalog.map(optionMarkup).join("")}</optgroup>` : ""}
-    ${personal.length ? `<optgroup label="Membretes propios">${personal.map(optionMarkup).join("")}</optgroup>` : ""}
+    <option value="">Sin logo</option>
+    ${catalog.length ? `<optgroup label="Logos precargados">${catalog.map(optionMarkup).join("")}</optgroup>` : ""}
+    ${personal.length ? `<optgroup label="Logos propios">${personal.map(optionMarkup).join("")}</optgroup>` : ""}
   `;
   letterheadLogoSelect.value = selectedLetterheadLogoId || "";
   if (addLetterheadLogoButton) addLetterheadLogoButton.hidden = letterheadCatalogLocked();
@@ -1182,19 +1224,18 @@ function renderLetterheadCatalogList() {
   if (!letterheadCatalogList) return;
   letterheadLogos = loadLetterheadLogos();
   if (!letterheadLogos.length) {
-    letterheadCatalogList.innerHTML = `<div class="empty-state"><strong>No hay membretes guardados.</strong><span>Sube el primero para que aparezca en la lista desplegable del contrato.</span></div>`;
+    letterheadCatalogList.innerHTML = `<div class="empty-state"><strong>No hay logos guardados.</strong><span>Sube el primero para que aparezca en la lista desplegable del contrato.</span></div>`;
     return;
   }
   letterheadCatalogList.innerHTML = letterheadLogos
     .map((logo) => {
       const selected = logo.id === selectedLetterheadLogoId;
-      const lines = letterheadFooterLines(logo);
       return `
         <article class="letterhead-catalog-item ${selected ? "active" : ""}">
           <div class="letterhead-preview">${logo.dataUrl ? `<img src="${escapeHtml(logo.dataUrl)}" alt="${escapeHtml(logo.name)}" />` : `<span>LX</span>`}</div>
           <div>
             <strong>${escapeHtml(logo.name)}</strong>
-            <small>${escapeHtml(lines.join(" · ") || "Sin pie de página capturado")}</small>
+            <small>${escapeHtml(logo.companyName || "Logo autorizado para contratos")}</small>
             <em>${logo.source === "catalog" ? "Precargado" : "Propio"}${selected ? " · En uso" : ""}</em>
           </div>
           <div class="letterhead-item-actions">
@@ -1219,7 +1260,7 @@ function cleanLogoName(file) {
 function addLetterheadLogo(file) {
   if (!file) return;
   if (!/^image\/(png|jpe?g|webp|svg\+xml)$/i.test(file.type)) {
-    showToast("Usa un archivo de imagen para el membrete: PNG, JPG, WebP o SVG.");
+    showToast("Usa un archivo de imagen para el logo: PNG, JPG, WebP o SVG.");
     return;
   }
   if (file.size > 1_500_000) {
@@ -1229,19 +1270,17 @@ function addLetterheadLogo(file) {
   const reader = new FileReader();
   reader.onload = () => {
     const defaultName = cleanLogoName(file);
-    const companyName = window.prompt("Empresa o razón social para este membrete", defaultName);
+    const companyName = window.prompt("Empresa o razón social para este logo", defaultName);
     if (!companyName || !companyName.trim()) {
-      showToast("Membrete cancelado. No se guardó sin nombre de empresa.");
+      showToast("Logo cancelado. No se guardó sin nombre de empresa.");
       return;
     }
-    const footer = window.prompt("Domicilio, sitio web o pie de página que debe aparecer en el documento. Puedes separar líneas con punto y coma.", "");
-    const addressLines = normalizeLetterheadLines(String(footer || "").split(";"));
     const logo = {
       id: `logo-${Date.now()}`,
       name: companyName.trim(),
       companyName: companyName.trim(),
-      addressLines,
-      footerLines: addressLines,
+      addressLines: [],
+      footerLines: [],
       dataUrl: String(reader.result || ""),
       type: file.type,
       source: "personal",
@@ -1253,8 +1292,8 @@ function addLetterheadLogo(file) {
     saveSelectedLetterheadLogoId();
     renderLetterheadLogos();
     renderLetterheadCatalogList();
-    saveActiveDraft("Membrete actualizado");
-    showToast(`Membrete "${logo.name}" agregado.`);
+    saveActiveDraft("Logo actualizado");
+    showToast(`Logo "${logo.name}" agregado.`);
   };
   reader.readAsDataURL(file);
 }
@@ -1263,21 +1302,21 @@ function clearSelectedLetterheadLogo() {
   selectedLetterheadLogoId = "";
   saveSelectedLetterheadLogoId();
   renderLetterheadLogos();
-  saveActiveDraft("Contrato sin membrete");
-  showToast("Este contrato queda sin membrete.");
+  saveActiveDraft("Contrato sin logo");
+  showToast("Este contrato queda sin logo.");
 }
 
 function deleteLetterheadLogo(id) {
   const logo = letterheadLogos.find((item) => item.id === id);
   if (!logo) {
-    showToast("No encontré ese membrete.");
+    showToast("No encontré ese logo.");
     return;
   }
   if (logo.source === "catalog") {
-    showToast("Este membrete pertenece al catálogo aprobado y no puede eliminarse desde la cuenta.");
+    showToast("Este logo pertenece al catálogo aprobado y no puede eliminarse desde la cuenta.");
     return;
   }
-  const confirmed = window.confirm(`¿Seguro que quieres eliminar este membrete de tu biblioteca?\n\n${logo.name}`);
+  const confirmed = window.confirm(`¿Seguro que quieres eliminar este logo de tu biblioteca?\n\n${logo.name}`);
   if (!confirmed) return;
   letterheadLogos = letterheadLogos.filter((item) => item.id !== logo.id);
   if (selectedLetterheadLogoId === logo.id) selectedLetterheadLogoId = "";
@@ -1285,30 +1324,30 @@ function deleteLetterheadLogo(id) {
   saveSelectedLetterheadLogoId();
   renderLetterheadLogos();
   renderLetterheadCatalogList();
-  saveActiveDraft("Membrete eliminado");
-  showToast("Membrete eliminado de la biblioteca.");
+  saveActiveDraft("Logo eliminado");
+  showToast("Logo eliminado de la biblioteca.");
 }
 
 function renameLetterheadLogo(id) {
   const logo = letterheadLogos.find((item) => item.id === id);
   if (!logo) {
-    showToast("No encontré ese membrete.");
+    showToast("No encontré ese logo.");
     return;
   }
   if (logo.source === "catalog") {
-    showToast("Ese membrete es precargado. Para cambiarlo, sube una nueva versión aprobada al catálogo.");
+    showToast("Ese logo es precargado. Para cambiarlo, sube una nueva versión aprobada al catálogo.");
     return;
   }
-  const name = window.prompt("Nuevo nombre del membrete", logo.name || "Membrete");
+  const name = window.prompt("Nuevo nombre del logo", logo.name || "Logo");
   if (!name || !name.trim()) return;
-  const confirmed = window.confirm(`¿Seguro que quieres renombrar este membrete como "${name.trim()}"?`);
+  const confirmed = window.confirm(`¿Seguro que quieres renombrar este logo como "${name.trim()}"?`);
   if (!confirmed) return;
   logo.name = name.trim();
   logo.companyName = logo.companyName || logo.name;
   saveLetterheadLogos();
   renderLetterheadLogos();
   renderFolders();
-  showToast("Membrete renombrado.");
+  showToast("Logo renombrado.");
 }
 
 function letterheadLogoForSignature() {
@@ -1798,8 +1837,8 @@ function renderAdminUsers(users = [], currentAdmin = {}) {
   }
   if (adminPermissionNote) {
     adminPermissionNote.textContent = currentIsSuperAdmin
-      ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, configuración y respaldos. Los formatos y membretes del sistema se administran desde Mis Documentos."
-      : "Estás entrando como administradora. Los formatos y membretes del sistema se administran desde Mis Documentos; la super administración conserva permisos avanzados.";
+      ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, configuración y respaldos. Los formatos y logos del sistema se administran desde Mis Documentos."
+      : "Estás entrando como administradora. Los formatos y logos del sistema se administran desde Mis Documentos; la super administración conserva permisos avanzados.";
     adminPermissionNote.classList.toggle("is-superadmin", currentIsSuperAdmin);
   }
   if (adminCreateRoleSelect) {
@@ -1975,10 +2014,10 @@ function openAdminTemplateCatalog() {
 function openAdminLetterheadCatalog() {
   adminUsersDialog?.close();
   if (!canSeeSystemCatalogs()) {
-    showToast("Solo administración puede modificar los membretes del sistema.");
+    showToast("Solo administración puede modificar los logos del sistema.");
     return;
   }
-  openArchiveFolder("Catálogos del sistema/Membretes", { announce: false });
+  openArchiveFolder("Catálogos del sistema/Logos", { announce: false });
   archiveDrawer.classList.add("open");
 }
 
@@ -2045,6 +2084,7 @@ function setWorkflowButtonState(button, state) {
 function updateWorkflowStepState() {
   const fillButton = document.querySelector("#fill-contract");
   const criticalButton = document.querySelector("#critical-review");
+  const signatureReadyButton = document.querySelector("#mark-ready-signature");
   const exportButton = document.querySelector("#export-word");
   const pdfButton = document.querySelector("#export-pdf-signature");
   const missingCount = fieldsReviewed ? missingFieldsForActiveTemplate().length : 0;
@@ -2054,6 +2094,7 @@ function updateWorkflowStepState() {
   setWorkflowButtonState(partyDocumentsButton, !fieldsReviewed ? "step-locked" : dataComplete || partyDocumentsStepVisited ? "step-done" : "step-current");
   setWorkflowButtonState(fillButton, !fieldsReviewed || (!partyDocumentsStepVisited && !dataComplete) ? "step-locked" : dataComplete ? "step-done" : "step-current");
   setWorkflowButtonState(criticalButton, !dataComplete ? "step-locked" : criticalReviewDone ? "step-done" : "step-current");
+  setWorkflowButtonState(signatureReadyButton, activeMatterFolio ? "step-done" : criticalReviewDone ? "step-ready" : "");
   setWorkflowButtonState(exportButton, criticalReviewDone ? "step-ready" : "");
   setWorkflowButtonState(pdfButton, criticalReviewDone ? "step-ready" : "");
 }
@@ -2190,6 +2231,93 @@ function matterBaseCode() {
   return `${partA}-${partB}-${year}-${typeCodeForTemplate()}`;
 }
 
+const defaultSignatureCompanyCodes = [
+  { code: "CGC", name: "Grupo COCEI / Corporativo Grupo COCEI" },
+  { code: "ERIJAN", name: "Erijan" }
+];
+
+function normalizeSignatureCompanyCode(value) {
+  return removeAccents(String(value || ""))
+    .toUpperCase()
+    .replace(/[^A-Z0-9]/g, "")
+    .slice(0, 12);
+}
+
+function loadSignatureCompanyCodes() {
+  const saved = readJson(userStorageKey("signature_company_codes"), []);
+  const merged = [...defaultSignatureCompanyCodes, ...(Array.isArray(saved) ? saved : [])]
+    .map((item) => ({
+      code: normalizeSignatureCompanyCode(item.code || item.name),
+      name: String(item.name || item.code || "").trim()
+    }))
+    .filter((item) => item.code);
+  const seen = new Set();
+  return merged.filter((item) => {
+    if (seen.has(item.code)) return false;
+    seen.add(item.code);
+    return true;
+  });
+}
+
+function saveSignatureCompanyCode(code, name = "") {
+  const normalized = normalizeSignatureCompanyCode(code);
+  if (!normalized || defaultSignatureCompanyCodes.some((item) => item.code === normalized)) return;
+  const saved = readJson(userStorageKey("signature_company_codes"), []);
+  const next = [
+    ...saved.filter((item) => normalizeSignatureCompanyCode(item.code || item.name) !== normalized),
+    { code: normalized, name: String(name || normalized).trim() }
+  ].slice(-30);
+  localStorage.setItem(userStorageKey("signature_company_codes"), JSON.stringify(next));
+}
+
+function signatureCodePrefix(companyCode, year = new Date().getFullYear()) {
+  return `SJ/${normalizeSignatureCompanyCode(companyCode) || "CGC"}-${year}-`;
+}
+
+function signatureCodeCandidates() {
+  return [
+    ...savedContracts.map((contract) => contract.matter?.signatureCode || contract.matter?.folio || contract.folio || ""),
+    ...versions.map((version) => version.matter?.signatureCode || version.matter?.folio || version.folio || ""),
+    activeMatterFolio || ""
+  ].filter(Boolean);
+}
+
+function nextSignatureSequence(companyCode, year = new Date().getFullYear()) {
+  const prefix = signatureCodePrefix(companyCode, year);
+  const max = signatureCodeCandidates()
+    .filter((folio) => String(folio).startsWith(prefix))
+    .reduce((current, folio) => {
+      const number = Number(String(folio).split("-").pop());
+      return Number.isFinite(number) ? Math.max(current, number) : current;
+    }, 0);
+  return String(max + 1).padStart(3, "0");
+}
+
+function buildSignatureCode(companyCode, year = new Date().getFullYear()) {
+  const code = normalizeSignatureCompanyCode(companyCode) || "CGC";
+  return `${signatureCodePrefix(code, year)}${nextSignatureSequence(code, year)}`;
+}
+
+function companyCodePromptText(codes) {
+  const options = codes.map((item) => `${item.code}${item.name && item.name !== item.code ? ` = ${item.name}` : ""}`).join("\n");
+  return `Código de empresa para el código final de firma:\n\n${options || "CGC = Grupo COCEI"}\n\nEscribe el código que corresponda.`;
+}
+
+function promptCompanyCodeForSignature() {
+  const codes = loadSignatureCompanyCodes();
+  const last = localStorage.getItem(userStorageKey("last_signature_company_code")) || codes[0]?.code || "CGC";
+  const typed = window.prompt(companyCodePromptText(codes), last);
+  if (typed === null) return "";
+  const normalized = normalizeSignatureCompanyCode(typed);
+  if (!normalized) {
+    showToast("No se generó código porque falta el código de empresa.");
+    return "";
+  }
+  saveSignatureCompanyCode(normalized);
+  localStorage.setItem(userStorageKey("last_signature_company_code"), normalized);
+  return normalized;
+}
+
 function nextMatterSequence(base) {
   const existing = savedContracts
     .map((contract) => contract.matter?.folio || contract.folio || "")
@@ -2207,18 +2335,36 @@ function ensureDraftMatterId() {
 }
 
 function visibleMatterCode() {
-  return activeMatterFolio || "Borrador sin folio final";
+  return activeMatterFolio || "Código final pendiente";
 }
 
 function previewMatterFolio() {
-  if (activeMatterFolio) return activeMatterFolio;
-  const base = matterBaseCode();
-  return `${base}-${nextMatterSequence(base)}`;
+  return activeMatterFolio || "";
 }
 
 function ensureMatterFolio() {
-  if (!activeMatterFolio) activeMatterFolio = previewMatterFolio();
-  return activeMatterFolio;
+  return activeMatterFolio || "";
+}
+
+function markContractReadyForSignature() {
+  if (!editor.value.trim()) {
+    showToast("Primero selecciona o redacta un contrato antes de generar el código de firma.");
+    return;
+  }
+  if (activeMatterFolio) {
+    const regenerate = window.confirm(`Este contrato ya tiene código:\n\n${activeMatterFolio}\n\n¿Quieres reemplazarlo por un código nuevo?`);
+    if (!regenerate) return;
+  }
+  const companyCode = promptCompanyCodeForSignature();
+  if (!companyCode) return;
+  const signatureCode = buildSignatureCode(companyCode);
+  activeMatterFolio = signatureCode;
+  addMatterEvent(`Contrato marcado listo para firma: ${signatureCode}`);
+  saveActiveDraft("Contrato listo para firma");
+  autoSaveVersion("manual");
+  renderMatterPanel();
+  updateWorkflowStepState();
+  showToast(`Código generado: ${signatureCode}. Se incluirá en la parte superior al exportar.`);
 }
 
 function classifySupportDocument(fileName) {
@@ -2251,6 +2397,7 @@ function matterSnapshot(status = "En preparación", lock = false) {
   const completed = required.filter(([name]) => String(values[name] || "").trim()).length;
   return {
     folio: lock ? ensureMatterFolio() : (activeMatterFolio || ""),
+    signatureCode: activeMatterFolio || "",
     draftId: ensureDraftMatterId(),
     displayCode: lock ? ensureMatterFolio() : visibleMatterCode(),
     status,
@@ -2285,7 +2432,7 @@ function renderMatterPanel() {
   const contractFiles = [
     "Contrato editable",
     events.includes("Word") ? "Contrato exportado Word" : "Word pendiente",
-    activeMatterFolio ? `Folio final: ${activeMatterFolio}` : "Folio final pendiente",
+    activeMatterFolio ? `Código final: ${activeMatterFolio}` : "Código final pendiente",
     events.includes("firma") || events.includes("Firma") ? "Paquete de firma preparado" : "Firma pendiente",
     "Contrato firmado pendiente"
   ];
@@ -2669,7 +2816,7 @@ function syncSystemCatalogFolders() {
     return;
   }
   templateCatalogFolders = loadTemplateCatalogFolders();
-  const dynamicFolders = ["Formatos del sistema", "Catálogos del sistema", "Catálogos del sistema/Membretes"];
+  const dynamicFolders = ["Formatos del sistema", "Catálogos del sistema", "Catálogos del sistema/Logos"];
   folders = Array.from(new Set([...folders.filter((folder) => !folder.startsWith("Formatos del sistema/")), ...dynamicFolders]));
 }
 
@@ -3095,7 +3242,7 @@ function renderVersions() {
           <article class="saved-contract" data-version-id="${version.id}">
             <button class="saved-contract-open open-version" type="button" data-version-id="${version.id}">
               <strong>${version.title}</strong>
-              <span>${version.matter?.folio || version.matter?.displayCode || "Borrador sin folio final"} · ${(version.language || "es").toUpperCase()} · ${version.date}</span>
+              <span>${version.matter?.signatureCode || version.matter?.folio || version.matter?.displayCode || "Código final pendiente"} · ${(version.language || "es").toUpperCase()} · ${version.date}</span>
             </button>
             <div class="saved-contract-actions">
               <button class="folder-action move-version" type="button" data-version-id="${version.id}">Mover</button>
@@ -3767,17 +3914,24 @@ function letterheadHeaderHtml() {
   `;
 }
 
-function letterheadFooterHtml(footerInitials) {
-  const lines = letterheadFooterLines();
-  const letterheadLines = lines.length
-    ? `<p class="letterhead-address">${lines.map((line) => escapeHtml(line)).join("<br />")}</p>`
-    : "";
+function wordFieldHtml(fieldName, fallback) {
+  return `<span style='mso-element:field-begin'></span><span style='mso-field-code:" ${fieldName} "'></span><span style='mso-element:field-separator'></span><span>${fallback}</span><span style='mso-element:field-end'></span>`;
+}
+
+function pageNumberFooterHtml() {
   return `
+    <div class="footer" id="firstfooter1">
+      <p>&nbsp;</p>
+    </div>
     <div class="footer" id="footer1">
-      ${letterheadLines}
-      <p class="footer-initials">${escapeHtml(footerInitials)}</p>
+      <p class="page-number">${wordFieldHtml("PAGE", "2")} de ${wordFieldHtml("NUMPAGES", "10")}</p>
     </div>
   `;
+}
+
+function contractCodeHeaderHtml() {
+  if (!activeMatterFolio) return "";
+  return `<p class="contract-final-code">${escapeHtml(activeMatterFolio)}</p>`;
 }
 
 function isSignatureBlockStart(paragraphs, index) {
@@ -3840,28 +3994,27 @@ function confirmExportReadiness(actionLabel) {
 function exportWordDocument() {
   if (!confirmExportReadiness("exportar a Word")) return;
   const title = cleanWorkingTitle(editorTitle.textContent);
-  const folio = ensureMatterFolio();
+  const finalCode = activeMatterFolio || "";
   readFormatControls();
-  const documentBody = formattedContractHtml(editor.value);
-  const footerInitials = currentUserInitials();
+  const documentBody = `${contractCodeHeaderHtml()}${formattedContractHtml(editor.value)}`;
   const letterheadHtml = letterheadHeaderHtml();
-  const letterheadFooter = letterheadFooterHtml(footerInitials);
+  const pageFooter = pageNumberFooterHtml();
   const hasLetterhead = Boolean(letterheadHtml);
   const html = `<!doctype html>
   <html>
     <head>
       <meta charset="utf-8" />
       <style>
-        @page WordSection1 { margin: ${legalFormat.margin}; mso-footer: footer1; ${hasLetterhead ? "mso-header: header1;" : ""} }
+        @page WordSection1 { margin: ${legalFormat.margin}; mso-footer: footer1; mso-first-footer: firstfooter1; mso-title-page: yes; ${hasLetterhead ? "mso-header: header1;" : ""} }
         div.WordSection1 { page: WordSection1; }
         div.header { mso-element: header; }
         div.footer { mso-element: footer; }
         .header p { margin: 0; text-align: left; }
         .header img { max-width: 180pt; max-height: 52pt; width: auto; height: auto; }
         .footer p { margin: 0; font-size: 8pt; color: #6b7280; }
-        .footer .letterhead-address { text-align: center; font-size: 7.5pt; color: #374151; line-height: 1.2; }
-        .footer .footer-initials { text-align: right; margin-top: 2pt; }
+        .footer .page-number { text-align: right; }
         body { font-family: "${legalFormat.font}", serif; color: #111827; line-height: ${legalFormat.lineHeight}; margin: 0; font-size: ${legalFormat.size}pt; }
+        .contract-final-code { margin: 0 0 14pt; text-align: right; font-size: ${Math.max(Number(legalFormat.size) - 2, 8)}pt; font-weight: 700; color: #374151; }
         h1 { font-size: ${Number(legalFormat.size) + 2}pt; text-align: center; font-weight: 700; margin: 0 0 24pt; text-transform: uppercase; }
         h2 { font-size: ${legalFormat.size}pt; text-align: justify; font-weight: 700; margin: 18pt 0 10pt; text-transform: uppercase; }
         h2.annex-title { text-align: center; margin-top: 0; page-break-before: always; break-before: page; }
@@ -3884,13 +4037,13 @@ function exportWordDocument() {
     <body>
       <div class="WordSection1">${documentBody || `<h1>${escapeHtml(title)}</h1>`}</div>
       ${letterheadHtml}
-      ${letterheadFooter}
+      ${pageFooter}
     </body>
   </html>`;
   const blob = new Blob(["\ufeff", html], { type: "application/msword" });
   const link = document.createElement("a");
   link.href = URL.createObjectURL(blob);
-  link.download = `${sanitizeFilename(folio)}-${sanitizeFilename(title)}.doc`;
+  link.download = `${finalCode ? `${sanitizeFilename(finalCode)}-` : ""}${sanitizeFilename(title)}.doc`;
   link.click();
   URL.revokeObjectURL(link.href);
   addMatterEvent("Versión exportada a Word");
@@ -3900,14 +4053,10 @@ function exportWordDocument() {
 
 function printContractHtml(printTitle) {
   const title = cleanWorkingTitle(printTitle || editorTitle.textContent);
-  const documentBody = formattedContractHtml(editor.value) || `<h1>${escapeHtml(title)}</h1>`;
+  const documentBody = `${contractCodeHeaderHtml()}${formattedContractHtml(editor.value)}` || `<h1>${escapeHtml(title)}</h1>`;
   const logo = selectedLetterheadLogo();
-  const footerLines = letterheadFooterLines();
   const headerHtml = logo?.dataUrl
     ? `<div class="print-letterhead"><img src="${logo.dataUrl}" alt="${escapeHtml(logo.name)}" /></div>`
-    : "";
-  const footerHtml = footerLines.length || currentUserInitials()
-    ? `<footer class="print-footer">${footerLines.map((line) => `<p>${escapeHtml(line)}</p>`).join("")}<p class="footer-initials">${escapeHtml(currentUserInitials())}</p></footer>`
     : "";
 
   return `<!doctype html>
@@ -3916,7 +4065,17 @@ function printContractHtml(printTitle) {
       <meta charset="utf-8" />
       <title>${escapeHtml(title)}</title>
       <style>
-        @page { margin: ${legalFormat.margin}; }
+        @page {
+          margin: ${legalFormat.margin};
+          @bottom-right {
+            content: counter(page) " de " counter(pages);
+            font-size: 8pt;
+            color: #6b7280;
+          }
+        }
+        @page:first {
+          @bottom-right { content: ""; }
+        }
         * { box-sizing: border-box; }
         body {
           font-family: "${legalFormat.font}", ${["Georgia", "Times New Roman"].includes(legalFormat.font) ? "serif" : "sans-serif"};
@@ -3928,6 +4087,7 @@ function printContractHtml(printTitle) {
         }
         .print-letterhead { margin: 0 0 22pt; text-align: left; }
         .print-letterhead img { max-width: 180pt; max-height: 52pt; width: auto; height: auto; }
+        .contract-final-code { margin: 0 0 14pt; text-align: right; font-size: ${Math.max(Number(legalFormat.size) - 2, 8)}pt; font-weight: 700; color: #374151; }
         h1 { font-size: ${Number(legalFormat.size) + 2}pt; text-align: center; font-weight: 700; margin: 0 0 24pt; text-transform: uppercase; }
         h2 { font-size: ${legalFormat.size}pt; text-align: justify; font-weight: 700; margin: 18pt 0 10pt; text-transform: uppercase; }
         h2.annex-title { text-align: center; margin-top: 0; page-break-before: always; break-before: page; }
@@ -3944,16 +4104,12 @@ function printContractHtml(printTitle) {
         .signature-entity, .signature-representative { text-transform: uppercase; }
         .signature-label { color: #111827; }
         .signature-empty { visibility: hidden; }
-        .print-footer { margin-top: 24pt; padding-top: 7pt; border-top: 0.5pt solid #d1d5db; color: #374151; font-size: 7.5pt; line-height: 1.2; page-break-inside: avoid; }
-        .print-footer p { margin: 0; text-align: center; }
-        .print-footer .footer-initials { text-align: right; margin-top: 3pt; color: #6b7280; }
         strong { font-weight: 700; }
       </style>
     </head>
     <body>
       ${headerHtml}
       <main>${documentBody}</main>
-      ${footerHtml}
       <script>
         window.addEventListener("load", () => {
           setTimeout(() => {
@@ -3969,7 +4125,6 @@ function printContractHtml(printTitle) {
 function exportPdfForSignature() {
   if (!confirmExportReadiness("exportar PDF para firma")) return;
   const title = cleanWorkingTitle(editorTitle.textContent);
-  ensureMatterFolio();
   readFormatControls();
   const printWindow = window.open("", "_blank");
   if (!printWindow) {
@@ -5067,6 +5222,112 @@ function contractFileSize(contract) {
   return `${kb} KB`;
 }
 
+function currentUserDisplayName() {
+  const account = currentAccount();
+  return account?.name || currentUserLabel?.textContent || activeUser || "Usuario";
+}
+
+function reviewSubmissionMeta(note = "") {
+  return {
+    status: "pending",
+    submittedBy: currentUserDisplayName(),
+    submittedByEmail: activeUser || "",
+    submittedAt: new Date().toLocaleString("es-MX"),
+    submitterNote: String(note || "").trim(),
+    reviewerComment: "",
+    reviewedBy: "",
+    reviewedAt: "",
+    history: [
+      {
+        action: "Enviado a revisión",
+        by: currentUserDisplayName(),
+        at: new Date().toLocaleString("es-MX"),
+        note: String(note || "").trim()
+      }
+    ]
+  };
+}
+
+function isReviewItem(item = {}) {
+  return isReviewFolder(item.folder || "");
+}
+
+function reviewStatusLabel(item = {}) {
+  const review = item.review || {};
+  if (!isReviewItem(item)) return "";
+  if (review.status === "reviewed") return "Revisado";
+  if (review.reviewerComment) return "Comentado";
+  return "Pendiente de revisión";
+}
+
+function reviewSubtitle(item = {}) {
+  if (!isReviewItem(item)) return "";
+  const review = item.review || {};
+  const parts = [];
+  if (review.submittedBy) parts.push(`Subido por ${review.submittedBy}`);
+  if (review.submittedAt) parts.push(review.submittedAt);
+  return parts.join(" · ") || "Enviado para revisión";
+}
+
+function reviewDetailsHtml(item = {}) {
+  if (!isReviewItem(item)) return "";
+  const review = item.review || {};
+  const comment = review.reviewerComment ? `<small class="review-note">Comentario: ${escapeHtml(review.reviewerComment)}</small>` : "";
+  const submitterNote = review.submitterNote ? `<small class="review-note">Nota del abogado: ${escapeHtml(review.submitterNote)}</small>` : "";
+  const reviewed = review.status === "reviewed" && review.reviewedBy ? `<small class="review-note">Visto bueno: ${escapeHtml(review.reviewedBy)} · ${escapeHtml(review.reviewedAt || "")}</small>` : "";
+  return `${submitterNote}${comment}${reviewed}`;
+}
+
+function reviewActionHtml(type, item = {}) {
+  if (!isReviewItem(item)) return "";
+  const label = reviewStatusLabel(item);
+  const reviewed = item.review?.status === "reviewed";
+  if (!canSeeSystemCatalogs()) {
+    return `<span class="review-status-badge ${reviewed ? "reviewed" : "pending"}">${escapeHtml(label)}</span>`;
+  }
+  return `
+    <button class="review-check-button ${reviewed ? "reviewed" : ""}" type="button" data-review-type="${escapeHtml(type)}" data-review-id="${escapeHtml(item.id)}" title="Comentar o marcar como revisado">
+      ${reviewed ? "✓ Revisado" : "Revisar"}
+    </button>
+  `;
+}
+
+function updateReviewSubmission(type, id) {
+  if (!canSeeSystemCatalogs()) {
+    showToast("Solo una administradora puede comentar o marcar documentos revisados.");
+    return;
+  }
+  const collection = type === "contract" ? savedContracts : supportDocuments;
+  const item = collection.find((entry) => entry.id === id);
+  if (!item || !isReviewItem(item)) return;
+  const review = item.review || reviewSubmissionMeta("");
+  const comment = window.prompt("Comentario para el abogado que subió este documento", review.reviewerComment || "");
+  if (comment === null) return;
+  const markReviewed = window.confirm("¿Quieres marcar este documento como revisado?\n\nAceptar: queda revisado.\nCancelar: guardar solo el comentario.");
+  const reviewer = currentUserDisplayName();
+  item.review = {
+    ...review,
+    status: markReviewed ? "reviewed" : "commented",
+    reviewerComment: String(comment || "").trim(),
+    reviewedBy: markReviewed ? reviewer : review.reviewedBy || "",
+    reviewedAt: markReviewed ? new Date().toLocaleString("es-MX") : review.reviewedAt || "",
+    history: [
+      ...(review.history || []),
+      {
+        action: markReviewed ? "Marcado como revisado" : "Comentario agregado",
+        by: reviewer,
+        at: new Date().toLocaleString("es-MX"),
+        note: String(comment || "").trim()
+      }
+    ]
+  };
+  if (type === "contract") saveSavedContracts(item);
+  else saveSupportDocuments();
+  renderFolders();
+  renderSavedContracts();
+  showToast(markReviewed ? "Documento marcado como revisado." : "Comentario guardado en la revisión.");
+}
+
 function renderFinderPath() {
   if (!finderPath) return;
   const parts = String(activeFolder || "Mis Documentos").split("/").filter(Boolean);
@@ -5338,14 +5599,14 @@ function templatesForSystemFolder(folder) {
 }
 
 function letterheadsForSystemFolder(folder) {
-  if (folder !== "Catálogos del sistema/Membretes") return [];
+  if (normalizeArchiveFolderPath(folder) !== "Catálogos del sistema/Logos") return [];
   return loadLetterheadLogos();
 }
 
 function systemFolderSubtitle(folder) {
   if (folder === "Formatos del sistema") return "Catálogo editable";
-  if (folder === "Catálogos del sistema") return "Membretes y catálogos";
-  if (folder === "Catálogos del sistema/Membretes") return "Catálogo de membretes";
+  if (folder === "Catálogos del sistema") return "Logos y catálogos";
+  if (normalizeArchiveFolderPath(folder) === "Catálogos del sistema/Logos") return "Catálogo de logos";
   return folderMetaText(folder);
 }
 
@@ -5389,40 +5650,48 @@ function renderFolders() {
       </article>
     `;
   };
-  const rowForContract = (contract) => `
-    <article class="finder-row content-row saved-contract ${isArchiveSelected("contract", contract.id) ? "is-selected" : ""}" data-id="${contract.id}" data-archive-row="contract" data-archive-id="${contract.id}">
-      <span class="archive-name-cell">
-        <button class="saved-contract-open open-saved-contract" type="button" data-id="${contract.id}">
-          <span class="finder-icon document-icon" aria-hidden="true"></span>
-          <span>
-            <strong>${escapeHtml(contract.title)}</strong>
-            <small>${escapeHtml(contract.status || (contract.language || "es").toUpperCase())} · ${escapeHtml(contract.date || "")}</small>
-          </span>
-        </button>
-      </span>
-      <span class="archive-row-action-space"></span>
-      <span>${escapeHtml(contract.date || "")}</span>
-      <span>${escapeHtml(contractFileSize(contract))}</span>
-      <span>Contrato</span>
-    </article>
-  `;
-  const rowForDocument = (document) => `
-    <article class="finder-row content-row saved-contract support-document ${isArchiveSelected("document", document.id) ? "is-selected" : ""}" data-document-id="${document.id}" data-archive-row="document" data-archive-id="${document.id}">
-      <span class="archive-name-cell">
-        <button class="saved-contract-open" type="button" disabled>
-          <span class="finder-icon document-icon" aria-hidden="true"></span>
-          <span>
-            <strong>${escapeHtml(document.name)}</strong>
-            <small>${escapeHtml(document.type || "Documento soporte")} · ${escapeHtml(document.size || "")}</small>
-          </span>
-        </button>
-      </span>
-      <span class="archive-row-action-space"></span>
-      <span>${escapeHtml(document.date || "")}</span>
-      <span>${escapeHtml(document.size || "")}</span>
-      <span>${escapeHtml(document.type || "Documento")}</span>
-    </article>
-  `;
+  const rowForContract = (contract) => {
+    const reviewLine = isReviewItem(contract) ? `${reviewStatusLabel(contract)} · ${reviewSubtitle(contract)}` : `${contract.status || (contract.language || "es").toUpperCase()} · ${contract.date || ""}`;
+    return `
+      <article class="finder-row content-row saved-contract ${isReviewItem(contract) ? "review-row" : ""} ${isArchiveSelected("contract", contract.id) ? "is-selected" : ""}" data-id="${contract.id}" data-archive-row="contract" data-archive-id="${contract.id}">
+        <span class="archive-name-cell">
+          <button class="saved-contract-open open-saved-contract" type="button" data-id="${contract.id}">
+            <span class="finder-icon document-icon" aria-hidden="true"></span>
+            <span>
+              <strong>${escapeHtml(contract.title)}</strong>
+              <small>${escapeHtml(reviewLine)}</small>
+              ${reviewDetailsHtml(contract)}
+            </span>
+          </button>
+        </span>
+        <span class="archive-row-action-space">${reviewActionHtml("contract", contract)}</span>
+        <span>${escapeHtml(contract.date || "")}</span>
+        <span>${escapeHtml(contractFileSize(contract))}</span>
+        <span>${isReviewItem(contract) ? "Revisión" : "Contrato"}</span>
+      </article>
+    `;
+  };
+  const rowForDocument = (document) => {
+    const reviewLine = isReviewItem(document) ? `${reviewStatusLabel(document)} · ${reviewSubtitle(document)}` : `${document.type || "Documento soporte"} · ${document.size || ""}`;
+    return `
+      <article class="finder-row content-row saved-contract support-document ${isReviewItem(document) ? "review-row" : ""} ${isArchiveSelected("document", document.id) ? "is-selected" : ""}" data-document-id="${document.id}" data-archive-row="document" data-archive-id="${document.id}">
+        <span class="archive-name-cell">
+          <button class="saved-contract-open" type="button" disabled>
+            <span class="finder-icon document-icon" aria-hidden="true"></span>
+            <span>
+              <strong>${escapeHtml(document.name)}</strong>
+              <small>${escapeHtml(reviewLine)}</small>
+              ${reviewDetailsHtml(document)}
+            </span>
+          </button>
+        </span>
+        <span class="archive-row-action-space">${reviewActionHtml("document", document)}</span>
+        <span>${escapeHtml(document.date || "")}</span>
+        <span>${escapeHtml(document.size || "")}</span>
+        <span>${isReviewItem(document) ? "Revisión" : escapeHtml(document.type || "Documento")}</span>
+      </article>
+    `;
+  };
   const rowForTemplate = ([key, template]) => `
     <article class="finder-row content-row system-template-row ${isArchiveSelected("template", key) ? "is-selected" : ""}" data-template="${escapeHtml(key)}" data-archive-row="template" data-archive-id="${escapeHtml(key)}">
       <span class="archive-name-cell">
@@ -5446,21 +5715,21 @@ function renderFolders() {
         <button class="saved-contract-open open-system-letterhead" type="button" data-letterhead-id="${escapeHtml(logo.id)}">
           <span class="finder-icon document-icon" aria-hidden="true"></span>
           <span>
-            <strong>${escapeHtml(logo.name || "Membrete sin nombre")}</strong>
-            <small>${escapeHtml(logo.companyName || logo.name || "Membrete")} · ${logo.source === "catalog" ? "Precargado" : "Propio"}</small>
+            <strong>${escapeHtml(logo.name || "Logo sin nombre")}</strong>
+            <small>${escapeHtml(logo.companyName || logo.name || "Logo")} · ${logo.source === "catalog" ? "Precargado" : "Propio"}</small>
           </span>
         </button>
       </span>
       <span class="archive-row-action-space"></span>
       <span>${escapeHtml(logo.date || "--")}</span>
       <span>${logo.dataUrl ? "Imagen" : "--"}</span>
-      <span>Membrete</span>
+      <span>Logo</span>
     </article>
   `;
   const visibleTemplates = templatesForSystemFolder(activeFolder)
     .filter(([, template]) => archiveMatches(template.title, "Formato del sistema", "Formato"));
   const visibleLetterheads = letterheadsForSystemFolder(activeFolder)
-    .filter((logo) => archiveMatches(logo.name, logo.companyName || "", "Membrete"));
+    .filter((logo) => archiveMatches(logo.name, logo.companyName || "", "Logo"));
   const contentItems = [
     ...children.map((folder) => ({
       html: rowForFolder(folder, { root: rootFolders.includes(folder) }),
@@ -5504,7 +5773,7 @@ function renderFolders() {
         name: logo.name || "",
         date: archiveDateValue(logo.date),
         size: logo.dataUrl ? String(logo.dataUrl).length : 0,
-        class: "Membrete"
+        class: "Logo"
       }
     }))
   ].sort(compareArchiveItems);
@@ -5762,7 +6031,7 @@ async function runArchiveContextAction(action) {
 function createFolderInsideArchive(folder = activeFolder) {
   const baseFolder = ensureFolderPath(folder || activeFolder || "Mis Documentos");
   if (isSystemRoot(baseFolder)) {
-    showToast("Los catálogos del sistema no usan subcarpetas. Sube ahí los formatos o membretes aprobados.");
+    showToast("Los catálogos del sistema no usan subcarpetas. Sube ahí los formatos o logos aprobados.");
     return;
   }
   const name = window.prompt(`Nombre de la nueva carpeta dentro de "${baseFolder}"`);
@@ -6425,7 +6694,8 @@ async function addFilesToArchiveFolder(fileList, folder = activeFolder) {
       name: displayName,
       size,
       type: classifySupportDocument(displayName),
-      date: new Date().toLocaleString("es-MX")
+      date: new Date().toLocaleString("es-MX"),
+      review: isReviewFolder(targetFolder) ? reviewSubmissionMeta("") : null
     });
   }
   if (!entries.length) {
@@ -6725,6 +6995,8 @@ document.querySelector("#export-word").addEventListener("click", exportWordDocum
 
 document.querySelector("#export-pdf-signature")?.addEventListener("click", exportPdfForSignature);
 
+document.querySelector("#mark-ready-signature")?.addEventListener("click", markContractReadyForSignature);
+
 document.querySelector("#critical-review")?.addEventListener("click", () => {
   criticalReviewDialog.showModal();
   criticalReviewOutput.textContent = "Elige si quieres solo observaciones o una propuesta de ajustes para integrar después de revisar.";
@@ -6964,9 +7236,11 @@ async function saveContractToArchive({ saveAs = false } = {}) {
     userInitials: currentUserInitials(),
     letterheadLogoId: selectedLetterheadLogoId,
     date: new Date().toLocaleString("es-MX"),
+    status: isReviewFolder(activeFolder) ? "Pendiente de revisión" : "",
     body: filled,
     folio: activeMatterFolio || "",
-    matter: matterSnapshot("Borrador guardado", false)
+    matter: matterSnapshot(isReviewFolder(activeFolder) ? "Enviado a revisión" : "Borrador guardado", false),
+    review: isReviewFolder(activeFolder) ? reviewSubmissionMeta("") : null
   };
   savedContracts.push(contract);
   saveSavedContracts(contract);
@@ -6977,8 +7251,43 @@ async function saveContractToArchive({ saveAs = false } = {}) {
   showToast(`${saveAs ? "Contrato guardado como copia" : "Contrato guardado"} en ${activeFolder}.`);
 }
 
+function submitContractForReview() {
+  if (!ensureEditableWorkspace("enviar a revisión")) return;
+  const title = cleanWorkingTitle(templates[activeTemplate]?.title || editorTitle.textContent || "Documento");
+  const note = window.prompt("Nota opcional para Tony sobre esta versión", "");
+  if (note === null) return;
+  const filled = fillPlaceholders(editor.value);
+  editor.value = filled;
+  const reviewFolder = ensureFolderPath(reviewRootFolder, reviewRootFolder);
+  const contract = {
+    id: `${Date.now()}-review`,
+    title,
+    folder: reviewFolder,
+    template: activeTemplate,
+    language: activeLanguage,
+    userInitials: currentUserInitials(),
+    letterheadLogoId: selectedLetterheadLogoId,
+    date: new Date().toLocaleString("es-MX"),
+    status: "Pendiente de revisión",
+    body: filled,
+    folio: activeMatterFolio || "",
+    matter: matterSnapshot("Enviado a revisión", false),
+    review: reviewSubmissionMeta(note)
+  };
+  savedContracts.push(contract);
+  activeFolder = reviewFolder;
+  addMatterEvent("Documento enviado a revisión");
+  saveSavedContracts(contract);
+  renderFolders();
+  renderSavedContracts();
+  renderVersions();
+  saveActiveDraft("Documento enviado a revisión");
+  showToast("Documento enviado a Revisión de documentos. Tony podrá comentarlo o marcarlo como revisado.");
+}
+
 document.querySelector("#save-contract")?.addEventListener("click", () => saveContractToArchive());
 document.querySelector("#save-as-contract")?.addEventListener("click", () => saveContractToArchive({ saveAs: true }));
+document.querySelector("#submit-review")?.addEventListener("click", submitContractForReview);
 
 document.querySelector("#save-version").addEventListener("click", () => {
   saveAsPersonalBaseTemplate();
@@ -7279,6 +7588,12 @@ folderList.addEventListener("click", (event) => {
     runArchiveContextAction(archiveActionButton.dataset.archiveAction);
     return;
   }
+  const reviewButton = event.target.closest("[data-review-type][data-review-id]");
+  if (reviewButton) {
+    event.stopPropagation();
+    updateReviewSubmission(reviewButton.dataset.reviewType, reviewButton.dataset.reviewId);
+    return;
+  }
   const renameButton = event.target.closest(".rename-folder");
   if (renameButton) {
     renameFolder(renameButton.dataset.folder);
@@ -7415,7 +7730,7 @@ archiveUploadDocumentsButton?.addEventListener("click", () => {
     templateImport?.click();
     return;
   }
-  if (activeFolder === "Catálogos del sistema/Membretes" && canSeeSystemCatalogs()) {
+  if (normalizeArchiveFolderPath(activeFolder) === "Catálogos del sistema/Logos" && canSeeSystemCatalogs()) {
     letterheadLogoInput?.click();
     return;
   }
@@ -7423,7 +7738,7 @@ archiveUploadDocumentsButton?.addEventListener("click", () => {
 });
 archiveUploadFolderButton?.addEventListener("click", () => archiveFolderUpload?.click());
 archiveDocumentUpload?.addEventListener("change", async () => {
-  if (activeFolder === "Catálogos del sistema/Membretes" && canSeeSystemCatalogs()) {
+  if (normalizeArchiveFolderPath(activeFolder) === "Catálogos del sistema/Logos" && canSeeSystemCatalogs()) {
     addLetterheadLogo(archiveDocumentUpload.files?.[0]);
     archiveDocumentUpload.value = "";
     return;
@@ -7763,8 +8078,8 @@ letterheadLogoSelect?.addEventListener("change", () => {
   selectedLetterheadLogoId = letterheadLogoSelect.value;
   saveSelectedLetterheadLogoId();
   renderLetterheadLogos();
-  saveActiveDraft("Membrete seleccionado");
-  showToast(selectedLetterheadLogoId ? "Membrete seleccionado para este documento." : "Documento sin página membretada.");
+  saveActiveDraft("Logo seleccionado");
+  showToast(selectedLetterheadLogoId ? "Logo seleccionado para este documento." : "Documento sin logo.");
 });
 
 addLetterheadLogoButton?.addEventListener("click", () => {
@@ -7795,8 +8110,8 @@ letterheadCatalogDialog?.addEventListener("click", (event) => {
     selectedLetterheadLogoId = id || "";
     saveSelectedLetterheadLogoId();
     renderLetterheadLogos();
-    saveActiveDraft("Membrete seleccionado");
-    showToast("Membrete seleccionado para este documento.");
+    saveActiveDraft("Logo seleccionado");
+    showToast("Logo seleccionado para este documento.");
   }
   if (button.dataset.letterheadAction === "delete") deleteLetterheadLogo(id);
 });

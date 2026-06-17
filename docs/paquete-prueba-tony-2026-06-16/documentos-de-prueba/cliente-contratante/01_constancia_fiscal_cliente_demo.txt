@@ -1,0 +1,13 @@
+CONSTANCIA FISCAL FICTICIA
+
+Esta constancia es de prueba. No corresponde a una persona moral real.
+
+Razón social: CLIENTE DEMO TECNOLOGIA, S.A. DE C.V.
+RFC: CDT240101AB1
+Régimen fiscal: Régimen General de Ley Personas Morales
+Domicilio fiscal: Avenida Reforma 100, Piso 12, Colonia Juárez, Alcaldía Cuauhtémoc, Ciudad de México, C.P. 06600.
+Correo electrónico de contacto: contratos.cliente.demo@example.com
+
+Uso para prueba:
+Usar este archivo como documento soporte de la parte que recibe, compra, contrata o solicita el servicio.
+

@@ -1,0 +1,14 @@
+IDENTIFICACION OFICIAL FICTICIA
+
+Este documento es de prueba. No corresponde a una persona real.
+
+Nombre: LUIS EDUARDO CARRANZA MORA
+Nacionalidad: Mexicana
+Identificación: Credencial para votar ficticia
+Clave de elector ficticia: CRMRLS800101HDFXXX09
+Correo electrónico: luis.carranza.demo@example.com
+Teléfono: +52 55 0000 0000
+
+Uso para prueba:
+Este archivo debe alimentar campos de nombre del representante legal, firmante y datos de contacto.
+

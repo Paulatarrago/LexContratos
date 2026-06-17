@@ -1,0 +1,19 @@
+PODER NOTARIAL FICTICIO
+
+Este documento es de prueba. No corresponde a una escritura real.
+
+Poderdante: CLIENTE DEMO TECNOLOGIA, S.A. DE C.V.
+Representante legal: ANA SOFIA MARTINEZ RIOS
+Cargo: Apoderada legal
+Tipo de fedatario: Notario público
+Instrumento: Escritura pública número 12,345
+Fecha del instrumento: 15 de febrero de 2024
+Notario: Lic. Mariana Gómez Salinas
+Número de notaría: Notaría Pública número 45
+Plaza: Ciudad de México
+Facultades: Facultades para actos de administración, suscripción de contratos y representación de la sociedad.
+Correo del representante: ana.martinez.demo@example.com
+
+Uso para prueba:
+Este archivo debe alimentar campos de representante legal, escritura, notaría, plaza y correo de firmante.
+
