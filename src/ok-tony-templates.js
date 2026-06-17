@@ -1,4 +1,4 @@
-// Formatos compartidos por usuaria piloto. Marca temporal: OK Tony.
+// Plantillas legales compartidas por usuaria piloto. Plantillas legales validadas por Tony.
 // Generado desde DOCX/DOTX limpios; no contiene datos de partes reales.
 
 window.lexImportedTemplates = {
@@ -6,11 +6,11 @@ window.lexImportedTemplates = {
 
   "okTonyCpsLogisticaAlmacenamiento": {
     "category": "Servicios",
-    "title": "Prestación de servicios de logística y almacenamiento · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Prestación de servicios de logística y almacenamiento",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 27,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "CPS Logística Almacenamiento TEMPLATE.docx",
     "customFields": [
@@ -143,11 +143,11 @@ window.lexImportedTemplates = {
   },
   "okTonyCompraventaAutoMoral": {
     "category": "Compraventa",
-    "title": "Compraventa de automóvil persona moral · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Compraventa de automóvil persona moral",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 35,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Compraventa Automovil Persona Moral TEMPLATE.docx",
     "customFields": [
@@ -321,11 +321,11 @@ window.lexImportedTemplates = {
   },
   "okTonyCompraventaBienes": {
     "category": "Compraventa",
-    "title": "Compraventa de bienes · OK Tony",
-    "description": "Formato compartido por usuaria piloto, con corrección de campos de firma y marca temporal OK Tony.",
+    "title": "Compraventa de bienes",
+    "description": "Plantilla legal compartida por usuaria piloto, con corrección de campos de firma.",
     "fields": 37,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Compraventa Bienes TEMPLATE.docx",
     "customFields": [
@@ -501,11 +501,11 @@ window.lexImportedTemplates = {
   },
   "okTonyCompraventaAutoFisica": {
     "category": "Compraventa",
-    "title": "Compraventa de automóvil persona física · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Compraventa de automóvil persona física",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 35,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Compraventa Automovil persona física TEMPLATE.docx",
     "customFields": [
@@ -679,11 +679,11 @@ window.lexImportedTemplates = {
   },
   "okTonyCompraventaMedicamentos": {
     "category": "Compraventa",
-    "title": "Compraventa de medicamentos · OK Tony",
-    "description": "Formato compartido por usuaria piloto, con corrección de representantes, entrega y fabricante; marca temporal OK Tony.",
+    "title": "Compraventa de medicamentos",
+    "description": "Plantilla legal compartida por usuaria piloto, con corrección de representantes, entrega y fabricante.",
     "fields": 29,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Compraventa Medicamentos TEMPLATE.docx",
     "customFields": [
@@ -832,11 +832,11 @@ window.lexImportedTemplates = {
   },
   "okTonyContratoComodato": {
     "category": "Contratos civiles",
-    "title": "Contrato de comodato · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Contrato de comodato",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 45,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Contrato de Comodato TEMPLATE.docx",
     "customFields": [
@@ -1045,11 +1045,11 @@ window.lexImportedTemplates = {
   },
   "okTonyCompraventaMercancia": {
     "category": "Compraventa",
-    "title": "Compraventa de mercancía · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Compraventa de mercancía",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 24,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Compraventa Mercancía TEMPLATE.docx",
     "customFields": [
@@ -1170,11 +1170,11 @@ window.lexImportedTemplates = {
   },
   "okTonyAvisoPrivacidad": {
     "category": "Privacidad",
-    "title": "Aviso de privacidad · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Aviso de privacidad",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 7,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Aviso de Privacidad TEMPLATE.docx",
     "customFields": [
@@ -1217,11 +1217,11 @@ window.lexImportedTemplates = {
   },
   "okTonyCartaPoder": {
     "category": "Corporativo",
-    "title": "Carta poder · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Carta poder",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 34,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Carta Poder TEMPLATE.docx",
     "customFields": [
@@ -1385,11 +1385,11 @@ window.lexImportedTemplates = {
   },
   "okTonyGarantiaServicios": {
     "category": "Servicios",
-    "title": "Garantía de servicios · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Garantía de servicios",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 14,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Garantía de Servicios TEMPLATE.docx",
     "customFields": [
@@ -1462,11 +1462,11 @@ window.lexImportedTemplates = {
   },
   "okTonyRentaMaquinaria": {
     "category": "Arrendamiento",
-    "title": "Renta de maquinaria pesada · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Renta de maquinaria pesada",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 52,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "COntrato renta maquinaria TEMPLATE.docx",
     "customFields": [
@@ -1701,11 +1701,11 @@ window.lexImportedTemplates = {
   },
   "okTonyContratoMandato": {
     "category": "Mandato",
-    "title": "Contrato de mandato · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Contrato de mandato",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 88,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Contrato de Mandato TEMPLATE.docx",
     "customFields": [
@@ -2146,11 +2146,11 @@ window.lexImportedTemplates = {
   },
   "okTonyConvenioReconocimientoAdeudo": {
     "category": "Convenios",
-    "title": "Convenio de reconocimiento de adeudo y cesión de derechos de cobro · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Convenio de reconocimiento de adeudo y cesión de derechos de cobro",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 94,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Convenio de reconocimiento de adeudo TEMPLATE.docx",
     "customFields": [
@@ -2622,11 +2622,11 @@ window.lexImportedTemplates = {
   },
   "okTonyConvenioTerminacionCps": {
     "category": "Convenios",
-    "title": "Convenio de terminación de prestación de servicios · OK Tony",
-    "description": "Formato compartido por usuaria piloto, revisión final de campos y marca temporal OK Tony.",
+    "title": "Convenio de terminación de prestación de servicios",
+    "description": "Plantilla legal compartida por usuaria piloto, revisión final de campos.",
     "fields": 12,
     "master": true,
-    "validatedLabel": "OK Tony",
+    "validatedLabel": "",
     "validatedBy": "Tony",
     "sourceFile": "Convenio de Terminación CPS TEMPLATE.dotx",
     "customFields": [

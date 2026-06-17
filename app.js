@@ -739,8 +739,8 @@ const sharedLibraryFolders = [
 ];
 const mattersRootFolder = "Expedientes";
 const partyDocumentsRootFolder = `${mattersRootFolder}/Documentos de las partes`;
-const signedContractsRootFolder = "Contratos firmados";
-const workFormatsRootFolder = "Formatos de trabajo";
+const signedContractsRootFolder = "Bóveda de contratos firmados";
+const workFormatsRootFolder = "Plantillas legales";
 const logosRootFolder = "Logos";
 const reviewRootFolder = "Revisión de documentos";
 const reviewContractsStorageKey = "lexcontratos_review_contracts";
@@ -826,8 +826,12 @@ function normalizeArchiveFolderPath(folder) {
   if (value.startsWith("Documentos de las partes/")) return `${partyDocumentsRootFolder}/${value.slice("Documentos de las partes/".length)}`;
   if (value === "Documentos para revisión") return reviewRootFolder;
   if (value.startsWith("Documentos para revisión/")) return `${reviewRootFolder}/${value.slice("Documentos para revisión/".length)}`;
+  if (value === "Formatos de trabajo") return workFormatsRootFolder;
+  if (value.startsWith("Formatos de trabajo/")) return `${workFormatsRootFolder}/${value.slice("Formatos de trabajo/".length)}`;
   if (value === "Formatos del sistema") return workFormatsRootFolder;
   if (value.startsWith("Formatos del sistema/")) return `${workFormatsRootFolder}/${value.slice("Formatos del sistema/".length)}`;
+  if (value === "Contratos firmados") return signedContractsRootFolder;
+  if (value.startsWith("Contratos firmados/")) return `${signedContractsRootFolder}/${value.slice("Contratos firmados/".length)}`;
   if (value === "Catálogos del sistema/Membretes" || value === "Catálogos del sistema/Logos") return logosRootFolder;
   if (value.startsWith("Catálogos del sistema/Membretes/")) return `${logosRootFolder}/${value.slice("Catálogos del sistema/Membretes/".length)}`;
   if (value.startsWith("Catálogos del sistema/Logos/")) return `${logosRootFolder}/${value.slice("Catálogos del sistema/Logos/".length)}`;
@@ -891,7 +895,9 @@ function readJson(key, fallback) {
 
 function loadMasterTemplates() {
   const imported = window.lexImportedTemplates || {};
-  const availableTemplates = { ...imported, ...baseTemplates, ...extendedTemplates };
+  const importedTemplateKeys = new Set(Object.keys(imported));
+  const legacyDefaultTemplateKeys = new Set([...Object.keys(baseTemplates), ...Object.keys(extendedTemplates)]);
+  const availableTemplates = { ...imported };
   const shared = readJson("lexcontratos_shared_master_templates", {});
   const legacy = readJson("lexcontratos_master_templates", {});
   const personal = readJson(userStorageKey("master_templates"), legacy);
@@ -903,6 +909,7 @@ function loadMasterTemplates() {
       const template = availableTemplates[key] || combined[key] || {};
       const merged = { ...template, ...(combined[key] || {}), master: true };
       if (merged.hidden) return [];
+      if (legacyDefaultTemplateKeys.has(key) && !importedTemplateKeys.has(key) && !merged.sourceFile) return [];
       const prepared = prepareTemplateFields(merged.body || "", merged.customFields || []);
       return [[
         key,
@@ -1664,7 +1671,7 @@ function canUploadArchiveFolder(path) {
 function requireArchiveModificationPermission(path, action = "modificar") {
   if (canModifyArchiveFolder(path, action)) return true;
   if (isImmutableArchiveFolder(path)) {
-    showToast("Los contratos firmados son de consulta. No se pueden modificar ni eliminar desde la app.");
+    showToast("La bóveda de contratos firmados es de consulta. No se pueden modificar ni eliminar desde la app.");
     return false;
   }
   showToast("Solo administración puede modificar esta carpeta compartida.");
@@ -1937,8 +1944,8 @@ function renderAdminUsers(users = [], currentAdmin = {}) {
   }
   if (adminPermissionNote) {
     adminPermissionNote.textContent = currentIsSuperAdmin
-      ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, configuración y respaldos. Biblioteca compartida, formatos de trabajo y logos se administran desde Documentos."
-      : "Estás entrando como administradora. Biblioteca compartida, formatos de trabajo y logos se administran desde Documentos; la super administración conserva permisos avanzados.";
+      ? "Tienes control de super administración: puedes asignar o retirar administradoras, gestionar usuarios, configuración y respaldos. Biblioteca compartida, plantillas legales y logos se administran desde Documentos."
+      : "Estás entrando como administradora. Biblioteca compartida, plantillas legales y logos se administran desde Documentos; la super administración conserva permisos avanzados.";
     adminPermissionNote.classList.toggle("is-superadmin", currentIsSuperAdmin);
   }
   if (adminCreateRoleSelect) {
@@ -2103,7 +2110,7 @@ function toggleAdminCreateUserForm() {
 function openAdminTemplateCatalog() {
   adminUsersDialog?.close();
   if (!canSeeSystemCatalogs()) {
-    showToast("Solo administración puede modificar los formatos de trabajo compartidos.");
+    showToast("Solo administración puede modificar las plantillas legales compartidas.");
     return;
   }
   syncSharedTemplatesFromBackend();
@@ -2941,7 +2948,7 @@ function ensureTemplateCatalogFolder(path) {
 
 function promptTemplateCatalogPath(defaultPath = "Formatos generales") {
   const examples = "Ejemplos: Arrendamientos / Maquinaria, NDA / Proveedores, Prestación de servicios / Persona moral";
-  const path = window.prompt(`Carpeta del catálogo de formatos.\n\n${examples}`, defaultPath);
+  const path = window.prompt(`Carpeta del catálogo de plantillas.\n\n${examples}`, defaultPath);
   if (!path || !path.trim()) return null;
   return ensureTemplateCatalogFolder(path);
 }
@@ -2969,7 +2976,7 @@ function requiresSystemTemplateConfirmation(templateKey) {
 function confirmSystemTemplateChange(action, templateKey) {
   if (!requiresSystemTemplateConfirmation(templateKey)) return true;
   const title = templates[templateKey]?.title || "este formato";
-  return window.confirm(`¿Estás segura de que quieres ${action} un formato de trabajo compartido?\n\n${title}\n\nEste cambio puede afectar los formatos base que usará el equipo.`);
+  return window.confirm(`¿Estás segura de que quieres ${action} una plantilla legal compartida?\n\n${title}\n\nEste cambio puede afectar las plantillas base que usará el equipo.`);
 }
 
 function setCatalogEditMode(templateKey = null) {
@@ -3009,14 +3016,14 @@ function createTemplateCatalogFolder() {
   if (!path) return;
   activeTemplateCatalogFolder = path;
   renderTemplates();
-  showToast(`Carpeta de formatos creada: ${path}.`);
+  showToast(`Carpeta de plantillas creada: ${path}.`);
 }
 
 function renameMasterTemplate(templateKey) {
   const template = templates[templateKey];
   if (!template?.master) return;
   if (!canManageTemplateCatalog(templateKey)) {
-    showToast("Solo una administradora puede renombrar formatos del catálogo general.");
+    showToast("Solo una administradora puede renombrar plantillas del catálogo general.");
     return;
   }
   if (!confirmSystemTemplateChange("renombrar", templateKey)) return;
@@ -3035,7 +3042,7 @@ function editMasterTemplate(templateKey) {
   const template = templates[templateKey];
   if (!template?.master) return;
   if (!canManageTemplateCatalog(templateKey)) {
-    showToast("Solo una administradora puede editar formatos del catálogo general.");
+    showToast("Solo una administradora puede editar plantillas del catálogo general.");
     return;
   }
   if (!confirmSystemTemplateChange("editar", templateKey)) return;
@@ -3107,7 +3114,7 @@ function moveMasterTemplate(templateKey) {
   const template = templates[templateKey];
   if (!template?.master) return;
   if (!canManageTemplateCatalog(templateKey)) {
-    showToast("Solo una administradora puede mover formatos del catálogo general.");
+    showToast("Solo una administradora puede mover plantillas del catálogo general.");
     return;
   }
   if (!confirmSystemTemplateChange("mover", templateKey)) return;
@@ -3129,7 +3136,7 @@ function deleteMasterTemplate(templateKey) {
   const template = templates[templateKey];
   if (!template?.master) return;
   if (!canManageTemplateCatalog(templateKey)) {
-    showToast("Solo una administradora puede quitar formatos del catálogo general.");
+    showToast("Solo una administradora puede quitar plantillas del catálogo general.");
     return;
   }
   if (!confirmSystemTemplateChange("quitar", templateKey)) return;
@@ -3162,25 +3169,27 @@ function renderTemplates() {
     .map(([key, template]) => {
       const canManage = canManageTemplateCatalog(key);
       const catalogLabel = template.validatedLabel
-        ? `Formato validado · ${escapeHtml(template.validatedLabel)}`
+        ? `Plantilla legal`
+        : template.validatedBy
+          ? "Plantilla legal"
         : template.shared
           ? "Catálogo general editable"
           : template.personal
             ? "Documento base propio"
             : canManageSharedCatalog()
-              ? "Formato del catálogo general"
-              : "Formato base del catálogo";
+              ? "Plantilla del catálogo general"
+              : "Plantilla base del catálogo";
       return `
       <article class="template-card ${key === activeTemplate ? "selected" : ""}" data-template="${key}">
         <h2>${template.title}</h2>
-        <p>Formato de trabajo · ${template.fields} campos</p>
+        <p>Plantilla legal · ${template.fields} campos</p>
         <footer>
           <span>${catalogLabel}</span>
           <div class="template-card-actions">
-            <button class="ghost-button use-template" type="button" data-template-action="use" title="Crear una copia de trabajo desde este formato.">Usar</button>
-            ${canManage ? `<button class="ghost-button" type="button" data-template-action="edit" title="Editar el texto y los campos del formato base.">Editar</button>` : ""}
-            ${canManage ? `<button class="ghost-button" type="button" data-template-action="rename" title="Cambiar el nombre del formato en el catálogo.">Renombrar</button>` : ""}
-            ${canManage ? `<button class="ghost-button danger-action" type="button" data-template-action="delete" title="Quitar este formato del catálogo sin borrar contratos ya guardados.">Quitar</button>` : ""}
+            <button class="ghost-button use-template" type="button" data-template-action="use" title="Crear una copia de trabajo desde esta plantilla.">Usar</button>
+            ${canManage ? `<button class="ghost-button" type="button" data-template-action="edit" title="Editar el texto y los campos de la plantilla base.">Editar</button>` : ""}
+            ${canManage ? `<button class="ghost-button" type="button" data-template-action="rename" title="Cambiar el nombre de la plantilla en el catálogo.">Renombrar</button>` : ""}
+            ${canManage ? `<button class="ghost-button danger-action" type="button" data-template-action="delete" title="Quitar esta plantilla del catálogo sin borrar contratos ya guardados.">Quitar</button>` : ""}
           </div>
         </footer>
       </article>
@@ -3270,7 +3279,7 @@ async function startContractFromTemplate(sourceKey) {
     return false;
   }
   if (isSignedArchiveFolder(destination.folder)) {
-    showToast("Los contratos firmados son solo para versiones finales firmadas. Guarda este documento en Documentos o Expedientes.");
+    showToast("La bóveda de contratos firmados es solo para versiones finales firmadas. Guarda este documento en Documentos o Expedientes.");
     return false;
   }
   activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || personalRootFolder);
@@ -3306,12 +3315,12 @@ function saveAsPersonalBaseTemplate() {
     return;
   }
   if (!isWorkingCopy) {
-    showToast("Los formatos base están protegidos. Trabaja una copia antes de guardar una versión limpia en la matriz de formatos.");
+    showToast("Las plantillas base están protegidas. Trabaja una copia antes de guardar una versión limpia en la matriz de plantillas.");
     return;
   }
 
   const defaultName = cleanWorkingTitle(editorTitle.textContent).replace(/\s+-\s+copia(?:\s+de\s+trabajo)?$/i, "");
-  const name = window.prompt("Nombre para guardar la versión limpia en el catálogo de formatos base. Ejemplo: Contrato marco de prestación de servicios", defaultName);
+  const name = window.prompt("Nombre para guardar la versión limpia en el catálogo de plantillas base. Ejemplo: Contrato marco de prestación de servicios", defaultName);
   if (!name || !name.trim()) {
     showToast("Guardado cancelado. La copia sigue editable.");
     return;
@@ -3446,7 +3455,7 @@ function loadTemplate(key) {
   autosaveStatus.textContent = isWorkingCopy ? "Copia de trabajo" : "Formato protegido";
   if (renameTemplateButton) {
     renameTemplateButton.textContent = isWorkingCopy ? "Renombrar copia" : "Nombre protegido";
-    renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Los formatos base se protegen; crea una copia para renombrar.";
+    renameTemplateButton.title = isWorkingCopy ? "Cambiar nombre de esta copia de trabajo" : "Las plantillas base se protegen; crea una copia para renombrar.";
   }
   setFieldsReviewedState(false);
   autosaveStatus.classList.remove("autosave-highlight");
@@ -4786,7 +4795,7 @@ function renameActiveTemplate() {
     return;
   }
   if (current.master) {
-    showToast("Los formatos base no se renombran directo. Crea una copia y renombra la copia.");
+    showToast("Las plantillas base no se renombran directo. Crea una copia y renombra la copia.");
     return;
   }
   const name = window.prompt("Nuevo nombre para esta copia de trabajo", current.title);
@@ -5733,7 +5742,7 @@ function letterheadsForSystemFolder(folder) {
 function systemFolderSubtitle(folder) {
   const normalized = normalizeArchiveFolderPath(folder);
   if (normalized === sharedLibraryRootFolder) return "Biblioteca para consulta del equipo";
-  if (normalized === workFormatsRootFolder) return canSeeSystemCatalogs() ? "Formatos aprobados editables" : "Formatos aprobados";
+  if (normalized === workFormatsRootFolder) return canSeeSystemCatalogs() ? "Plantillas legales editables" : "Plantillas legales";
   if (normalized === logosRootFolder) return canSeeSystemCatalogs() ? "Logos aprobados editables" : "Logos aprobados";
   if (normalized === reviewRootFolder) return "Documentos enviados a revisión";
   if (normalized === signedContractsRootFolder) return "Solo consulta y descarga";
@@ -5828,15 +5837,15 @@ function renderFolders() {
         <button class="saved-contract-open open-system-template" type="button" data-template="${escapeHtml(key)}">
           <span class="finder-icon document-icon" aria-hidden="true"></span>
           <span>
-            <strong>${escapeHtml(template.title || "Formato sin nombre")}</strong>
-            <small>Formato de trabajo · ${Number(template.fields || 0)} campos</small>
+            <strong>${escapeHtml(template.title || "Plantilla sin nombre")}</strong>
+            <small>Plantilla legal · ${Number(template.fields || 0)} campos</small>
           </span>
         </button>
       </span>
       <span class="archive-row-action-space"></span>
       <span>${escapeHtml(template.updatedAt || template.updated_at || template.metadata?.updatedAt || "--")}</span>
       <span>${Number(template.fields || 0)} campos</span>
-      <span>Formato</span>
+      <span>Plantilla</span>
     </article>
   `;
   const rowForLetterhead = (logo) => `
@@ -5857,7 +5866,7 @@ function renderFolders() {
     </article>
   `;
   const visibleTemplates = templatesForSystemFolder(activeFolder)
-    .filter(([, template]) => archiveMatches(template.title, "Formato de trabajo", "Formato"));
+    .filter(([, template]) => archiveMatches(template.title, "Plantilla legal", "Plantilla"));
   const visibleLetterheads = letterheadsForSystemFolder(activeFolder)
     .filter((logo) => archiveMatches(logo.name, logo.companyName || "", "Logo"));
   const contentItems = [
@@ -6045,7 +6054,7 @@ async function moveArchiveTargets(targets = currentArchiveTargets()) {
   if (!destination) return;
   if (!requireArchiveUploadPermission(destination, "mover")) return;
   if (isSignedArchiveFolder(destination) && movable.some((item) => item.type === "contract")) {
-    showToast("Contratos firmados recibe documentos finales firmados. No muevas borradores editables a ese archivo.");
+    showToast("Bóveda de contratos firmados recibe documentos finales firmados. No muevas borradores editables a ese archivo.");
     return;
   }
   movable.forEach(({ type, id }) => {
@@ -6093,7 +6102,7 @@ async function copyArchiveTargets(targets = currentArchiveTargets()) {
   if (!destination) return;
   if (!requireArchiveUploadPermission(destination, "copiar")) return;
   if (isSignedArchiveFolder(destination) && copyable.some((item) => item.type === "contract")) {
-    showToast("Contratos firmados recibe documentos finales firmados. No copies borradores editables a ese archivo.");
+    showToast("Bóveda de contratos firmados recibe documentos finales firmados. No copies borradores editables a ese archivo.");
     return;
   }
   const stamp = Date.now();
@@ -6348,7 +6357,7 @@ function renameFolder(folder) {
     return;
   }
 
-  const confirmed = window.confirm(`${isSystemRoot(folder) ? "¿Estás segura de que quieres modificar una carpeta compartida?" : "¿Seguro que quieres renombrar esta carpeta?"}\n\n"${folder}" se renombrará como "${newPath}".\n\nTambién se actualizarán sus subcarpetas, contratos, versiones o formatos asociados.`);
+  const confirmed = window.confirm(`${isSystemRoot(folder) ? "¿Estás segura de que quieres modificar una carpeta compartida?" : "¿Seguro que quieres renombrar esta carpeta?"}\n\n"${folder}" se renombrará como "${newPath}".\n\nTambién se actualizarán sus subcarpetas, contratos, versiones o plantillas asociadas.`);
   if (!confirmed) return;
 
   updateTemplateCatalogFolderPath(folder, newPath);
@@ -6390,7 +6399,7 @@ function deleteFolder(folder, { skipConfirm = false } = {}) {
   const affectedDocuments = supportDocuments.filter((document) => pathInFolder(document.folder || "", folder)).length;
   const childFolders = folders.filter((path) => pathInFolder(path, folder)).length;
   const isSystemFolder = isSystemRoot(folder);
-  const confirmed = skipConfirm || window.confirm(`${isSystemFolder ? "¿Estás segura de que quieres eliminar una carpeta compartida?" : "¿Seguro que quieres eliminar esta carpeta?"}\n\n"${folder}" y ${childFolders - 1} subcarpeta(s) dejarán de aparecer.\n\nNo se borrarán contratos ni versiones: se moverán a Documentos/Otros. Los formatos de trabajo, si los hay, se conservarán en el catálogo.`);
+  const confirmed = skipConfirm || window.confirm(`${isSystemFolder ? "¿Estás segura de que quieres eliminar una carpeta compartida?" : "¿Seguro que quieres eliminar esta carpeta?"}\n\n"${folder}" y ${childFolders - 1} subcarpeta(s) dejarán de aparecer.\n\nNo se borrarán contratos ni versiones: se moverán a Documentos/Otros. Las plantillas legales, si los hay, se conservarán en el catálogo.`);
   if (!confirmed) return;
 
   const movedTemplates = moveTemplatesOutOfDeletedSystemFolder(folder);
@@ -6458,7 +6467,7 @@ async function moveContractToFolder(contractId) {
   if (!destination) return;
   if (!requireArchiveUploadPermission(destination, "mover")) return;
   if (isSignedArchiveFolder(destination)) {
-    showToast("Contratos firmados recibe documentos finales firmados. No muevas borradores editables a ese archivo.");
+    showToast("Bóveda de contratos firmados recibe documentos finales firmados. No muevas borradores editables a ese archivo.");
     return;
   }
   const folio = contract.matter?.folio || contract.folio;
@@ -6488,7 +6497,7 @@ async function copyContractToFolder(contractId) {
   if (!destination) return;
   if (!requireArchiveUploadPermission(destination, "copiar")) return;
   if (isSignedArchiveFolder(destination)) {
-    showToast("Contratos firmados recibe documentos finales firmados. No copies borradores editables a ese archivo.");
+    showToast("Bóveda de contratos firmados recibe documentos finales firmados. No copies borradores editables a ese archivo.");
     return;
   }
   const sourceFolio = contract.matter?.folio || contract.folio || "";
@@ -6518,7 +6527,7 @@ function deleteSavedContract(contractId, { skipConfirm = false } = {}) {
   const folio = contract.matter?.folio || contract.folio || "";
   const relatedVersions = folio ? versions.filter((version) => version.matter?.folio === folio).length : 0;
   const confirmed = skipConfirm || window.confirm(
-    `¿Seguro que quieres eliminar este contrato guardado?\n\n${contract.title}\n\n${relatedVersions ? `También se eliminarán ${relatedVersions} versión(es) guardada(s) del mismo expediente.` : "Esta acción no elimina formatos base."}`
+    `¿Seguro que quieres eliminar este contrato guardado?\n\n${contract.title}\n\n${relatedVersions ? `También se eliminarán ${relatedVersions} versión(es) guardada(s) del mismo expediente.` : "Esta acción no elimina plantillas base."}`
   );
   if (!confirmed) return;
 
@@ -6633,7 +6642,7 @@ async function moveVersionToFolder(versionId) {
   if (!destination) return;
   if (!requireArchiveUploadPermission(destination, "mover")) return;
   if (isSignedArchiveFolder(destination)) {
-    showToast("Contratos firmados recibe documentos finales firmados. No muevas versiones editables a ese archivo.");
+    showToast("Bóveda de contratos firmados recibe documentos finales firmados. No muevas versiones editables a ese archivo.");
     return;
   }
   version.folder = destination;
@@ -6655,7 +6664,7 @@ async function copyVersionToFolder(versionId) {
   if (!destination) return;
   if (!requireArchiveUploadPermission(destination, "copiar")) return;
   if (isSignedArchiveFolder(destination)) {
-    showToast("Contratos firmados recibe documentos finales firmados. No copies versiones editables a ese archivo.");
+    showToast("Bóveda de contratos firmados recibe documentos finales firmados. No copies versiones editables a ese archivo.");
     return;
   }
   versions.push({
@@ -6862,7 +6871,7 @@ async function addFilesToArchiveFolder(fileList, folder = activeFolder) {
   if (!requireArchiveUploadPermission(targetFolder, "agregar documentos")) return;
   const normalizedTarget = normalizeArchiveFolderPath(targetFolder);
   if (normalizedTarget === workFormatsRootFolder) {
-    showToast("Para agregar formatos de trabajo usa “Importar draft propio” o el botón de subir dentro de Formatos de trabajo.");
+    showToast("Para agregar plantillas legales usa “Importar draft propio” o el botón de subir dentro de Plantillas legales.");
     return;
   }
   if (normalizedTarget === logosRootFolder) {
@@ -7413,7 +7422,7 @@ async function saveContractToArchive({ saveAs = false } = {}) {
     return;
   }
   if (isSignedArchiveFolder(destination.folder)) {
-    showToast("Contratos firmados es un archivo de consulta. Guarda aquí solo el PDF firmado desde el explorador.");
+    showToast("Bóveda de contratos firmados es un archivo de consulta. Guarda aquí solo el PDF firmado desde el explorador.");
     return;
   }
   activeFolder = ensureFolderPath(destination.folder, activeFolder.split("/")[0] || personalRootFolder);
