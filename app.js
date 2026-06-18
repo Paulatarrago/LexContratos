@@ -1650,8 +1650,15 @@ function isSignedArchiveFolder(path) {
   return folderRoot(path) === signedContractsRootFolder;
 }
 
+function isSystemGeneratedArchiveFolder(path) {
+  return folderRoot(path) === mattersRootFolder;
+}
+
 function canModifyArchiveFolder(path, action = "editar") {
   const root = folderRoot(path);
+  if (root === mattersRootFolder) {
+    return false;
+  }
   if (immutableRootFolders.includes(root)) {
     return false;
   }
@@ -1663,6 +1670,7 @@ function canModifyArchiveFolder(path, action = "editar") {
 
 function canUploadArchiveFolder(path) {
   const root = folderRoot(path);
+  if (root === mattersRootFolder) return false;
   if (root === signedContractsRootFolder) return true;
   if (adminManagedRootFolders.includes(root)) return canSeeSystemCatalogs();
   return true;
@@ -1674,18 +1682,62 @@ function requireArchiveModificationPermission(path, action = "modificar") {
     showToast("La bóveda de contratos firmados es de consulta. No se pueden modificar ni eliminar desde la app.");
     return false;
   }
+  if (isSystemGeneratedArchiveFolder(path)) {
+    showToast("Expedientes se llena automáticamente con documentos de partes, versiones y trazabilidad. No se modifica manualmente.");
+    return false;
+  }
   showToast("Solo administración puede modificar esta carpeta compartida.");
   return false;
 }
 
 function requireArchiveUploadPermission(path, action = "agregar documentos") {
   if (canUploadArchiveFolder(path)) return true;
+  if (isSystemGeneratedArchiveFolder(path)) {
+    showToast("Expedientes es automático. Guarda contratos de trabajo en Documentos.");
+    return false;
+  }
   showToast("Solo administración puede agregar documentos en esta biblioteca compartida.");
   return false;
 }
 
 function saveDialogRootFolders() {
   return baseRootFolders.slice();
+}
+
+function canChooseArchiveDestination(folder) {
+  const normalized = normalizeArchiveFolderPath(folder);
+  const root = folderRoot(normalized);
+  if ([mattersRootFolder, signedContractsRootFolder, workFormatsRootFolder, logosRootFolder].includes(root)) return false;
+  return canUploadArchiveFolder(normalized);
+}
+
+function canSaveWorkingContractDestination(folder) {
+  const normalized = normalizeArchiveFolderPath(folder);
+  const root = folderRoot(normalized);
+  return root === personalRootFolder && canUploadArchiveFolder(normalized);
+}
+
+function saveLocationPermissionMessage(folder) {
+  const root = folderRoot(normalizeArchiveFolderPath(folder));
+  if (root === signedContractsRootFolder) return "La bóveda de contratos firmados es solo de consulta y resguardo final.";
+  if (root === mattersRootFolder) return "Expedientes se llena automáticamente con documentos de las partes, versiones y trazabilidad.";
+  if (root === workFormatsRootFolder) return "Las plantillas legales se administran desde el catálogo, no desde Guardar como.";
+  if (root === logosRootFolder) return "Los logos se administran desde el catálogo de logos.";
+  if (root === reviewRootFolder) return "La revisión de documentos se usa desde Enviar a revisión.";
+  if (root === sharedLibraryRootFolder && !canSeeSystemCatalogs()) return "Esta biblioteca es de consulta para usuarios generales.";
+  if (root === sharedLibraryRootFolder) return "La biblioteca compartida guarda documentos de consulta, no contratos de trabajo.";
+  return "Esta carpeta no admite guardar aquí en este flujo.";
+}
+
+function saveLocationCanSave(folder) {
+  const normalized = normalizeArchiveFolderPath(folder);
+  const canSave = saveLocationState.canSaveFolder || canChooseArchiveDestination;
+  return canSave(normalized);
+}
+
+function firstAllowedSaveLocation(fallback = personalRootFolder) {
+  const roots = saveDialogRootFolders();
+  return roots.find((root) => saveLocationCanSave(root)) || fallback || personalRootFolder;
 }
 
 function folderAllowedForCurrentUser(folder) {
@@ -3272,7 +3324,8 @@ async function startContractFromTemplate(sourceKey) {
     initialFolder: activeFolder || personalRootFolder,
     confirmLabel: "Guardar aquí",
     defaultName: cleanWorkingTitle(source.title),
-    requireName: true
+    requireName: true,
+    canSaveFolder: canSaveWorkingContractDestination
   });
   if (!destination) {
     showToast("Selección cancelada. No se creó el documento de trabajo.");
@@ -5488,7 +5541,10 @@ function folderColumnParentsFor(folder) {
 function renderSaveLocationBrowser() {
   if (!saveLocationBrowser || !saveLocationSelected) return;
   let selected = ensureFolderPath(saveLocationState.folder || activeFolder || personalRootFolder);
-  if (!saveDialogRootFolders().includes(folderRoot(selected))) selected = personalRootFolder;
+  const visibleRoots = saveDialogRootFolders().filter((root) => saveLocationCanSave(root) || root === folderRoot(selected));
+  if (!saveDialogRootFolders().includes(folderRoot(selected)) || !saveLocationCanSave(selected)) {
+    selected = firstAllowedSaveLocation(personalRootFolder);
+  }
   saveLocationState.folder = selected;
   saveLocationSelected.textContent = selected;
   if (saveLocationFileName) {
@@ -5496,15 +5552,19 @@ function renderSaveLocationBrowser() {
     saveLocationFileName.closest("label")?.classList.toggle("is-hidden", !saveLocationState.requireName);
   }
   saveLocationConfirm.textContent = saveLocationState.confirmLabel || "Guardar aquí";
+  const canSaveSelected = saveLocationCanSave(selected);
+  saveLocationConfirm.disabled = !canSaveSelected;
+  saveLocationConfirm.title = canSaveSelected ? "" : saveLocationPermissionMessage(selected);
   const parent = folderParent(selected);
   const folderRows = directChildFolders(selected)
     .map((folder) => {
       const label = folder.split("/").pop();
       const root = rootFolders.includes(folder);
       const canEditFolder = canModifyArchiveFolder(folder, "editar");
+      const canSaveFolder = saveLocationCanSave(folder);
       return `
-        <article class="save-file-row save-folder-row" data-save-folder="${escapeHtml(folder)}" title="${escapeHtml(folder)}">
-          <button class="save-file-name save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}">
+        <article class="save-file-row save-folder-row ${canSaveFolder ? "" : "is-readonly"}" data-save-folder="${escapeHtml(folder)}" title="${escapeHtml(canSaveFolder ? folder : `${folder} · ${saveLocationPermissionMessage(folder)}`)}">
+          <button class="save-file-name save-folder-option" type="button" data-save-folder="${escapeHtml(folder)}" ${canSaveFolder ? "" : "disabled"} title="${escapeHtml(canSaveFolder ? folder : saveLocationPermissionMessage(folder))}">
             <strong>${escapeHtml(label)}</strong>
           </button>
           <span>--</span>
@@ -5547,10 +5607,11 @@ function renderSaveLocationBrowser() {
     `)
     .join("");
   const emptyRows = !folderRows && !contractRows && !documentRows ? `<div class="save-file-empty">Esta carpeta está vacía. Haz clic derecho aquí para crear una carpeta dentro de esta ruta.</div>` : "";
+  const readonlyNotice = canSaveSelected ? "" : `<div class="save-file-empty">${escapeHtml(saveLocationPermissionMessage(selected))}</div>`;
   saveLocationBrowser.innerHTML = `
     <div class="save-location-shell" data-save-folder="${escapeHtml(selected)}">
       <aside class="save-location-roots" aria-label="Carpetas raíz">
-        ${saveDialogRootFolders()
+        ${visibleRoots
           .map((root) => `
             <button class="save-folder-option ${selected === root || selected.startsWith(`${root}/`) ? "active" : ""}" type="button" data-save-folder="${escapeHtml(root)}">
               ${escapeHtml(root)}
@@ -5572,7 +5633,7 @@ function renderSaveLocationBrowser() {
           <span>Acciones</span>
         </div>
         <div class="save-file-list">
-          ${folderRows}${contractRows}${documentRows}${emptyRows}
+          ${readonlyNotice}${folderRows}${contractRows}${documentRows}${emptyRows}
         </div>
       </section>
     </div>
@@ -5586,17 +5647,22 @@ function resolveSaveLocation(folder) {
   if (resolver) resolver(folder);
 }
 
-function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder = activeFolder, confirmLabel = "Guardar aquí", defaultName = "", requireName = false } = {}) {
+function openSaveLocationDialog({ title = "Elige dónde guardar", initialFolder = activeFolder, confirmLabel = "Guardar aquí", defaultName = "", requireName = false, canSaveFolder = null } = {}) {
   if (!saveLocationDialog) return Promise.resolve({ folder: initialFolder || activeFolder, fileName: defaultName });
   return new Promise((resolve) => {
     saveLocationResolve = resolve;
+    const initial = ensureFolderPath(initialFolder || activeFolder || personalRootFolder);
     saveLocationState = {
-      folder: ensureFolderPath(initialFolder || activeFolder || personalRootFolder),
+      folder: initial,
       confirmLabel,
       defaultName,
       fileName: defaultName,
-      requireName
+      requireName,
+      canSaveFolder
     };
+    if (!saveLocationCanSave(saveLocationState.folder)) {
+      saveLocationState.folder = firstAllowedSaveLocation(personalRootFolder);
+    }
     if (saveLocationTitle) saveLocationTitle.textContent = title;
     renderSaveLocationBrowser();
     saveLocationDialog.showModal();
@@ -7255,7 +7321,8 @@ quickFolderButton?.addEventListener("click", async () => {
   const destination = await openSaveLocationDialog({
     title: "Elegir carpeta de trabajo",
     initialFolder: activeFolder || personalRootFolder,
-    confirmLabel: "Usar esta carpeta"
+    confirmLabel: "Usar esta carpeta",
+    canSaveFolder: canSaveWorkingContractDestination
   });
   if (!destination) return;
   activeFolder = ensureFolderPath(destination.folder);
@@ -7415,7 +7482,8 @@ async function saveContractToArchive({ saveAs = false } = {}) {
     initialFolder: activeFolder || personalRootFolder,
     confirmLabel: saveAs ? "Guardar como" : "Guardar aquí",
     defaultName,
-    requireName: true
+    requireName: true,
+    canSaveFolder: canSaveWorkingContractDestination
   });
   if (!destination) {
     showToast("Guardado cancelado. El contrato sigue como borrador.");
