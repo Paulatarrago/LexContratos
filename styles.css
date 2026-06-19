@@ -3683,6 +3683,379 @@ dialog {
   gap: 5px;
 }
 
+/* Premium document explorer refresh */
+.side-drawer {
+  color: #172033;
+  background: #f7f6f2;
+  border: 1px solid rgba(23, 32, 51, 0.1);
+  border-radius: 12px;
+  box-shadow: 0 24px 70px rgba(15, 23, 42, 0.18);
+}
+
+.side-drawer .drawer-heading {
+  border-bottom: 1px solid rgba(23, 32, 51, 0.08);
+  background: linear-gradient(180deg, #fbfaf7, #f2f0ea);
+}
+
+.side-drawer .eyebrow {
+  color: #737b8a;
+  letter-spacing: 0.11em;
+}
+
+.side-drawer .drawer-heading h2 {
+  color: #172033;
+  font-weight: 780;
+  letter-spacing: 0;
+}
+
+.side-drawer .icon-button.dark,
+.save-location-dialog .icon-button {
+  border-color: rgba(23, 32, 51, 0.12);
+  color: #172033;
+  background: rgba(255, 255, 255, 0.82);
+  box-shadow: 0 8px 18px rgba(15, 23, 42, 0.08);
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.side-drawer .icon-button.dark:hover,
+.save-location-dialog .icon-button:hover {
+  border-color: rgba(8, 47, 111, 0.22);
+  background: #ffffff;
+  box-shadow: 0 10px 24px rgba(15, 23, 42, 0.12);
+  transform: translateY(-1px);
+}
+
+.finder-browser-panel,
+.save-location-browser {
+  border-color: rgba(23, 32, 51, 0.1);
+  background: #f4f2ec;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.8);
+}
+
+.finder-toolbar,
+.save-location-toolbar {
+  border-color: rgba(23, 32, 51, 0.1);
+  background: linear-gradient(180deg, #fbfaf7, #eeece6);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.finder-tool-button,
+.finder-view-button,
+.archive-context-button {
+  border-color: rgba(23, 32, 51, 0.12);
+  color: #334155;
+  background: linear-gradient(180deg, #ffffff, #f5f3ee);
+  box-shadow: 0 1px 1px rgba(15, 23, 42, 0.06);
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+}
+
+.finder-tool-button:hover,
+.finder-view-button:hover,
+.finder-view-button.active,
+.archive-context-button:hover:not(:disabled),
+.archive-context-button.has-target:not(:disabled) {
+  color: #082f6f;
+  border-color: rgba(8, 47, 111, 0.26);
+  background: #f1f6ff;
+  box-shadow: 0 5px 14px rgba(8, 47, 111, 0.1);
+  transform: translateY(-1px);
+}
+
+.archive-context-button.danger {
+  color: #7f1d1d;
+  border-color: rgba(127, 29, 29, 0.12);
+  background: #fffafa;
+}
+
+.archive-context-button.danger:hover:not(:disabled),
+.archive-context-button.danger.has-target:not(:disabled) {
+  color: #8a1f1a;
+  border-color: rgba(138, 31, 26, 0.24);
+  background: #fff4f3;
+}
+
+.finder-search {
+  color: #647084;
+  font-size: 13px;
+  font-weight: 720;
+}
+
+.finder-search input,
+.save-location-current input {
+  border-color: rgba(23, 32, 51, 0.14);
+  background: rgba(255, 255, 255, 0.9);
+  transition: border-color 150ms ease, box-shadow 150ms ease, background 150ms ease;
+}
+
+.finder-search input:focus,
+.save-location-current input:focus {
+  border-color: rgba(8, 47, 111, 0.38);
+  background: #ffffff;
+  box-shadow: 0 0 0 3px rgba(8, 47, 111, 0.1);
+  outline: none;
+}
+
+.finder-path {
+  border-color: rgba(23, 32, 51, 0.1);
+  color: #172033;
+  background: rgba(255, 255, 255, 0.82);
+}
+
+.finder-crumb {
+  color: #082f6f;
+  font-weight: 760;
+}
+
+.archive-finder,
+.save-location-shell,
+.saved-contracts {
+  border-color: rgba(23, 32, 51, 0.1);
+  background: #ffffff;
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.045);
+}
+
+.archive-finder {
+  border-radius: 10px;
+}
+
+.archive-rootbar,
+.save-location-roots {
+  background: #efede8;
+  border-right-color: rgba(23, 32, 51, 0.1);
+}
+
+.archive-root,
+.save-location-roots button {
+  position: relative;
+  min-height: 34px;
+  border: 0;
+  border-radius: 8px;
+  padding: 0 10px 0 28px;
+  color: #4a5568;
+  background: transparent;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+  transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.archive-root::before,
+.save-location-roots button::before {
+  content: "";
+  position: absolute;
+  left: 10px;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  border: 1px solid rgba(100, 116, 139, 0.5);
+  border-radius: 2px;
+  background: rgba(255, 255, 255, 0.7);
+  transform: translateY(-50%);
+}
+
+.archive-root:hover,
+.save-location-roots button:hover {
+  color: #172033;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.archive-root.active,
+.archive-root.system-root.active,
+.archive-root[data-folder="Revisión de documentos"].active,
+.save-location-roots button.active {
+  color: #082f6f;
+  background: #eaf3ff;
+  box-shadow: inset 3px 0 0 #082f6f;
+}
+
+.archive-root.active::before,
+.archive-root.system-root.active::before,
+.archive-root[data-folder="Revisión de documentos"].active::before,
+.save-location-roots button.active::before {
+  border-color: rgba(8, 47, 111, 0.36);
+  background: #dcecff;
+}
+
+.archive-system-separator {
+  margin: 18px 6px 7px;
+  padding-top: 13px;
+  border-top: 1px solid rgba(23, 32, 51, 0.1);
+  color: #7b8494;
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+}
+
+.archive-root.system-root,
+.archive-root.system-root:hover,
+.archive-root[data-folder="Revisión de documentos"],
+.archive-root[data-folder="Revisión de documentos"]:hover {
+  color: #4a5568;
+  border: 0;
+  background: transparent;
+}
+
+.archive-root.system-root:hover,
+.archive-root[data-folder="Revisión de documentos"]:hover {
+  color: #172033;
+  background: rgba(255, 255, 255, 0.55);
+}
+
+.archive-root[data-folder="Bóveda de contratos firmados"]::before {
+  border-radius: 50%;
+  border-color: rgba(8, 47, 111, 0.45);
+  background: linear-gradient(180deg, #ffffff, #e3ecf8);
+}
+
+.archive-root[data-folder="Revisión de documentos"]::before {
+  border-color: rgba(199, 144, 62, 0.45);
+  background: #fff4df;
+}
+
+.archive-list-header,
+.content-list-header,
+.save-file-header {
+  color: #647084;
+  border-bottom-color: rgba(23, 32, 51, 0.08);
+  background: #f8f8f6;
+  font-size: 12px;
+  font-weight: 690;
+}
+
+.archive-sort-button {
+  color: #647084;
+  font-weight: 690;
+}
+
+.archive-sort-button:hover,
+.archive-sort-button.active {
+  color: #082f6f;
+  background: rgba(234, 243, 255, 0.72);
+}
+
+.archive-context-actions {
+  border-color: rgba(23, 32, 51, 0.1);
+  background: rgba(255, 255, 255, 0.68);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.9);
+}
+
+.archive-list-body,
+.save-file-list {
+  background: #ffffff;
+}
+
+.finder-row,
+.content-row,
+.save-file-row {
+  border-bottom-color: rgba(23, 32, 51, 0.07);
+  color: #172033;
+  background: #ffffff;
+  font-size: 13px;
+  font-weight: 520;
+  transition: background 150ms ease, box-shadow 150ms ease, color 150ms ease;
+}
+
+.finder-row:nth-child(even),
+.content-row:nth-child(even),
+.save-file-row:nth-child(even) {
+  background: #fbfbf9;
+}
+
+.finder-row:hover,
+.content-row:hover,
+.save-file-row:hover {
+  background: #f2f7ff;
+}
+
+.finder-row:focus-within,
+.finder-row.is-selected,
+.content-row:focus-within,
+.content-row.is-selected {
+  background: #eaf3ff;
+  box-shadow: inset 3px 0 0 #082f6f;
+}
+
+.finder-row.review-row,
+.finder-row.review-row:hover,
+.finder-row.review-row.is-selected {
+  background: #fffaf0;
+}
+
+.finder-row > span:not(.archive-name-cell),
+.content-row > span:not(.archive-name-cell),
+.save-file-row > span {
+  color: #5f6b7c;
+}
+
+.finder-folder strong,
+.saved-contract-open strong,
+.save-file-name strong {
+  color: #303a49;
+  font-weight: 680;
+}
+
+.finder-folder small,
+.saved-contract-open small {
+  color: #7a8494;
+  font-weight: 560;
+}
+
+.finder-icon {
+  background: #f4f7fb;
+  box-shadow: inset 0 0 0 1px rgba(23, 32, 51, 0.06);
+}
+
+.finder-icon.folder-icon::before {
+  border-color: #d6a24d;
+  background: #ffe2a5;
+}
+
+.finder-icon.folder-icon::after {
+  background: #efbd63;
+}
+
+.finder-icon.document-icon {
+  background: #eef4ff;
+}
+
+.finder-empty,
+.save-file-empty {
+  border-color: rgba(23, 32, 51, 0.08);
+  color: #647084;
+  background: #fbfaf7;
+}
+
+.folder-action {
+  border-color: rgba(23, 32, 51, 0.12);
+  color: #4a5568;
+  background: #ffffff;
+  transition: color 150ms ease, background 150ms ease, border-color 150ms ease;
+}
+
+.folder-action:hover {
+  color: #082f6f;
+  border-color: rgba(8, 47, 111, 0.24);
+  background: #f1f6ff;
+}
+
+.folder-action.danger {
+  color: #8a1f1a;
+  border-color: rgba(138, 31, 26, 0.18);
+  background: #fff8f7;
+}
+
+.save-location-current {
+  border-color: rgba(23, 32, 51, 0.1);
+  background: #fbfaf7;
+}
+
+.save-file-row.is-readonly {
+  opacity: 0.72;
+}
+
+.save-file-row.is-readonly .save-file-name {
+  cursor: not-allowed;
+}
+
 .critical-review-actions {
   display: flex;
   gap: 8px;
