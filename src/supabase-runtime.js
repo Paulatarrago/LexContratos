@@ -306,6 +306,20 @@ if (!config.url || !config.publishableKey) {
     return response.json();
   }
 
+  async function generateSignatureCode(companyCode, year = new Date().getFullYear()) {
+    const cleanCompanyCode = String(companyCode || "CGC")
+      .toUpperCase()
+      .replace(/[^A-Z0-9]/g, "") || "CGC";
+    const cleanYear = Number(year) || new Date().getFullYear();
+    const { data, error } = await supabase.rpc("generate_signature_code", {
+      p_company_code: cleanCompanyCode,
+      p_year: cleanYear
+    });
+    if (error) throw error;
+    if (!data) throw new Error("No se recibió código de firma.");
+    return String(data);
+  }
+
   async function authHeaders() {
     const {
       data: { session }
@@ -397,6 +411,7 @@ if (!config.url || !config.publishableKey) {
     deleteVersion,
     uploadSupportDocuments,
     extractPartyData,
+    generateSignatureCode,
     listAdminUsers,
     updateAdminUser,
     downloadAdminBackup,

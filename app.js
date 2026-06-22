@@ -2461,6 +2461,18 @@ function buildSignatureCode(companyCode, year = new Date().getFullYear()) {
   return `${signatureCodePrefix(code, year)}${nextSignatureSequence(code, year)}`;
 }
 
+async function generateSafeSignatureCode(companyCode, year = new Date().getFullYear()) {
+  const backend = productionBackend();
+  if (backend?.generateSignatureCode) {
+    return backend.generateSignatureCode(companyCode, year);
+  }
+  if (isLocalStaticPreview()) {
+    showToast("Modo local: se generó un código temporal. En producción Supabase evita duplicados.");
+    return buildSignatureCode(companyCode, year);
+  }
+  throw new Error("La generación segura de códigos no está disponible.");
+}
+
 function companyCodePromptText(codes) {
   const options = codes.map((item) => `${item.code}${item.name && item.name !== item.code ? ` = ${item.name}` : ""}`).join("\n");
   return `Código de empresa para el código final de firma:\n\n${options || "CGC = Grupo COCEI"}\n\nEscribe el código que corresponda.`;
@@ -2509,7 +2521,7 @@ function ensureMatterFolio() {
   return activeMatterFolio || "";
 }
 
-function markContractReadyForSignature() {
+async function markContractReadyForSignature() {
   if (!editor.value.trim()) {
     showToast("Primero selecciona o redacta un contrato antes de generar el código de firma.");
     return;
@@ -2520,14 +2532,29 @@ function markContractReadyForSignature() {
   }
   const companyCode = promptCompanyCodeForSignature();
   if (!companyCode) return;
-  const signatureCode = buildSignatureCode(companyCode);
-  activeMatterFolio = signatureCode;
-  addMatterEvent(`Contrato marcado listo para firma: ${signatureCode}`);
-  saveActiveDraft("Contrato listo para firma");
-  autoSaveVersion("manual");
-  renderMatterPanel();
-  updateWorkflowStepState();
-  showToast(`Código generado: ${signatureCode}. Se incluirá en la parte superior al exportar.`);
+  const button = document.querySelector("#mark-ready-signature");
+  const originalText = button?.textContent || "";
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Generando código...";
+  }
+  try {
+    const signatureCode = await generateSafeSignatureCode(companyCode);
+    activeMatterFolio = signatureCode;
+    addMatterEvent(`Contrato marcado listo para firma: ${signatureCode}`);
+    saveActiveDraft("Contrato listo para firma");
+    autoSaveVersion("manual");
+    renderMatterPanel();
+    updateWorkflowStepState();
+    showToast(`Código generado: ${signatureCode}. Se incluirá en la parte superior al exportar.`);
+  } catch (error) {
+    reportBackendError("generar el código único de firma", error);
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = originalText;
+    }
+  }
 }
 
 function classifySupportDocument(fileName) {
