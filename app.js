@@ -5715,7 +5715,6 @@ function renderSaveLocationBrowser() {
             return `
             <button class="save-folder-option ${escapeHtml(meta.className)} ${canSaveRoot ? "" : "is-readonly"} ${selected === root || selected.startsWith(`${root}/`) ? "active" : ""}" type="button" data-save-folder="${escapeHtml(root)}" title="${escapeHtml(canSaveRoot ? meta.description : saveLocationPermissionMessage(root))}">
               <span class="archive-root-name">${escapeHtml(root)}</span>
-              <span class="archive-root-meta">${escapeHtml(canSaveRoot ? meta.description : saveLocationPermissionMessage(root))}</span>
             </button>
           `;
           })
