@@ -6067,10 +6067,8 @@ function renderFolders() {
   const rootButton = (root) => {
     const meta = rootFolderDisplayMeta(root);
     return `
-    <button class="folder-item archive-root ${escapeHtml(meta.className)} ${activeFolder === root || activeFolder.startsWith(`${root}/`) ? "active" : ""}" type="button" data-folder="${escapeHtml(root)}" title="${escapeHtml(meta.description)}" data-tip="${escapeHtml(meta.description)}">
+    <button class="folder-item archive-root ${escapeHtml(meta.className)} ${activeFolder === root || activeFolder.startsWith(`${root}/`) ? "active" : ""}" type="button" data-folder="${escapeHtml(root)}" title="${escapeHtml(meta.description)}" data-tip="${escapeHtml(meta.description)}" aria-label="${escapeHtml(`${root}: ${meta.description}`)}">
       <span class="archive-root-name">${escapeHtml(root)}</span>
-      <span class="archive-root-meta">${escapeHtml(meta.description)}</span>
-      ${meta.badge ? `<span class="archive-root-badge">${escapeHtml(meta.badge)}</span>` : ""}
     </button>
   `;
   };
