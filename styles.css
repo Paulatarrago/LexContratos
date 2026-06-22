@@ -3879,11 +3879,27 @@ dialog {
   transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
 }
 
+.archive-rootbar .archive-root {
+  display: flex;
+  min-height: 34px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 9px 7px 11px;
+}
+
 .archive-root-name {
   display: block;
   color: inherit;
   font-size: 13.5px;
   line-height: 1.08;
+}
+
+.archive-rootbar .archive-root-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .archive-root-meta {
@@ -3894,6 +3910,10 @@ dialog {
   font-weight: 650;
   line-height: 1.18;
   letter-spacing: 0;
+}
+
+.archive-rootbar .archive-root-meta {
+  display: none;
 }
 
 .archive-root-badge {
@@ -3908,6 +3928,13 @@ dialog {
   font-size: 9.5px;
   font-weight: 780;
   letter-spacing: 0.02em;
+}
+
+.archive-rootbar .archive-root-badge {
+  flex: 0 0 auto;
+  margin-top: 0;
+  padding: 2px 5px;
+  font-size: 9px;
 }
 
 .save-location-roots button.is-readonly {
@@ -3931,6 +3958,10 @@ dialog {
   border-radius: 2px;
   background: rgba(255, 255, 255, 0.7);
   transform: translateY(-50%);
+}
+
+.archive-rootbar .archive-root::before {
+  display: none;
 }
 
 .archive-root:hover,
