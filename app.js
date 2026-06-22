@@ -799,6 +799,10 @@ function accountRoleLabel(role) {
   return backendRoleLabels[role] || "Usuario";
 }
 
+function registrationDomainAllowed(email) {
+  return String(email || "").trim().toLowerCase().endsWith("@grupococei.com");
+}
+
 function loadUsers() {
   return readJson("lexcontratos_users", {});
 }
@@ -5305,6 +5309,71 @@ function folderMetaText(folder) {
   return parts.join(" · ") || "Vacía";
 }
 
+function rootFolderDisplayMeta(root) {
+  if (root === personalRootFolder) {
+    return {
+      group: "Trabajo",
+      className: "storage-root",
+      badge: "Guardar",
+      description: "Espacio editable para guardar y organizar documentos de trabajo."
+    };
+  }
+  if (root === mattersRootFolder) {
+    return {
+      group: "Expedientes",
+      className: "controlled-root",
+      badge: "Automático",
+      description: "El sistema agrupa versiones y documentos por contrato; no es una carpeta libre de guardado."
+    };
+  }
+  if (root === sharedLibraryRootFolder) {
+    return {
+      group: "Compartido",
+      className: "shared-root",
+      badge: canSeeSystemCatalogs() ? "Admin edita" : "Consulta",
+      description: "Biblioteca común: todos consultan; solo administración puede cargar o modificar."
+    };
+  }
+  if (root === workFormatsRootFolder) {
+    return {
+      group: "Compartido",
+      className: "admin-root",
+      badge: canSeeSystemCatalogs() ? "Admin edita" : "Consulta",
+      description: "Plantillas legales aprobadas: usuarios consultan y usan; administración edita."
+    };
+  }
+  if (root === logosRootFolder) {
+    return {
+      group: "Compartido",
+      className: "admin-root",
+      badge: canSeeSystemCatalogs() ? "Admin edita" : "Consulta",
+      description: "Logos aprobados para encabezado de documentos; administración los gestiona."
+    };
+  }
+  if (root === reviewRootFolder) {
+    return {
+      group: "Control",
+      className: "review-root",
+      badge: "Revisión",
+      description: "Documentos enviados a revisión interna con comentarios y validación."
+    };
+  }
+  if (root === signedContractsRootFolder) {
+    return {
+      group: "Control",
+      className: "vault-root",
+      badge: "Solo consulta",
+      description: "Bóveda de contratos firmados: resguardo final, descarga y consulta."
+    };
+  }
+  return {
+    group: "Trabajo",
+    className: "",
+    badge: "",
+    description: "Carpeta de trabajo."
+  };
+}
+
 function archiveKey(type, id) {
   return `${type}::${id}`;
 }
@@ -5611,12 +5680,18 @@ function renderSaveLocationBrowser() {
   saveLocationBrowser.innerHTML = `
     <div class="save-location-shell" data-save-folder="${escapeHtml(selected)}">
       <aside class="save-location-roots" aria-label="Carpetas raíz">
+        <div class="save-location-section-label">Guardar en</div>
         ${visibleRoots
-          .map((root) => `
-            <button class="save-folder-option ${selected === root || selected.startsWith(`${root}/`) ? "active" : ""}" type="button" data-save-folder="${escapeHtml(root)}">
-              ${escapeHtml(root)}
+          .map((root) => {
+            const meta = rootFolderDisplayMeta(root);
+            const canSaveRoot = saveLocationCanSave(root);
+            return `
+            <button class="save-folder-option ${escapeHtml(meta.className)} ${canSaveRoot ? "" : "is-readonly"} ${selected === root || selected.startsWith(`${root}/`) ? "active" : ""}" type="button" data-save-folder="${escapeHtml(root)}" title="${escapeHtml(canSaveRoot ? meta.description : saveLocationPermissionMessage(root))}">
+              <span class="archive-root-name">${escapeHtml(root)}</span>
+              <span class="archive-root-meta">${escapeHtml(canSaveRoot ? meta.description : saveLocationPermissionMessage(root))}</span>
             </button>
-          `)
+          `;
+          })
           .join("")}
       </aside>
       <section class="save-location-files" aria-label="Contenido de carpeta">
@@ -5983,21 +6058,31 @@ function renderFolders() {
     }))
   ].sort(compareArchiveItems);
   const contentRows = contentItems.map((item) => item.html);
-  const regularRootButtons = rootFolders.filter((root) => !systemRootFolders.includes(root));
-  const systemRootButtons = rootFolders.filter((root) => systemRootFolders.includes(root));
-  const rootButton = (root, extraClass = "") => `
-    <button class="folder-item archive-root ${extraClass} ${activeFolder === root || activeFolder.startsWith(`${root}/`) ? "active" : ""}" type="button" data-folder="${escapeHtml(root)}">
-      ${escapeHtml(root)}
+  const rootGroups = ["Trabajo", "Expedientes", "Compartido", "Control"]
+    .map((group) => ({
+      group,
+      roots: rootFolders.filter((root) => rootFolderDisplayMeta(root).group === group)
+    }))
+    .filter((item) => item.roots.length);
+  const rootButton = (root) => {
+    const meta = rootFolderDisplayMeta(root);
+    return `
+    <button class="folder-item archive-root ${escapeHtml(meta.className)} ${activeFolder === root || activeFolder.startsWith(`${root}/`) ? "active" : ""}" type="button" data-folder="${escapeHtml(root)}" title="${escapeHtml(meta.description)}" data-tip="${escapeHtml(meta.description)}">
+      <span class="archive-root-name">${escapeHtml(root)}</span>
+      <span class="archive-root-meta">${escapeHtml(meta.description)}</span>
+      ${meta.badge ? `<span class="archive-root-badge">${escapeHtml(meta.badge)}</span>` : ""}
     </button>
   `;
+  };
   folderList.innerHTML = `
     <div class="archive-finder view-${escapeHtml(archiveViewMode)}" role="list" data-context-folder="${escapeHtml(activeFolder)}">
       <div class="archive-rootbar" aria-label="Carpetas raíz">
-        ${regularRootButtons.map((root) => rootButton(root)).join("")}
-        ${systemRootButtons.length ? `
-          <div class="archive-system-separator" aria-hidden="true">Compartido</div>
-          ${systemRootButtons.map((root) => rootButton(root, "system-root")).join("")}
-        ` : ""}
+        ${rootGroups.map(({ group, roots }) => `
+          <section class="archive-root-section ${escapeHtml(group.toLowerCase())}" aria-label="${escapeHtml(group)}">
+            <div class="archive-system-separator">${escapeHtml(group)}</div>
+            ${roots.map((root) => rootButton(root)).join("")}
+          </section>
+        `).join("")}
       </div>
       <div class="archive-list-header">
         <button class="archive-sort-button" type="button" data-archive-sort="name" data-sort-label="Nombre">Nombre</button>
@@ -7382,9 +7467,18 @@ document.querySelector("#demo-login")?.addEventListener("click", () => {
 document.querySelector("#register-form").addEventListener("submit", async (event) => {
   event.preventDefault();
   const backend = productionBackend();
+  const registerEmail = document.querySelector("#register-email").value.trim().toLowerCase();
+  const website = document.querySelector("#register-website")?.value?.trim() || "";
+  if (website) {
+    showToast("No se pudo procesar el registro.");
+    return;
+  }
+  if (!registrationDomainAllowed(registerEmail)) {
+    showToast("Por ahora el registro está limitado a correos institucionales @grupococei.com.");
+    return;
+  }
   if (backend) {
     try {
-      const registerEmail = document.querySelector("#register-email").value.trim().toLowerCase();
       await backend.signUp(
         registerEmail,
         document.querySelector("#register-password").value,
@@ -7403,7 +7497,7 @@ document.querySelector("#register-form").addEventListener("submit", async (event
     return;
   }
   const users = loadUsers();
-  const email = document.querySelector("#register-email").value.trim().toLowerCase();
+  const email = registerEmail;
   if (users[email]) {
     showToast("Ese usuario ya existe.");
     return;

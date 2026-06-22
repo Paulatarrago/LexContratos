@@ -284,11 +284,12 @@
             </div>
           </div>
           <h1>Crea tu usuario.</h1>
-          <p class="auth-production-note">Aquí sí registras correo y contraseña. Después aparecerás en el panel de administración para que se active tu licencia.</p>
+          <p class="auth-production-note">Aquí sí registras correo y contraseña. Por ahora, el registro está limitado a correos institucionales @grupococei.com. Después aparecerás en el panel de administración para que se active tu licencia.</p>
           <form id="register-form" class="auth-form">
             <label>Nombre<input id="register-name" name="name" type="text" autocomplete="name" required /></label>
             <label>Correo<input id="register-email" name="email" type="email" autocomplete="email" required /></label>
             <label>Contraseña<input id="register-password" name="password" type="password" autocomplete="new-password" minlength="6" required /></label>
+            <label class="spam-trap" aria-hidden="true">Sitio web<input id="register-website" name="website" type="text" autocomplete="off" tabindex="-1" /></label>
             <button class="primary-action" type="submit">Crear usuario</button>
           </form>
           <div class="auth-links">

@@ -818,6 +818,16 @@ button {
   margin-top: 18px;
 }
 
+.spam-trap {
+  position: absolute;
+  left: -10000px;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
 .auth-form label {
   display: grid;
   gap: 6px;
@@ -2146,7 +2156,8 @@ button {
 
 .finder-tool-button[data-tip],
 .finder-view-button[data-tip],
-.archive-context-button[data-tip] {
+.archive-context-button[data-tip],
+.archive-root[data-tip] {
   position: relative;
 }
 
@@ -2160,7 +2171,8 @@ button {
 
 .finder-tool-button:hover::after,
 .finder-view-button:hover::after,
-.archive-context-button:hover::after {
+.archive-context-button:hover::after,
+.archive-root:hover::after {
   content: attr(data-tip);
   position: absolute;
   left: 50%;
@@ -2180,6 +2192,13 @@ button {
   box-shadow: 0 10px 24px rgba(16, 24, 32, 0.16);
   pointer-events: none;
   white-space: normal;
+}
+
+.archive-root:hover::after {
+  left: 10px;
+  top: 100%;
+  min-width: 190px;
+  transform: none;
 }
 
 .finder-tool-button.icon-only {
@@ -3824,18 +3843,80 @@ dialog {
   border-right-color: rgba(23, 32, 51, 0.1);
 }
 
+.archive-root-section {
+  display: grid;
+  gap: 5px;
+}
+
+.archive-root-section + .archive-root-section {
+  margin-top: 13px;
+  padding-top: 12px;
+  border-top: 1px solid rgba(23, 32, 51, 0.09);
+}
+
+.save-location-section-label {
+  margin: 0 8px 7px;
+  color: #7b8494;
+  font-size: 10px;
+  font-weight: 840;
+  letter-spacing: 0.13em;
+  text-transform: uppercase;
+}
+
 .archive-root,
 .save-location-roots button {
   position: relative;
-  min-height: 34px;
+  min-height: 44px;
   border: 0;
   border-radius: 8px;
-  padding: 0 10px 0 28px;
+  padding: 7px 9px 7px 28px;
   color: #4a5568;
   background: transparent;
   font-weight: 700;
   letter-spacing: -0.01em;
+  align-content: center;
+  text-align: left;
   transition: color 150ms ease, background 150ms ease, box-shadow 150ms ease;
+}
+
+.archive-root-name {
+  display: block;
+  color: inherit;
+  font-size: 13.5px;
+  line-height: 1.08;
+}
+
+.archive-root-meta {
+  display: block;
+  margin-top: 3px;
+  color: #7b8494;
+  font-size: 10.5px;
+  font-weight: 650;
+  line-height: 1.18;
+  letter-spacing: 0;
+}
+
+.archive-root-badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 5px;
+  padding: 2px 6px;
+  border: 1px solid rgba(23, 32, 51, 0.1);
+  border-radius: 999px;
+  color: #647084;
+  background: rgba(255, 255, 255, 0.58);
+  font-size: 9.5px;
+  font-weight: 780;
+  letter-spacing: 0.02em;
+}
+
+.save-location-roots button.is-readonly {
+  color: #7b8494;
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.save-location-roots button.is-readonly .archive-root-meta {
+  color: #8a94a3;
 }
 
 .archive-root::before,
@@ -3858,8 +3939,46 @@ dialog {
   background: rgba(255, 255, 255, 0.55);
 }
 
+.archive-root.storage-root,
+.save-location-roots button.storage-root {
+  background: rgba(255, 255, 255, 0.5);
+}
+
+.archive-root.storage-root::before,
+.save-location-roots button.storage-root::before {
+  border-color: rgba(8, 47, 111, 0.4);
+  background: #f8fbff;
+}
+
+.archive-root.shared-root,
+.archive-root.admin-root,
+.save-location-roots button.shared-root,
+.save-location-roots button.admin-root {
+  background: rgba(255, 255, 255, 0.28);
+}
+
+.archive-root.shared-root::before,
+.archive-root.admin-root::before,
+.save-location-roots button.shared-root::before,
+.save-location-roots button.admin-root::before {
+  border-color: rgba(93, 109, 129, 0.4);
+  background: #f4f6f8;
+}
+
+.archive-root.controlled-root,
+.archive-root.review-root,
+.archive-root.vault-root,
+.save-location-roots button.controlled-root,
+.save-location-roots button.review-root,
+.save-location-roots button.vault-root {
+  background: rgba(250, 249, 246, 0.45);
+}
+
 .archive-root.active,
-.archive-root.system-root.active,
+.archive-root.shared-root.active,
+.archive-root.admin-root.active,
+.archive-root.controlled-root.active,
+.archive-root.vault-root.active,
 .archive-root[data-folder="Revisión de documentos"].active,
 .save-location-roots button.active {
   color: #082f6f;
@@ -3868,7 +3987,10 @@ dialog {
 }
 
 .archive-root.active::before,
-.archive-root.system-root.active::before,
+.archive-root.shared-root.active::before,
+.archive-root.admin-root.active::before,
+.archive-root.controlled-root.active::before,
+.archive-root.vault-root.active::before,
 .archive-root[data-folder="Revisión de documentos"].active::before,
 .save-location-roots button.active::before {
   border-color: rgba(8, 47, 111, 0.36);
@@ -3876,25 +3998,29 @@ dialog {
 }
 
 .archive-system-separator {
-  margin: 18px 6px 7px;
-  padding-top: 13px;
-  border-top: 1px solid rgba(23, 32, 51, 0.1);
+  margin: 2px 8px 6px;
   color: #7b8494;
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .archive-root.system-root,
 .archive-root.system-root:hover,
+.archive-root.shared-root,
+.archive-root.shared-root:hover,
+.archive-root.admin-root,
+.archive-root.admin-root:hover,
 .archive-root[data-folder="Revisión de documentos"],
 .archive-root[data-folder="Revisión de documentos"]:hover {
   color: #4a5568;
   border: 0;
-  background: transparent;
 }
 
 .archive-root.system-root:hover,
+.archive-root.shared-root:hover,
+.archive-root.admin-root:hover,
 .archive-root[data-folder="Revisión de documentos"]:hover {
   color: #172033;
   background: rgba(255, 255, 255, 0.55);

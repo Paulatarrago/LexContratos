@@ -21,6 +21,25 @@ function isEmail(value) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(value || "").trim());
 }
 
+function csvSet(value) {
+  return new Set(
+    String(value || "")
+      .split(",")
+      .map((item) => item.trim().toLowerCase())
+      .filter(Boolean)
+  );
+}
+
+function emailDomain(email) {
+  return String(email || "").split("@").pop()?.toLowerCase() || "";
+}
+
+function isAllowedAccessEmail(email, env) {
+  const allowedDomains = csvSet(env.REGISTRATION_ALLOWED_DOMAINS || "grupococei.com");
+  const allowedEmails = csvSet(env.REGISTRATION_ALLOWED_EMAILS);
+  return allowedEmails.has(email) || allowedDomains.has(emailDomain(email));
+}
+
 const RATE_LIMIT_WINDOW_MS = 15 * 60 * 1000;
 const RATE_LIMIT_MAX_REQUESTS = 5;
 
@@ -144,6 +163,10 @@ export default async function handler(request) {
 
   if (!name || !isEmail(email) || !message) {
     return jsonResponse({ error: "Completa nombre, correo y mensaje." }, 400);
+  }
+
+  if (!isAllowedAccessEmail(email, env)) {
+    return jsonResponse({ error: "Por ahora el acceso a LexContratos está limitado a correos institucionales @grupococei.com." }, 403);
   }
 
   const safeName = escapeHtml(name);

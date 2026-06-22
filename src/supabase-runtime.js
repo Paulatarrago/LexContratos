@@ -93,6 +93,8 @@ if (!config.url || !config.publishableKey) {
   }
 
   async function signUp(email, password, fullName) {
+    const website = document.querySelector("#register-website")?.value?.trim() || "";
+    if (website) return { user: null, session: null };
     const { data, error } = await supabase.auth.signUp({
       email,
       password,
@@ -104,7 +106,7 @@ if (!config.url || !config.publishableKey) {
     await fetch("/api/registration-notify", {
       method: "POST",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify({ email, name: fullName || email })
+      body: JSON.stringify({ email, name: fullName || email, website })
     }).catch((notifyError) => console.warn("LexContratos registro sin notificación", notifyError));
     if (data?.user && data?.session) await ensureProfile(data.user);
     return data;
