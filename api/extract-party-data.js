@@ -55,6 +55,77 @@ function normalizeFields(value) {
   }
 }
 
+function normalizeStorageDocuments(value) {
+  try {
+    const parsed = JSON.parse(value || "[]");
+    return Array.isArray(parsed)
+      ? parsed.filter((document) => document?.storagePath).map((document) => ({
+          storagePath: String(document.storagePath || ""),
+          storageBucket: String(document.storageBucket || ""),
+          name: String(document.name || ""),
+          type: String(document.type || "")
+        }))
+      : [];
+  } catch {
+    return [];
+  }
+}
+
+function storageConfig(env) {
+  const supabaseUrl = env.SUPABASE_URL || env.VITE_SUPABASE_URL;
+  const serviceKey = env.SUPABASE_SERVICE_ROLE_KEY;
+  const bucket = env.VITE_SUPABASE_STORAGE_BUCKET || "contract-documents";
+  if (!supabaseUrl || !serviceKey) return null;
+  return {
+    supabaseUrl: supabaseUrl.replace(/\/+$/, ""),
+    serviceKey,
+    bucket
+  };
+}
+
+function encodeStoragePath(path) {
+  return String(path || "")
+    .split("/")
+    .map((part) => encodeURIComponent(part))
+    .join("/");
+}
+
+async function storageDocumentsAsFiles(env, access, documents = []) {
+  const config = storageConfig(env);
+  const warnings = [];
+  const files = [];
+  if (!documents.length) return { files, warnings };
+  if (!config) return { files, warnings: ["No se pudo abrir documentos internos porque Storage no está configurado."] };
+
+  for (const document of documents.slice(0, MAX_FILES)) {
+    const path = String(document.storagePath || "").trim();
+    if (!path) continue;
+    if (!path.startsWith(`${access.user.id}/`)) {
+      warnings.push(`Documento interno omitido por permisos: ${document.name || "sin nombre"}.`);
+      continue;
+    }
+    const bucket = document.storageBucket || config.bucket;
+    const response = await fetch(`${config.supabaseUrl}/storage/v1/object/${encodeURIComponent(bucket)}/${encodeStoragePath(path)}`, {
+      headers: {
+        apikey: config.serviceKey,
+        authorization: `Bearer ${config.serviceKey}`
+      }
+    });
+    if (!response.ok) {
+      warnings.push(`No se pudo abrir documento interno: ${document.name || path.split("/").pop()}.`);
+      continue;
+    }
+    const buffer = await response.arrayBuffer();
+    files.push({
+      name: document.name || path.split("/").pop() || "documento-interno",
+      type: response.headers.get("content-type") || document.type || "application/octet-stream",
+      size: buffer.byteLength,
+      arrayBuffer: async () => buffer
+    });
+  }
+  return { files, warnings };
+}
+
 export default async function handler(request) {
   const env = typeof process !== "undefined" ? process.env : {};
   const apiKey = env.OPENAI_API_KEY;
@@ -82,10 +153,15 @@ export default async function handler(request) {
   const side = String(formData.get("side") || "");
   const fields = normalizeFields(formData.get("fields"));
   const sourceTexts = formData.getAll("sourceText").map(String).filter(Boolean);
-  const files = formData
+  const storageDocuments = normalizeStorageDocuments(formData.get("storageDocuments"));
+  const storageFiles = await storageDocumentsAsFiles(env, access, storageDocuments);
+  const files = [
+    ...formData
     .getAll("files")
     .filter((file) => typeof file?.arrayBuffer === "function")
-    .slice(0, MAX_FILES);
+      .slice(0, MAX_FILES),
+    ...storageFiles.files
+  ].slice(0, MAX_FILES);
 
   if (!fields.length) {
     return jsonResponse({ values: {}, missing: [], warnings: ["No hay campos solicitados para este rol."] });
@@ -173,6 +249,10 @@ export default async function handler(request) {
   return jsonResponse({
     values: parsed.values || parsed.fields || {},
     missing: parsed.missing || [],
-    warnings: [...(parsed.warnings || []), ...oversized.map((name) => `Archivo omitido por tamano: ${name}`)]
+    warnings: [
+      ...(parsed.warnings || []),
+      ...oversized.map((name) => `Archivo omitido por tamano: ${name}`),
+      ...storageFiles.warnings
+    ]
   });
 }

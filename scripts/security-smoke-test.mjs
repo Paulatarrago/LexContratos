@@ -77,6 +77,7 @@ function assertServerSecretUseOnly() {
     "docs/security-checklist.md",
     "api/admin-backup.js",
     "api/cron-s3-backup.js",
+    "api/extract-party-data.js",
     "api/admin-templates.js",
     "api/admin-users.js",
     "src/server-auth.js",

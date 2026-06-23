@@ -1723,6 +1723,34 @@ button {
   font-weight: 820;
 }
 
+.role-drop-actions {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.app-document-trigger {
+  min-height: 30px;
+  border: 1px solid rgba(8, 47, 111, 0.2);
+  border-radius: 7px;
+  color: #082f6f;
+  background: #eef6ff;
+  font-size: 12px;
+  font-weight: 820;
+}
+
+.folder-upload-trigger,
+.app-document-trigger {
+  transition: border-color 140ms ease, background 140ms ease, transform 140ms ease;
+}
+
+.folder-upload-trigger:hover,
+.app-document-trigger:hover {
+  border-color: rgba(8, 47, 111, 0.38);
+  background: #f7fbff;
+  transform: translateY(-1px);
+}
+
 .role-file-list {
   list-style: none;
   display: grid;
@@ -3222,6 +3250,148 @@ dialog {
 .party-documents-dialog .party-upload-section {
   margin-top: 12px;
   box-shadow: none;
+}
+
+.app-document-picker-dialog {
+  width: min(940px, calc(100vw - 28px));
+}
+
+.app-document-picker-shell {
+  display: grid;
+  gap: 10px;
+  margin-top: 12px;
+  border: 1px solid rgba(41, 75, 121, 0.16);
+  border-radius: 10px;
+  background: #fbfcfd;
+  padding: 10px;
+}
+
+.app-document-picker-roots {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.app-document-picker-roots button {
+  min-height: 30px;
+  border: 1px solid rgba(41, 75, 121, 0.16);
+  border-radius: 999px;
+  background: #ffffff;
+  color: #4c5a68;
+  padding: 0 10px;
+  font-size: 12px;
+  font-weight: 760;
+  transition: border-color 140ms ease, background 140ms ease, color 140ms ease;
+}
+
+.app-document-picker-roots button:hover,
+.app-document-picker-roots button.is-active {
+  border-color: rgba(8, 47, 111, 0.28);
+  background: #eef6ff;
+  color: #082f6f;
+}
+
+.app-document-picker-toolbar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  border: 1px solid rgba(41, 75, 121, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+  padding: 8px;
+}
+
+.app-document-picker-toolbar strong {
+  min-width: 0;
+  overflow: hidden;
+  color: #0f1e2e;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.mini-action {
+  min-height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.app-document-picker-list {
+  display: grid;
+  max-height: min(46vh, 420px);
+  overflow: auto;
+  border: 1px solid rgba(41, 75, 121, 0.14);
+  border-radius: 8px;
+  background: #ffffff;
+}
+
+.app-picker-row {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 150px 90px;
+  gap: 10px;
+  align-items: center;
+  min-height: 46px;
+  padding: 8px 10px;
+  border-bottom: 1px solid rgba(41, 75, 121, 0.1);
+  color: #445160;
+  font-size: 12px;
+}
+
+.app-picker-row:last-child {
+  border-bottom: 0;
+}
+
+.app-picker-row:hover {
+  background: #f6faff;
+}
+
+.app-picker-row input {
+  width: 15px;
+  height: 15px;
+}
+
+.app-picker-name,
+.app-picker-open-folder {
+  min-width: 0;
+}
+
+.app-picker-name strong,
+.app-picker-open-folder strong {
+  display: block;
+  overflow: hidden;
+  color: #132235;
+  font-size: 13px;
+  font-weight: 780;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-picker-name small,
+.app-picker-open-folder small {
+  display: block;
+  overflow: hidden;
+  color: #6b7788;
+  font-size: 11px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.app-picker-open-folder {
+  border: 0;
+  background: transparent;
+  padding: 0;
+  text-align: left;
+}
+
+.app-picker-open-folder:hover strong {
+  color: #082f6f;
+}
+
+.empty-list-note {
+  margin: 0;
+  padding: 18px;
+  color: #6b7788;
+  font-size: 13px;
 }
 
 .letterhead-catalog-actions {

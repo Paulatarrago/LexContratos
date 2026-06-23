@@ -694,6 +694,14 @@ const downloadAdminBackupButton = document.querySelector("#download-admin-backup
 const reviewFieldsButton = document.querySelector("#review-fields");
 const partyDocumentsButton = document.querySelector("#party-documents");
 const partyDocumentsDialog = document.querySelector("#party-documents-dialog");
+const appDocumentPickerDialog = document.querySelector("#app-document-picker-dialog");
+const appDocumentPickerTitle = document.querySelector("#app-document-picker-title");
+const appDocumentPickerRoots = document.querySelector("#app-document-picker-roots");
+const appDocumentPickerBack = document.querySelector("#app-document-picker-back");
+const appDocumentPickerPath = document.querySelector("#app-document-picker-path");
+const appDocumentPickerList = document.querySelector("#app-document-picker-list");
+const appDocumentPickerCancel = document.querySelector("#app-document-picker-cancel");
+const appDocumentPickerAdd = document.querySelector("#app-document-picker-add");
 const archiveDrawer = document.querySelector("#archive-drawer");
 const assistantPane = document.querySelector("#assistant-pane");
 const saveLocationDialog = document.querySelector("#save-location-dialog");
@@ -777,6 +785,9 @@ let lastArchiveSelectionKey = "";
 let hoveredArchiveItem = null;
 let archiveSortKey = localStorage.getItem("lexcontratos_archive_sort_key") || "name";
 let archiveSortDirection = localStorage.getItem("lexcontratos_archive_sort_direction") || "asc";
+let appDocumentPickerSide = "";
+let appDocumentPickerFolder = sharedLibraryRootFolder;
+let selectedAppPickerItems = new Set();
 let pendingCriticalReviewBody = "";
 let pendingCriticalChanges = [];
 let lastCriticalReviewFindings = [];
@@ -1079,9 +1090,21 @@ function setPartyData(values = {}) {
 }
 
 function serializableSourceFiles() {
+  const cleanEntry = ({ name, size, type, text, fromApp, sourceDocumentId, sourceFolder, storagePath, storageBucket, mimeType }) => ({
+    name,
+    size,
+    type,
+    text: text || "",
+    fromApp: Boolean(fromApp),
+    sourceDocumentId: sourceDocumentId || "",
+    sourceFolder: sourceFolder || "",
+    storagePath: storagePath || "",
+    storageBucket: storageBucket || "",
+    mimeType: mimeType || ""
+  });
   return {
-    A: (sourceTextsBySide.A || []).map(({ name, size, type, text }) => ({ name, size, type, text: text || "" })),
-    B: (sourceTextsBySide.B || []).map(({ name, size, type, text }) => ({ name, size, type, text: text || "" }))
+    A: (sourceTextsBySide.A || []).map(cleanEntry),
+    B: (sourceTextsBySide.B || []).map(cleanEntry)
   };
 }
 
@@ -5259,9 +5282,12 @@ function renderRoleDrops() {
             <strong>Sube documentos de ${escapeHtml(role.label)}.</strong>
             <small>${escapeHtml(roleHint)} Arrastra aquí actas, poderes, constancias fiscales, identificaciones, correos, PDF, Word, Excel o una carpeta completa de ${escapeHtml(partyName)}.</small>
           </label>
-          <button class="folder-upload-trigger" type="button" data-side="${role.side}">Cargar carpeta completa</button>
+          <div class="role-drop-actions">
+            <button class="folder-upload-trigger" type="button" data-side="${role.side}">Cargar carpeta local</button>
+            <button class="app-document-trigger" type="button" data-side="${role.side}">Usar documentos de la app</button>
+          </div>
           <input class="role-folder-input" type="file" multiple webkitdirectory directory data-side="${role.side}" />
-          <ul class="role-file-list">${files.map((file) => `<li><span>${file.type || classifySupportDocument(file.name)} · ${file.name}</span><strong>${file.size}</strong></li>`).join("")}</ul>
+          <ul class="role-file-list">${files.map((file) => `<li><span>${file.type || classifySupportDocument(file.name)} · ${file.name}${file.fromApp ? " · LexContratos" : ""}</span><strong>${file.size}</strong></li>`).join("")}</ul>
         </section>
       `;
     })
@@ -6994,12 +7020,21 @@ async function extractRoleDataWithAi(role) {
   if (!entries.length || !fields.length) return {};
   const files = entries.map((entry) => entry.file).filter(Boolean);
   const sourceTexts = entries.map((entry) => entry.text).filter(Boolean);
+  const storageDocuments = entries
+    .filter((entry) => entry.storagePath)
+    .map((entry) => ({
+      storagePath: entry.storagePath,
+      storageBucket: entry.storageBucket || "",
+      name: entry.name,
+      type: entry.mimeType || entry.type || ""
+    }));
   const result = await backend.extractPartyData({
     roleLabel: role.label,
     side: role.side,
     fields,
     files,
-    sourceTexts
+    sourceTexts,
+    storageDocuments
   });
   return normalizeExtractionValues(result);
 }
@@ -7039,6 +7074,28 @@ async function filesFromDrop(dataTransfer) {
   return files.flat();
 }
 
+function attachStorageUploads(records = [], uploaded = []) {
+  let changed = false;
+  records.forEach((record, index) => {
+    const upload = uploaded[index] || uploaded.find((item) => item.fileName === record.name || String(record.name || "").endsWith(item.fileName || ""));
+    if (!upload?.path) return;
+    record.storagePath = upload.path;
+    record.storageBucket = upload.bucket || record.storageBucket || "";
+    record.mimeType = upload.type || record.mimeType || "";
+    const stored = supportDocuments.find((document) => document.id && document.id === record.id);
+    if (stored) {
+      stored.storagePath = record.storagePath;
+      stored.storageBucket = record.storageBucket;
+      stored.mimeType = record.mimeType;
+    }
+    changed = true;
+  });
+  if (changed) {
+    saveSupportDocuments();
+    saveActiveDraft("Rutas de documentos actualizadas");
+  }
+}
+
 async function addFilesToArchiveFolder(fileList, folder = activeFolder) {
   const files = Array.from(fileList || []);
   if (!files.length) return;
@@ -7059,11 +7116,13 @@ async function addFilesToArchiveFolder(fileList, folder = activeFolder) {
       .map((document) => `${document.name}-${document.size}`)
   );
   const entries = [];
+  const filesToUpload = [];
   for (const file of files) {
     const displayName = file.webkitRelativePath || file.relativePath || file.name;
     const size = `${Math.ceil(file.size / 1024)} KB`;
     const key = `${displayName}-${size}`;
     if (existing.has(key)) continue;
+    filesToUpload.push(file);
     entries.push({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       folder: targetFolder,
@@ -7090,8 +7149,8 @@ async function addFilesToArchiveFolder(fileList, folder = activeFolder) {
     backend.uploadSupportDocuments({
       folio: targetFolder,
       roleLabel: "archivo",
-      files
-    }).catch((error) => reportBackendError("subir documentos a carpeta", error));
+      files: filesToUpload
+    }).then((uploaded) => attachStorageUploads(entries, uploaded)).catch((error) => reportBackendError("subir documentos a carpeta", error));
   }
   renderFolders();
   renderSavedContracts();
@@ -7108,6 +7167,7 @@ async function addFilesToRole(side, fileList) {
   const current = sourceTextsBySide[side] || [];
   const existing = new Set(current.map((file) => `${file.name}-${file.size}`));
   const entries = [];
+  const filesToUpload = [];
   for (const file of files) {
     const displayName = file.webkitRelativePath || file.relativePath || file.name;
     const key = `${displayName}-${Math.ceil(file.size / 1024)} KB`;
@@ -7115,6 +7175,7 @@ async function addFilesToRole(side, fileList) {
     const entry = { name: displayName, size: `${Math.ceil(file.size / 1024)} KB`, type: classifySupportDocument(displayName), text: "", file };
     if (/\.(txt|csv|eml)$/i.test(displayName)) entry.text = await file.text();
     entries.push(entry);
+    filesToUpload.push(file);
   }
   if (!entries.length) {
     showToast("Esos documentos ya estaban cargados en esta parte.");
@@ -7126,8 +7187,7 @@ async function addFilesToRole(side, fileList) {
   const role = getRoles().find((item) => item.side === side);
   const values = getPartyData();
   const supportFolder = supportFolderForRole(role, values);
-  supportDocuments.push(
-    ...entries.map((entry) => ({
+  const supportCopies = entries.map((entry) => ({
       id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
       folder: supportFolder,
       roleLabel: role?.label || "Parte",
@@ -7138,8 +7198,8 @@ async function addFilesToRole(side, fileList) {
       size: entry.size,
       type: entry.type,
       date: new Date().toLocaleString("es-MX")
-    }))
-  );
+    }));
+  supportDocuments.push(...supportCopies);
   saveSupportDocuments();
   const backend = productionBackend();
   if (backend) {
@@ -7147,7 +7207,16 @@ async function addFilesToRole(side, fileList) {
       .uploadSupportDocuments({
         folio: activeMatterFolio || ensureDraftMatterId(),
         roleLabel: role?.label || "parte",
-        files: entries.map((entry) => entry.file).filter(Boolean)
+        files: filesToUpload
+      })
+      .then((uploaded) => {
+        uploaded?.forEach((upload, index) => {
+          if (!upload?.path || !entries[index]) return;
+          entries[index].storagePath = upload.path;
+          entries[index].storageBucket = upload.bucket || "";
+          entries[index].mimeType = upload.type || "";
+        });
+        attachStorageUploads(supportCopies, uploaded || []);
       })
       .catch((error) => reportBackendError("subir documentos", error));
   }
@@ -7164,6 +7233,189 @@ async function addFilesToRole(side, fileList) {
   } else {
     showToast(`${entries.length} documento${entries.length === 1 ? "" : "s"} agregado${entries.length === 1 ? "" : "s"} en ${supportFolder}.`);
   }
+}
+
+function appPickerKey(type, id) {
+  return `${type}::${id}`;
+}
+
+function appPickerTargetFromKey(key) {
+  const [type, ...rest] = String(key || "").split("::");
+  return { type, id: rest.join("::") };
+}
+
+function appDocumentPickerRootsForUser() {
+  return [
+    sharedLibraryRootFolder,
+    personalRootFolder,
+    mattersRootFolder,
+    reviewRootFolder,
+    signedContractsRootFolder
+  ].filter((folder) => folders.includes(folder) && folderAllowedForCurrentUser(folder));
+}
+
+function documentsInAppPickerTarget(target) {
+  if (target.type === "document") {
+    const document = supportDocuments.find((item) => item.id === target.id);
+    return document ? [document] : [];
+  }
+  if (target.type === "folder") {
+    return supportDocuments.filter((document) => pathInFolder(document.folder || "", target.id));
+  }
+  return [];
+}
+
+function selectedAppPickerDocuments() {
+  return uniqueById(Array.from(selectedAppPickerItems).flatMap((key) => documentsInAppPickerTarget(appPickerTargetFromKey(key))));
+}
+
+function renderAppDocumentPicker() {
+  if (!appDocumentPickerDialog || !appDocumentPickerList) return;
+  const currentFolder = folderAllowedForCurrentUser(appDocumentPickerFolder) && folders.includes(appDocumentPickerFolder)
+    ? appDocumentPickerFolder
+    : sharedLibraryRootFolder;
+  appDocumentPickerFolder = currentFolder;
+  const role = getRoles().find((item) => item.side === appDocumentPickerSide);
+  if (appDocumentPickerTitle) appDocumentPickerTitle.textContent = `Agregar documentos a ${role?.label || "la parte"}`;
+  if (appDocumentPickerPath) appDocumentPickerPath.textContent = currentFolder;
+  const rootButtons = appDocumentPickerRootsForUser();
+  if (appDocumentPickerRoots) {
+    appDocumentPickerRoots.innerHTML = rootButtons
+      .map((folder) => `<button type="button" class="${pathInFolder(currentFolder, folder) ? "is-active" : ""}" data-picker-root="${escapeHtml(folder)}">${escapeHtml(folder)}</button>`)
+      .join("");
+  }
+  if (appDocumentPickerBack) appDocumentPickerBack.disabled = rootFolders.includes(currentFolder);
+
+  const foldersInView = directChildFolders(currentFolder).filter(folderAllowedForCurrentUser);
+  const documentsInView = supportDocuments
+    .filter((document) => document.folder === currentFolder)
+    .sort((a, b) => String(a.name || "").localeCompare(String(b.name || ""), "es"));
+  const folderRows = foldersInView
+    .map((folder) => {
+      const key = appPickerKey("folder", folder);
+      const label = folder.split("/").pop();
+      return `
+        <article class="app-picker-row is-folder" data-picker-kind="folder" data-picker-id="${escapeHtml(folder)}">
+          <input type="checkbox" data-picker-check="folder" data-picker-id="${escapeHtml(folder)}" ${selectedAppPickerItems.has(key) ? "checked" : ""} aria-label="Seleccionar carpeta ${escapeHtml(label)}" />
+          <button type="button" class="app-picker-open-folder" data-picker-folder="${escapeHtml(folder)}">
+            <strong>${escapeHtml(label)}</strong>
+            <small>${escapeHtml(folderMetaText(folder))}</small>
+          </button>
+          <span>Carpeta</span>
+          <span>${supportDocuments.filter((document) => pathInFolder(document.folder || "", folder)).length} doc.</span>
+        </article>
+      `;
+    })
+    .join("");
+  const documentRows = documentsInView
+    .map((document) => {
+      const key = appPickerKey("document", document.id);
+      return `
+        <article class="app-picker-row" data-picker-kind="document" data-picker-id="${escapeHtml(document.id)}">
+          <input type="checkbox" data-picker-check="document" data-picker-id="${escapeHtml(document.id)}" ${selectedAppPickerItems.has(key) ? "checked" : ""} aria-label="Seleccionar documento ${escapeHtml(document.name)}" />
+          <span class="app-picker-name">
+            <strong>${escapeHtml(document.name)}</strong>
+            <small>${escapeHtml(document.type || classifySupportDocument(document.name))}</small>
+          </span>
+          <span>${escapeHtml(document.date || "--")}</span>
+          <span>${escapeHtml(document.size || "")}</span>
+        </article>
+      `;
+    })
+    .join("");
+  appDocumentPickerList.innerHTML = folderRows || documentRows
+    ? `${folderRows}${documentRows}`
+    : `<p class="empty-list-note">Esta carpeta no tiene documentos para agregar.</p>`;
+  const selectedCount = selectedAppPickerDocuments().length;
+  if (appDocumentPickerAdd) {
+    appDocumentPickerAdd.textContent = selectedCount ? `Agregar ${selectedCount} seleccionado${selectedCount === 1 ? "" : "s"}` : "Agregar seleccionados";
+    appDocumentPickerAdd.disabled = selectedCount === 0;
+  }
+}
+
+function openAppDocumentPicker(side) {
+  if (!ensureEditableWorkspace("usar documentos de la app")) return;
+  if (!requireFieldsReviewed("agregar documentos de la app")) return;
+  appDocumentPickerSide = side;
+  const startFolder = folders.includes(sharedLibraryRootFolder) ? sharedLibraryRootFolder : personalRootFolder;
+  appDocumentPickerFolder = folderAllowedForCurrentUser(activeFolder) ? activeFolder : startFolder;
+  if (!pathInFolder(appDocumentPickerFolder, sharedLibraryRootFolder) && folders.includes(sharedLibraryRootFolder)) {
+    appDocumentPickerFolder = sharedLibraryRootFolder;
+  }
+  selectedAppPickerItems = new Set();
+  renderAppDocumentPicker();
+  appDocumentPickerDialog?.showModal();
+}
+
+function addAppDocumentsToRole(side, documents = []) {
+  if (!documents.length) {
+    showToast("Selecciona al menos un documento de la app.");
+    return;
+  }
+  const role = getRoles().find((item) => item.side === side);
+  const values = getPartyData();
+  const supportFolder = supportFolderForRole(role, values);
+  const current = sourceTextsBySide[side] || [];
+  const existing = new Set(current.map((file) => `${file.sourceDocumentId || ""}-${file.name}-${file.size}`));
+  const entries = documents.flatMap((document) => {
+    const key = `${document.id || ""}-${document.name}-${document.size || ""}`;
+    if (existing.has(key)) return [];
+    return [{
+      name: document.name,
+      size: document.size || "",
+      type: document.type || classifySupportDocument(document.name),
+      text: document.text || "",
+      fromApp: true,
+      sourceDocumentId: document.id || "",
+      sourceFolder: document.folder || "",
+      storagePath: document.storagePath || "",
+      storageBucket: document.storageBucket || "",
+      mimeType: document.mimeType || ""
+    }];
+  });
+  if (!entries.length) {
+    showToast("Esos documentos ya estaban cargados en esta parte.");
+    return;
+  }
+  sourceTextsBySide[side] = [...current, ...entries];
+  partyDocumentsStepVisited = true;
+  const supportCopies = entries.map((entry) => ({
+    id: `${Date.now()}-${Math.random().toString(16).slice(2)}`,
+    folder: supportFolder,
+    roleLabel: role?.label || "Parte",
+    party: values[role?.part] || role?.label || "Parte",
+    folio: activeMatterFolio || "",
+    draftId: ensureDraftMatterId(),
+    name: entry.name,
+    size: entry.size,
+    type: entry.type,
+    date: new Date().toLocaleString("es-MX"),
+    sourceDocumentId: entry.sourceDocumentId,
+    sourceFolder: entry.sourceFolder,
+    storagePath: entry.storagePath,
+    storageBucket: entry.storageBucket,
+    mimeType: entry.mimeType,
+    fromApp: true
+  }));
+  supportDocuments.push(...supportCopies);
+  saveSupportDocuments();
+  renderRoleDrops();
+  updateWorkflowStepState();
+  renderFolders();
+  renderSavedContracts();
+  renderMatterPanel();
+  addMatterEvent(`Documentos internos agregados para ${role?.label || "parte"}`);
+  saveActiveDraft("Documentos internos agregados");
+  const needsServerRead = entries.some(documentNeedsAiExtraction);
+  showToast(needsServerRead
+    ? `${entries.length} documento${entries.length === 1 ? "" : "s"} agregado${entries.length === 1 ? "" : "s"}. Si un archivo guardado no tiene texto leído, LexContratos lo usará cuando la extracción desde archivo interno esté disponible.`
+    : `${entries.length} documento${entries.length === 1 ? "" : "s"} de la app agregado${entries.length === 1 ? "" : "s"} en ${supportFolder}.`);
+}
+
+function confirmAppDocumentPickerSelection() {
+  const documents = selectedAppPickerDocuments();
+  addAppDocumentsToRole(appDocumentPickerSide, documents);
+  if (documents.length) appDocumentPickerDialog?.close();
 }
 
 templateGrid.addEventListener("click", async (event) => {
@@ -7202,12 +7454,59 @@ roleDropGrid.addEventListener("change", async (event) => {
 });
 
 roleDropGrid.addEventListener("click", (event) => {
+  const appButton = event.target.closest(".app-document-trigger");
+  if (appButton) {
+    event.preventDefault();
+    openAppDocumentPicker(appButton.dataset.side);
+    return;
+  }
   const folderButton = event.target.closest(".folder-upload-trigger");
   if (!folderButton) return;
   event.preventDefault();
   const input = roleDropGrid.querySelector(`.role-folder-input[data-side="${folderButton.dataset.side}"]`);
   input?.click();
 });
+
+appDocumentPickerRoots?.addEventListener("click", (event) => {
+  const button = event.target.closest("[data-picker-root]");
+  if (!button) return;
+  appDocumentPickerFolder = button.dataset.pickerRoot;
+  selectedAppPickerItems = new Set();
+  renderAppDocumentPicker();
+});
+
+appDocumentPickerBack?.addEventListener("click", () => {
+  const parent = folderParent(appDocumentPickerFolder);
+  if (!parent || !folderAllowedForCurrentUser(parent)) return;
+  appDocumentPickerFolder = parent;
+  renderAppDocumentPicker();
+});
+
+appDocumentPickerList?.addEventListener("change", (event) => {
+  const checkbox = event.target.closest("[data-picker-check]");
+  if (!checkbox) return;
+  const key = appPickerKey(checkbox.dataset.pickerCheck, checkbox.dataset.pickerId);
+  if (checkbox.checked) selectedAppPickerItems.add(key);
+  else selectedAppPickerItems.delete(key);
+  renderAppDocumentPicker();
+});
+
+appDocumentPickerList?.addEventListener("click", (event) => {
+  const openButton = event.target.closest("[data-picker-folder]");
+  if (!openButton) return;
+  appDocumentPickerFolder = openButton.dataset.pickerFolder;
+  renderAppDocumentPicker();
+});
+
+appDocumentPickerList?.addEventListener("dblclick", (event) => {
+  const row = event.target.closest('[data-picker-kind="folder"]');
+  if (!row) return;
+  appDocumentPickerFolder = row.dataset.pickerId;
+  renderAppDocumentPicker();
+});
+
+appDocumentPickerCancel?.addEventListener("click", () => appDocumentPickerDialog?.close());
+appDocumentPickerAdd?.addEventListener("click", confirmAppDocumentPickerSelection);
 
 roleDropGrid.addEventListener("dragover", (event) => {
   const drop = event.target.closest(".role-drop");

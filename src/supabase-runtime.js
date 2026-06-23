@@ -279,12 +279,12 @@ if (!config.url || !config.publishableKey) {
         file_size: file.size || null
       });
       if (documentError) throw documentError;
-      uploaded.push({ path: data.path, fileName: file.name, size: file.size, type: file.type });
+      uploaded.push({ path: data.path, bucket: config.bucket, fileName: file.name, size: file.size, type: file.type });
     }
     return uploaded;
   }
 
-  async function extractPartyData({ roleLabel, side, fields, files, sourceTexts }) {
+  async function extractPartyData({ roleLabel, side, fields, files, sourceTexts, storageDocuments }) {
     const formData = new FormData();
     formData.append("roleLabel", roleLabel || "Parte");
     formData.append("side", side || "");
@@ -292,6 +292,7 @@ if (!config.url || !config.publishableKey) {
     (sourceTexts || []).forEach((text) => {
       if (text?.trim()) formData.append("sourceText", text);
     });
+    if (storageDocuments?.length) formData.append("storageDocuments", JSON.stringify(storageDocuments));
     (files || []).forEach((file) => formData.append("files", file, file.name));
 
     const response = await fetch("/api/extract-party-data", {

@@ -783,6 +783,29 @@
       </section>
     </dialog>
 
+    <dialog class="app-document-picker-dialog" id="app-document-picker-dialog">
+      <form method="dialog" class="dialog-close-row">
+        <div>
+          <p class="eyebrow">Documentos guardados</p>
+          <h2 id="app-document-picker-title">Elegir documentos de LexContratos</h2>
+          <p class="dialog-copy">Selecciona documentos o carpetas ya guardadas en la app para agregarlos a la parte correcta del contrato.</p>
+        </div>
+        <button class="icon-button" type="submit" aria-label="Cerrar selector de documentos">×</button>
+      </form>
+      <div class="app-document-picker-shell">
+        <div class="app-document-picker-roots" id="app-document-picker-roots" aria-label="Carpetas principales"></div>
+        <div class="app-document-picker-toolbar">
+          <button class="secondary-action mini-action" id="app-document-picker-back" type="button">Atrás</button>
+          <strong id="app-document-picker-path">Documentos</strong>
+        </div>
+        <div class="app-document-picker-list" id="app-document-picker-list" aria-live="polite"></div>
+      </div>
+      <div class="dialog-actions">
+        <button class="secondary-action" id="app-document-picker-cancel" type="button">Cancelar</button>
+        <button class="primary-action action-cta" id="app-document-picker-add" type="button">Agregar seleccionados</button>
+      </div>
+    </dialog>
+
     <dialog class="letterhead-catalog-dialog" id="letterhead-catalog-dialog">
       <form method="dialog" class="dialog-close-row">
         <div>
