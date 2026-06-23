@@ -5678,6 +5678,9 @@ function renderSaveLocationBrowser() {
   saveLocationConfirm.disabled = !canSaveSelected;
   saveLocationConfirm.title = canSaveSelected ? "" : saveLocationPermissionMessage(selected);
   const parent = folderParent(selected);
+  const selectedIsRoot = rootFolders.includes(selected);
+  const canCreateInSelected = canModifyArchiveFolder(selected, "crear carpeta");
+  const canEditSelectedFolder = canModifyArchiveFolder(selected, "editar");
   const folderRows = directChildFolders(selected)
     .map((folder) => {
       const label = folder.split("/").pop();
@@ -5750,7 +5753,12 @@ function renderSaveLocationBrowser() {
         <div class="save-location-toolbar">
           <button class="secondary-action mini-action save-folder-option" type="button" data-save-folder="${escapeHtml(parent || selected)}" ${parent ? "" : "disabled"}>Atrás</button>
           <strong>${escapeHtml(selected)}</strong>
-          <span class="save-location-hint">Clic derecho: nueva carpeta, renombrar o eliminar</span>
+          <div class="save-location-tool-actions" aria-label="Acciones de carpeta">
+            <button class="save-toolbar-action" type="button" data-save-toolbar-action="new" ${canCreateInSelected ? "" : "disabled"} title="${escapeHtml(canCreateInSelected ? "Crear carpeta dentro de la ubicación actual" : saveLocationPermissionMessage(selected))}">Nueva carpeta</button>
+            <button class="save-toolbar-action" type="button" data-save-toolbar-action="rename" ${selectedIsRoot || !canEditSelectedFolder ? "disabled" : ""} title="${escapeHtml(selectedIsRoot ? "Las carpetas raíz no se renombran" : canEditSelectedFolder ? "Renombrar la carpeta actual" : saveLocationPermissionMessage(selected))}">Renombrar</button>
+            <button class="save-toolbar-action danger" type="button" data-save-toolbar-action="delete" ${selectedIsRoot || !canEditSelectedFolder ? "disabled" : ""} title="${escapeHtml(selectedIsRoot ? "Las carpetas raíz no se eliminan" : canEditSelectedFolder ? "Eliminar la carpeta actual" : saveLocationPermissionMessage(selected))}">Eliminar</button>
+          </div>
+          <span class="save-location-hint">También puedes usar clic derecho dentro de la carpeta.</span>
         </div>
         <div class="save-file-header">
           <span>Nombre</span>
@@ -8492,6 +8500,17 @@ folderList.addEventListener("drop", async (event) => {
 
 saveLocationBrowser?.addEventListener("click", (event) => {
   hideSaveLocationContextMenu();
+  const toolbarButton = event.target.closest("[data-save-toolbar-action]");
+  if (toolbarButton) {
+    event.stopPropagation();
+    if (toolbarButton.disabled) return;
+    const folder = saveLocationState.folder || activeFolder || personalRootFolder;
+    const action = toolbarButton.dataset.saveToolbarAction;
+    if (action === "new") createFolderInsideSaveLocationAt(folder);
+    if (action === "rename") renameFolderInsideSaveLocation(folder);
+    if (action === "delete") deleteFolderInsideSaveLocation(folder);
+    return;
+  }
   const actionButton = event.target.closest(".save-folder-action");
   if (actionButton) {
     event.stopPropagation();
